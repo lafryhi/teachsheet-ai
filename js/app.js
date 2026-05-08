@@ -24,7 +24,41 @@ document.addEventListener("DOMContentLoaded", () => {
       perPage: 10
     }
   };
+  
+const exportBtn = document.getElementById("exportPdfBtn");
 
+if (exportBtn) {
+  exportBtn.addEventListener("click", exportPDF);
+}
+
+function exportPDF() {
+
+  const element =
+    document.querySelector(".a4-sheet") ||
+    document.querySelector(".a4-page");
+
+  if (!element) return;
+
+  const options = {
+    margin: 0,
+    filename: "TeachSheet-Worksheet.pdf",
+    image: {
+      type: "jpeg",
+      quality: 1
+    },
+    html2canvas: {
+      scale: 2,
+      useCORS: true
+    },
+    jsPDF: {
+      unit: "mm",
+      format: "a4",
+      orientation: "portrait"
+    }
+  };
+
+  html2pdf().set(options).from(element).save();
+}
   const $ = (id) => document.getElementById(id);
 
   const preview = $("worksheetPreview") || $("preview") || createPreviewArea();
