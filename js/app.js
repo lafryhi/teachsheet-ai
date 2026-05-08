@@ -333,3 +333,31 @@ function exportPDF() {
     return span;
   }
 });
+function updateZoom(value) {
+  const preview =
+    document.querySelector(".a4-sheet") ||
+    document.querySelector(".a4-page");
+
+  const zoomText =
+    document.getElementById("zoomValue") ||
+    document.getElementById("zoomText");
+
+  let zoom = Number(value);
+
+  if (zoom > 3) {
+    zoom = zoom / 100;
+  }
+
+  if (!zoom || zoom < 0.3) {
+    zoom = 1;
+  }
+
+  if (preview) {
+    preview.style.transform = `scale(${zoom})`;
+    preview.style.transformOrigin = "top center";
+  }
+
+  if (zoomText) {
+    zoomText.textContent = `${Math.round(zoom * 100)}%`;
+  }
+}
