@@ -361,3 +361,6 @@ function updateZoom(value) {
     zoomText.textContent = `${Math.round(zoom * 100)}%`;
   }
 }
+git add .
+git commit -m "Fix updateZoom function"
+git push
