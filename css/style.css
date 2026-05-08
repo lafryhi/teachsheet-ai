@@ -708,3 +708,34 @@ footer p {
     align-items: flex-start;
   }
 }
+@media print {
+
+  body {
+    background: white;
+  }
+
+  .navbar,
+  .panel,
+  .preview-toolbar,
+  footer {
+    display: none !important;
+  }
+
+  .preview,
+  .pro-preview,
+  .preview-stage {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .a4-sheet,
+  .a4-page {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 auto;
+    width: 210mm;
+    min-height: 297mm;
+  }
+}
