@@ -333,7 +333,9 @@ function exportPDF() {
     return span;
   }
 });
-function updateZoom(value) {
+
+ function updateZoom(value) {
+
   const preview =
     document.querySelector(".a4-sheet") ||
     document.querySelector(".a4-page");
@@ -358,9 +360,52 @@ function updateZoom(value) {
   }
 
   if (zoomText) {
-    zoomText.textContent = `${Math.round(zoom * 100)}%`;
+    zoomText.textContent =
+      `${Math.round(zoom * 100)}%`;
   }
 }
-git add .
-git commit -m "Fix updateZoom function"
-git push
+
+const exportBtn =
+  document.getElementById("exportPdfBtn");
+
+if (exportBtn) {
+  exportBtn.addEventListener(
+    "click",
+    exportPDF
+  );
+}
+
+function exportPDF() {
+
+  const element =
+    document.querySelector(".a4-sheet") ||
+    document.querySelector(".a4-page");
+
+  if (!element) return;
+
+  const options = {
+    margin: 0,
+    filename: "TeachSheet-Worksheet.pdf",
+
+    image: {
+      type: "jpeg",
+      quality: 1
+    },
+
+    html2canvas: {
+      scale: 2,
+      useCORS: true
+    },
+
+    jsPDF: {
+      unit: "mm",
+      format: "a4",
+      orientation: "portrait"
+    }
+  };
+
+  html2pdf()
+    .set(options)
+    .from(element)
+    .save();
+}
