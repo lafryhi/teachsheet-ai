@@ -1,608 +1,301 @@
-let currentQuestions = [];
-let currentWorksheetData = null;
-let previewPages = [];
-let currentPreviewPage = 0;
+/* TeachSheet AI - js/app.js */
+/* Preview + Pagination + Answer Sheet + Zoom + Themes */
 
-function getRandomNumber(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+document.addEventListener("DOMContentLoaded", () => {
+  const app = {
+    exercises: [],
+    answers: [],
+    pages: [],
+    currentPage: 0,
+    zoom: 1,
+    theme: "blue",
+    showAnswers: false,
 
-function getElementValue(id) {
-  const element = document.getElementById(id);
-  return element ? element.value : "";
-}
-
-function getCleanValue(id, fallback = "") {
-  const value = getElementValue(id).trim();
-  return value || fallback;
-}
-
-function getGradeNumber(gradeText) {
-  const number = parseInt(String(gradeText).replace(/\D/g, ""), 10);
-  return Number.isNaN(number) ? 2 : number;
-}
-
-function getDifficultyLevel(difficultyText) {
-  return String(difficultyText || "medium").toLowerCase();
-}
-
-function getNumberRange(grade, difficulty) {
-  const gradeNumber = getGradeNumber(grade);
-  const level = getDifficultyLevel(difficulty);
-
-  if (gradeNumber <= 1) {
-    if (level === "easy") return { min: 1, max: 10 };
-    if (level === "medium") return { min: 1, max: 20 };
-    return { min: 10, max: 50 };
-  }
-
-  if (gradeNumber === 2) {
-    if (level === "easy") return { min: 1, max: 20 };
-    if (level === "medium") return { min: 10, max: 100 };
-    return { min: 50, max: 200 };
-  }
-
-  if (gradeNumber === 3) {
-    if (level === "easy") return { min: 10, max: 100 };
-    if (level === "medium") return { min: 50, max: 500 };
-    return { min: 100, max: 999 };
-  }
-
-  if (gradeNumber === 4) {
-    if (level === "easy") return { min: 50, max: 500 };
-    if (level === "medium") return { min: 100, max: 999 };
-    return { min: 500, max: 3000 };
-  }
-
-  if (level === "easy") return { min: 100, max: 999 };
-  if (level === "medium") return { min: 500, max: 5000 };
-  return { min: 1000, max: 9999 };
-}
-
-function formatOperation(operation) {
-  const operations = {
-    addition: "Addition",
-    subtraction: "Subtraction",
-    multiplication: "Multiplication",
-    division: "Division",
-    mixed: "Mixed Operations"
+    settings: {
+      title: "TeachSheet AI Worksheet",
+      subtitle: "Generated educational worksheet",
+      studentName: true,
+      date: true,
+      level: "Primary",
+      questionsCount: 20,
+      operations: ["addition"],
+      min: 1,
+      max: 20,
+      perPage: 10
+    }
   };
 
-  return operations[operation] || "Addition";
-}
+  const $ = (id) => document.getElementById(id);
 
-function createAdditionQuestion(grade, difficulty) {
-  const range = getNumberRange(grade, difficulty);
-  const a = getRandomNumber(range.min, range.max);
-  const b = getRandomNumber(range.min, range.max);
+  const preview = $("worksheetPreview") || $("preview") || createPreviewArea();
+  const pageCounter = $("pageCounter") || createSmallText("pageCounter");
+  const zoomValue = $("zoomValue") || createSmallText("zoomValue");
 
-  return {
-    text: `${a} + ${b} =`,
-    answer: a + b,
-    operation: "Addition"
-  };
-}
+  bindButtons();
+  generateWorksheet();
 
-function createSubtractionQuestion(grade, difficulty) {
-  const range = getNumberRange(grade, difficulty);
-  let a = getRandomNumber(range.min, range.max);
-  let b = getRandomNumber(range.min, range.max);
+  function bindButtons() {
+    bind("generateBtn", generateWorksheet);
+    bind("prevPageBtn", prevPage);
+    bind("nextPageBtn", nextPage);
+    bind("zoomInBtn", zoomIn);
+    bind("zoomOutBtn", zoomOut);
+    bind("resetZoomBtn", resetZoom);
+    bind("answerSheetBtn", toggleAnswerSheet);
 
-  if (b > a) {
-    [a, b] = [b, a];
-  }
-
-  return {
-    text: `${a} - ${b} =`,
-    answer: a - b,
-    operation: "Subtraction"
-  };
-}
-
-function createMultiplicationQuestion(grade, difficulty) {
-  const gradeNumber = getGradeNumber(grade);
-  const level = getDifficultyLevel(difficulty);
-
-  let a;
-  let b;
-
-  if (gradeNumber <= 2 || level === "easy") {
-    a = getRandomNumber(1, 10);
-    b = getRandomNumber(1, 10);
-  } else if (gradeNumber <= 4 || level === "medium") {
-    a = getRandomNumber(2, 12);
-    b = getRandomNumber(2, 12);
-  } else {
-    a = getRandomNumber(10, 99);
-    b = getRandomNumber(2, 12);
-  }
-
-  return {
-    text: `${a} × ${b} =`,
-    answer: a * b,
-    operation: "Multiplication"
-  };
-}
-
-function createDivisionQuestion(grade, difficulty) {
-  const gradeNumber = getGradeNumber(grade);
-  const level = getDifficultyLevel(difficulty);
-
-  let divisor;
-  let quotient;
-
-  if (gradeNumber <= 2 || level === "easy") {
-    divisor = getRandomNumber(2, 10);
-    quotient = getRandomNumber(2, 10);
-  } else if (gradeNumber <= 4 || level === "medium") {
-    divisor = getRandomNumber(2, 12);
-    quotient = getRandomNumber(5, 20);
-  } else {
-    divisor = getRandomNumber(2, 20);
-    quotient = getRandomNumber(10, 50);
-  }
-
-  const dividend = divisor * quotient;
-
-  return {
-    text: `${dividend} ÷ ${divisor} =`,
-    answer: quotient,
-    operation: "Division"
-  };
-}
-
-function createQuestion(operation, grade, difficulty) {
-  let selectedOperation = operation;
-
-  if (selectedOperation === "mixed") {
-    const operations = ["addition", "subtraction", "multiplication", "division"];
-    selectedOperation = operations[getRandomNumber(0, operations.length - 1)];
-  }
-
-  if (selectedOperation === "addition") return createAdditionQuestion(grade, difficulty);
-  if (selectedOperation === "subtraction") return createSubtractionQuestion(grade, difficulty);
-  if (selectedOperation === "multiplication") return createMultiplicationQuestion(grade, difficulty);
-  if (selectedOperation === "division") return createDivisionQuestion(grade, difficulty);
-
-  return createAdditionQuestion(grade, difficulty);
-}
-
-function getWorksheetData() {
-  return {
-    teacherName: getCleanValue("teacherName", "Teacher"),
-    schoolName: getCleanValue("schoolName", "School"),
-    subjectName: getCleanValue("subjectName", "Mathematics"),
-    className: getCleanValue("className", "Class"),
-    grade: getElementValue("grade"),
-    operation: getElementValue("operation"),
-    difficulty: getElementValue("difficulty"),
-    questionCount: parseInt(getElementValue("questionCount"), 10) || 15,
-    studentName: getCleanValue("studentName", "________________"),
-    date: new Date().toLocaleDateString()
-  };
-}
-
-function generateWorksheet() {
-  currentWorksheetData = getWorksheetData();
-  currentQuestions = [];
-
-  for (let i = 0; i < currentWorksheetData.questionCount; i++) {
-    currentQuestions.push(
-      createQuestion(
-        currentWorksheetData.operation,
-        currentWorksheetData.grade,
-        currentWorksheetData.difficulty
-      )
-    );
-  }
-
-  buildPreviewPages();
-  currentPreviewPage = 0;
-  renderCurrentPreviewPage();
-}
-
-function buildPreviewPages() {
-  const questionsPerPage = 20;
-  previewPages = [];
-
-  for (let i = 0; i < currentQuestions.length; i += questionsPerPage) {
-    previewPages.push({
-      type: "worksheet",
-      questions: currentQuestions.slice(i, i + questionsPerPage),
-      startIndex: i
+    document.querySelectorAll("[data-theme]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        app.theme = btn.dataset.theme;
+        renderPage();
+      });
     });
   }
 
-  previewPages.push({
-    type: "answer-key",
-    questions: currentQuestions,
-    startIndex: 0
-  });
-}
+  function bind(id, fn) {
+    const el = $(id);
+    if (el) el.addEventListener("click", fn);
+  }
 
-function renderCurrentPreviewPage() {
-  const worksheet = document.getElementById("worksheet");
-  const pageInfo = document.getElementById("pageInfo");
+  function generateWorksheet() {
+    readSettings();
 
-  if (!worksheet) return;
+    app.exercises = [];
+    app.answers = [];
+    app.pages = [];
+    app.currentPage = 0;
+    app.showAnswers = false;
 
-  if (!currentWorksheetData || !previewPages.length) {
-    worksheet.innerHTML = getEmptyPreviewHTML();
-
-    if (pageInfo) {
-      pageInfo.textContent = "Page 1 of 1";
+    for (let i = 1; i <= app.settings.questionsCount; i++) {
+      const ex = createExercise(i);
+      app.exercises.push(ex);
+      app.answers.push({
+        number: i,
+        question: ex.question,
+        answer: ex.answer
+      });
     }
 
-    return;
+    app.pages = paginate(app.exercises, app.settings.perPage);
+    renderPage();
   }
 
-  const page = previewPages[currentPreviewPage];
+  function readSettings() {
+    app.settings.title = getValue("worksheetTitle", app.settings.title);
+    app.settings.subtitle = getValue("worksheetSubtitle", app.settings.subtitle);
+    app.settings.level = getValue("worksheetLevel", app.settings.level);
 
-  if (pageInfo) {
-    pageInfo.textContent = `Page ${currentPreviewPage + 1} of ${previewPages.length}`;
+    app.settings.questionsCount = getNumber("questionsCount", 20);
+    app.settings.min = getNumber("minNumber", 1);
+    app.settings.max = getNumber("maxNumber", 20);
+    app.settings.perPage = getNumber("questionsPerPage", 10);
+
+    const operation = getValue("operationType", "addition");
+    app.settings.operations = [operation];
+
+    if (app.settings.max <= app.settings.min) {
+      app.settings.max = app.settings.min + 10;
+    }
   }
 
-  if (page.type === "answer-key") {
-    worksheet.innerHTML = getAnswerKeyPageHTML(page);
-  } else {
-    worksheet.innerHTML = getWorksheetPageHTML(page);
+  function createExercise(index) {
+    const op = app.settings.operations[0];
+    let a = rand(app.settings.min, app.settings.max);
+    let b = rand(app.settings.min, app.settings.max);
+    let question = "";
+    let answer = 0;
+
+    if (op === "subtraction") {
+      if (b > a) [a, b] = [b, a];
+      question = `${a} − ${b} =`;
+      answer = a - b;
+    } else if (op === "multiplication") {
+      question = `${a} × ${b} =`;
+      answer = a * b;
+    } else if (op === "division") {
+      answer = rand(app.settings.min, Math.max(app.settings.min + 1, app.settings.max));
+      b = rand(1, 10);
+      a = answer * b;
+      question = `${a} ÷ ${b} =`;
+    } else {
+      question = `${a} + ${b} =`;
+      answer = a + b;
+    }
+
+    return {
+      number: index,
+      question,
+      answer
+    };
   }
-}
 
-function getA4HeaderHTML(title, subtitle) {
-  return `
-    <div class="a4-header">
-      <div class="logo-mark">TS</div>
+  function paginate(items, perPage) {
+    const result = [];
+    for (let i = 0; i < items.length; i += perPage) {
+      result.push(items.slice(i, i + perPage));
+    }
+    return result;
+  }
 
-      <div class="a4-title-block">
-        <h2>${title}</h2>
-        <p>${subtitle}</p>
-      </div>
+  function renderPage() {
+    preview.innerHTML = "";
 
-      <div class="a4-brand">
-        TeachSheet AI
-      </div>
-    </div>
-  `;
-}
+    const sheet = document.createElement("div");
+    sheet.className = `a4-sheet theme-${app.theme}`;
+    sheet.style.transform = `scale(${app.zoom})`;
+    sheet.style.transformOrigin = "top center";
 
-function getInfoGridHTML() {
-  return `
-    <div class="a4-info-grid">
-      <div><strong>Teacher:</strong> ${currentWorksheetData.teacherName}</div>
-      <div><strong>School:</strong> ${currentWorksheetData.schoolName}</div>
-      <div><strong>Class:</strong> ${currentWorksheetData.className}</div>
-      <div><strong>Student:</strong> ${currentWorksheetData.studentName}</div>
-      <div><strong>Date:</strong> ${currentWorksheetData.date}</div>
-      <div><strong>Grade:</strong> ${currentWorksheetData.grade}</div>
-    </div>
-  `;
-}
-
-function getWorksheetPageHTML(page) {
-  const questionsHTML = page.questions
-    .map((question, index) => {
-      const number = page.startIndex + index + 1;
-
-      return `
-        <div class="question">
-          <strong>${number}.</strong>
-          ${question.text}
-          <span class="answer-line"></span>
+    sheet.innerHTML = `
+      <div class="sheet-header">
+        <div>
+          <h1>${escapeHtml(app.settings.title)}</h1>
+          <p>${escapeHtml(app.settings.subtitle)}</p>
         </div>
-      `;
-    })
-    .join("");
-
-  return `
-    ${getA4HeaderHTML(
-      `${currentWorksheetData.subjectName} Worksheet`,
-      `${formatOperation(currentWorksheetData.operation)} · ${currentWorksheetData.difficulty} · ${currentWorksheetData.questionCount} questions`
-    )}
-
-    ${getInfoGridHTML()}
-
-    <div class="a4-divider"></div>
-
-    <div id="questions" class="questions">
-      ${questionsHTML}
-    </div>
-
-    <div class="a4-footer">
-      Generated by TeachSheet AI · Page ${currentPreviewPage + 1}
-    </div>
-  `;
-}
-
-function getAnswerKeyPageHTML() {
-  const answersHTML = currentQuestions
-    .map((question, index) => {
-      return `<div>${index + 1}) ${question.answer}</div>`;
-    })
-    .join("");
-
-  return `
-    ${getA4HeaderHTML(
-      "Answer Key",
-      `${currentWorksheetData.subjectName} · ${currentWorksheetData.grade} · ${currentWorksheetData.date}`
-    )}
-
-    ${getInfoGridHTML()}
-
-    <div class="a4-divider"></div>
-
-    <div class="answer-key">
-      <h3>Answer Key</h3>
-
-      <div class="answer-grid">
-        ${answersHTML}
-      </div>
-    </div>
-
-    <div class="a4-footer">
-      Generated by TeachSheet AI · Answer Key
-    </div>
-  `;
-}
-
-function getEmptyPreviewHTML() {
-  return `
-    <div class="a4-header">
-      <div class="logo-mark">TS</div>
-
-      <div class="a4-title-block">
-        <h2>Math Worksheet</h2>
-        <p>Choose settings and generate your worksheet.</p>
+        <div class="sheet-logo">TeachSheet AI</div>
       </div>
 
-      <div class="a4-brand">
-        TeachSheet AI
+      <div class="sheet-info">
+        <span>Name: ____________________</span>
+        <span>Date: ____ / ____ / ______</span>
+        <span>Level: ${escapeHtml(app.settings.level)}</span>
       </div>
-    </div>
 
-    <div class="a4-info-grid">
-      <div><strong>Teacher:</strong> —</div>
-      <div><strong>School:</strong> —</div>
-      <div><strong>Class:</strong> —</div>
-      <div><strong>Student:</strong> —</div>
-      <div><strong>Date:</strong> —</div>
-      <div><strong>Grade:</strong> —</div>
-    </div>
+      ${app.showAnswers ? renderAnswerSheet() : renderExercises()}
 
-    <div class="a4-divider"></div>
+      <div class="sheet-footer">
+        <span>Page ${app.currentPage + 1} / ${app.pages.length}</span>
+        <span>Generated by TeachSheet AI</span>
+      </div>
+    `;
 
-    <div id="questions" class="questions empty a4-empty">
-      No worksheet generated yet.
-    </div>
-
-    <div class="a4-footer">
-      Generated by TeachSheet AI · Page 1
-    </div>
-  `;
-}
-
-function previousPreviewPage() {
-  if (!previewPages.length) return;
-
-  currentPreviewPage--;
-
-  if (currentPreviewPage < 0) {
-    currentPreviewPage = previewPages.length - 1;
+    preview.appendChild(sheet);
+    updateControls();
   }
 
-  renderCurrentPreviewPage();
-}
+  function renderExercises() {
+    const page = app.pages[app.currentPage] || [];
 
-function nextPreviewPage() {
-  if (!previewPages.length) return;
-
-  currentPreviewPage++;
-
-  if (currentPreviewPage >= previewPages.length) {
-    currentPreviewPage = 0;
+    return `
+      <div class="exercise-grid">
+        ${page.map(ex => `
+          <div class="exercise-card">
+            <div class="exercise-number">${ex.number}</div>
+            <div class="exercise-question">${ex.question}</div>
+            <div class="answer-line"></div>
+          </div>
+        `).join("")}
+      </div>
+    `;
   }
 
-  renderCurrentPreviewPage();
-}
-
-function clearWorksheet() {
-  currentQuestions = [];
-  currentWorksheetData = null;
-  previewPages = [];
-  currentPreviewPage = 0;
-
-  renderCurrentPreviewPage();
-}
-
-function downloadPDF() {
-  if (!currentQuestions.length || !currentWorksheetData) {
-    alert("Please generate a worksheet first.");
-    return;
+  function renderAnswerSheet() {
+    return `
+      <div class="answer-sheet">
+        <h2>Answer Sheet</h2>
+        <div class="answer-grid">
+          ${app.answers.map(item => `
+            <div class="answer-item">
+              <strong>${item.number}.</strong>
+              <span>${item.question}</span>
+              <b>${item.answer}</b>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
   }
 
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert("PDF library is not loaded. Please check your internet connection.");
-    return;
+  function updateControls() {
+    pageCounter.textContent = `Page ${app.currentPage + 1} / ${app.pages.length}`;
+    zoomValue.textContent = `${Math.round(app.zoom * 100)}%`;
+
+    const prev = $("prevPageBtn");
+    const next = $("nextPageBtn");
+
+    if (prev) prev.disabled = app.currentPage === 0 || app.showAnswers;
+    if (next) next.disabled = app.currentPage >= app.pages.length - 1 || app.showAnswers;
   }
 
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("p", "mm", "a4");
-
-  drawWorksheetPDFPages(pdf);
-  drawAnswerKeyPDF(pdf);
-
-  const fileName = `${currentWorksheetData.subjectName.toLowerCase().replace(/\s+/g, "-")}-worksheet.pdf`;
-  pdf.save(fileName);
-}
-
-function drawPDFFrame(pdf, colorType = "blue") {
-  const fillColor = colorType === "green" ? [34, 197, 94] : [24, 119, 242];
-
-  pdf.setDrawColor(30, 144, 255);
-  pdf.setLineWidth(1.2);
-  pdf.roundedRect(10, 10, 190, 277, 4, 4);
-
-  pdf.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
-  pdf.roundedRect(10, 10, 190, 24, 4, 4, "F");
-
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(18);
-  pdf.text(currentWorksheetData.schoolName, 18, 22);
-
-  pdf.setFontSize(13);
-  pdf.text(currentWorksheetData.teacherName, 192, 22, { align: "right" });
-
-  pdf.setTextColor(0, 0, 0);
-}
-
-function drawPDFInfo(pdf, y) {
-  const data = currentWorksheetData;
-
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  pdf.setTextColor(0, 0, 0);
-
-  pdf.text(`Student: ${data.studentName}`, 18, y);
-  pdf.text(`Class: ${data.className}`, 78, y);
-  pdf.text(`Date: ${data.date}`, 145, y);
-
-  y += 8;
-
-  pdf.text(`Grade: ${data.grade}`, 18, y);
-  pdf.text(`Operation: ${formatOperation(data.operation)}`, 78, y);
-  pdf.text(`Difficulty: ${data.difficulty}`, 145, y);
-
-  y += 10;
-
-  pdf.setDrawColor(220, 220, 220);
-  pdf.line(18, y, 192, y);
-
-  return y + 12;
-}
-
-function drawWorksheetPDFPages(pdf) {
-  const questionsPerPage = 20;
-  let pageNumber = 1;
-
-  for (let start = 0; start < currentQuestions.length; start += questionsPerPage) {
-    if (start > 0) {
-      pdf.addPage();
+  function prevPage() {
+    if (app.currentPage > 0) {
+      app.currentPage--;
+      renderPage();
     }
-
-    drawPDFFrame(pdf, "blue");
-
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(18);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text(`${currentWorksheetData.subjectName} Worksheet`, 105, 48, {
-      align: "center"
-    });
-
-    let y = drawPDFInfo(pdf, 62);
-
-    pdf.setFontSize(14);
-
-    const pageQuestions = currentQuestions.slice(start, start + questionsPerPage);
-
-    pageQuestions.forEach((question, index) => {
-      const number = start + index + 1;
-      const leftColumn = index % 2 === 0;
-      const x = leftColumn ? 20 : 110;
-
-      pdf.setDrawColor(220, 220, 220);
-      pdf.roundedRect(x - 5, y - 8, 75, 16, 3, 3);
-
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`${number}.`, x, y);
-
-      pdf.setFont("helvetica", "normal");
-      pdf.text(question.text, x + 10, y);
-
-      pdf.line(x + 40, y + 1, x + 62, y + 1);
-
-      if (!leftColumn) {
-        y += 22;
-      }
-    });
-
-    addPdfFooter(pdf, `Generated by TeachSheet AI · Page ${pageNumber}`);
-    pageNumber++;
   }
-}
 
-function drawAnswerKeyPDF(pdf) {
-  pdf.addPage();
-
-  drawPDFFrame(pdf, "green");
-
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(18);
-  pdf.setTextColor(0, 0, 0);
-  pdf.text("Answer Key", 105, 48, { align: "center" });
-
-  let y = 66;
-
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-
-  pdf.text(`Subject: ${currentWorksheetData.subjectName}`, 18, y);
-  pdf.text(`Grade: ${currentWorksheetData.grade}`, 78, y);
-  pdf.text(`Date: ${currentWorksheetData.date}`, 145, y);
-
-  y += 16;
-
-  pdf.setFontSize(12);
-
-  currentQuestions.forEach((question, index) => {
-    if (y > 260) {
-      addPdfFooter(pdf, "Generated by TeachSheet AI · Answer Key");
-      pdf.addPage();
-      drawPDFFrame(pdf, "green");
-
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(18);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text("Answer Key", 105, 48, { align: "center" });
-
-      y = 66;
+  function nextPage() {
+    if (app.currentPage < app.pages.length - 1) {
+      app.currentPage++;
+      renderPage();
     }
+  }
 
-    const column = index % 4;
-    const x = 20 + column * 42;
+  function zoomIn() {
+    app.zoom = Math.min(app.zoom + 0.1, 1.5);
+    renderPage();
+  }
 
-    pdf.setFillColor(245, 245, 245);
-    pdf.roundedRect(x, y - 6, 35, 12, 2, 2, "F");
+  function zoomOut() {
+    app.zoom = Math.max(app.zoom - 0.1, 0.5);
+    renderPage();
+  }
 
-    pdf.setFont("helvetica", "normal");
-    pdf.text(`${index + 1}) ${question.answer}`, x + 4, y + 1);
+  function resetZoom() {
+    app.zoom = 1;
+    renderPage();
+  }
 
-    if (column === 3) {
-      y += 16;
+  function toggleAnswerSheet() {
+    app.showAnswers = !app.showAnswers;
+    app.currentPage = 0;
+    renderPage();
+
+    const btn = $("answerSheetBtn");
+    if (btn) {
+      btn.textContent = app.showAnswers ? "Show Worksheet" : "Answer Sheet";
     }
-  });
+  }
 
-  addPdfFooter(pdf, "Generated by TeachSheet AI · Answer Key");
-}
+  function getValue(id, fallback) {
+    const el = $(id);
+    return el && el.value.trim() ? el.value.trim() : fallback;
+  }
 
-function addPdfFooter(pdf, text = "Generated by TeachSheet AI") {
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  pdf.setTextColor(120, 120, 120);
+  function getNumber(id, fallback) {
+    const el = $(id);
+    const value = el ? parseInt(el.value, 10) : fallback;
+    return Number.isFinite(value) ? value : fallback;
+  }
 
-  pdf.text(text, 105, 281, {
-    align: "center"
-  });
+  function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
 
-  pdf.setTextColor(0, 0, 0);
-}
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
-window.generateWorksheet = generateWorksheet;
-window.downloadPDF = downloadPDF;
-window.clearWorksheet = clearWorksheet;
-window.previousPreviewPage = previousPreviewPage;
-window.nextPreviewPage = nextPreviewPage;
+  function createPreviewArea() {
+    const div = document.createElement("div");
+    div.id = "worksheetPreview";
+    div.style.width = "100%";
+    div.style.minHeight = "900px";
+    div.style.display = "flex";
+    div.style.justifyContent = "center";
+    div.style.alignItems = "flex-start";
+    document.body.appendChild(div);
+    return div;
+  }
 
-document.addEventListener("DOMContentLoaded", function () {
-  clearWorksheet();
+  function createSmallText(id) {
+    const span = document.createElement("span");
+    span.id = id;
+    span.style.display = "none";
+    document.body.appendChild(span);
+    return span;
+  }
 });
