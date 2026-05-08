@@ -1,21 +1,32 @@
 let currentQuestions = [];
+let currentWorksheetData = null;
 
 function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function normalizeText(text) {
-  return String(text || "").trim();
+function getElementValue(id) {
+  const element = document.getElementById(id);
+  return element ? element.value : "";
 }
 
-function getRangeByGradeAndDifficulty(grade, difficulty) {
-  const gradeNumber = parseInt(String(grade).replace(/\D/g, ""), 10) || 2;
-  const level = String(difficulty).toLowerCase();
+function getGradeNumber(gradeText) {
+  const number = parseInt(String(gradeText).replace(/\D/g, ""), 10);
+  return Number.isNaN(number) ? 2 : number;
+}
+
+function getDifficultyLevel(difficultyText) {
+  return String(difficultyText || "medium").toLowerCase();
+}
+
+function getNumberRange(grade, difficulty) {
+  const gradeNumber = getGradeNumber(grade);
+  const level = getDifficultyLevel(difficulty);
 
   if (gradeNumber <= 1) {
     if (level === "easy") return { min: 1, max: 10 };
     if (level === "medium") return { min: 1, max: 20 };
-    return { min: 1, max: 50 };
+    return { min: 10, max: 50 };
   }
 
   if (gradeNumber === 2) {
@@ -33,12 +44,104 @@ function getRangeByGradeAndDifficulty(grade, difficulty) {
   if (gradeNumber === 4) {
     if (level === "easy") return { min: 50, max: 500 };
     if (level === "medium") return { min: 100, max: 999 };
-    return { min: 500, max: 5000 };
+    return { min: 500, max: 3000 };
   }
 
   if (level === "easy") return { min: 100, max: 999 };
   if (level === "medium") return { min: 500, max: 5000 };
   return { min: 1000, max: 9999 };
+}
+
+function formatOperation(operation) {
+  const operations = {
+    addition: "Addition",
+    subtraction: "Subtraction",
+    multiplication: "Multiplication",
+    division: "Division",
+    mixed: "Mixed Operations"
+  };
+
+  return operations[operation] || "Addition";
+}
+
+function createAdditionQuestion(grade, difficulty) {
+  const range = getNumberRange(grade, difficulty);
+  const a = getRandomNumber(range.min, range.max);
+  const b = getRandomNumber(range.min, range.max);
+
+  return {
+    text: `${a} + ${b} =`,
+    answer: a + b,
+    operation: "Addition"
+  };
+}
+
+function createSubtractionQuestion(grade, difficulty) {
+  const range = getNumberRange(grade, difficulty);
+  let a = getRandomNumber(range.min, range.max);
+  let b = getRandomNumber(range.min, range.max);
+
+  if (b > a) {
+    [a, b] = [b, a];
+  }
+
+  return {
+    text: `${a} - ${b} =`,
+    answer: a - b,
+    operation: "Subtraction"
+  };
+}
+
+function createMultiplicationQuestion(grade, difficulty) {
+  const gradeNumber = getGradeNumber(grade);
+  const level = getDifficultyLevel(difficulty);
+
+  let a;
+  let b;
+
+  if (gradeNumber <= 2 || level === "easy") {
+    a = getRandomNumber(1, 10);
+    b = getRandomNumber(1, 10);
+  } else if (gradeNumber <= 4 || level === "medium") {
+    a = getRandomNumber(2, 12);
+    b = getRandomNumber(2, 12);
+  } else {
+    a = getRandomNumber(10, 99);
+    b = getRandomNumber(2, 12);
+  }
+
+  return {
+    text: `${a} × ${b} =`,
+    answer: a * b,
+    operation: "Multiplication"
+  };
+}
+
+function createDivisionQuestion(grade, difficulty) {
+  const gradeNumber = getGradeNumber(grade);
+  const level = getDifficultyLevel(difficulty);
+
+  let divisor;
+  let quotient;
+
+  if (gradeNumber <= 2 || level === "easy") {
+    divisor = getRandomNumber(2, 10);
+    quotient = getRandomNumber(2, 10);
+  } else if (gradeNumber <= 4 || level === "medium") {
+    divisor = getRandomNumber(2, 12);
+    quotient = getRandomNumber(5, 20);
+  } else {
+    divisor = getRandomNumber(2, 20);
+    quotient = getRandomNumber(10, 50);
+  }
+
+  const dividend = divisor * quotient;
+
+  return {
+    text: `${dividend} ÷ ${divisor} =`,
+    answer: quotient,
+    operation: "Division"
+  };
 }
 
 function createQuestion(operation, grade, difficulty) {
@@ -49,122 +152,72 @@ function createQuestion(operation, grade, difficulty) {
     selectedOperation = operations[getRandomNumber(0, operations.length - 1)];
   }
 
-  const range = getRangeByGradeAndDifficulty(grade, difficulty);
-  let a = getRandomNumber(range.min, range.max);
-  let b = getRandomNumber(range.min, range.max);
-
   if (selectedOperation === "addition") {
-    return {
-      operation: "Addition",
-      text: `${a} + ${b} =`,
-      answer: a + b
-    };
+    return createAdditionQuestion(grade, difficulty);
   }
 
   if (selectedOperation === "subtraction") {
-    if (b > a) {
-      const temp = a;
-      a = b;
-      b = temp;
-    }
-
-    return {
-      operation: "Subtraction",
-      text: `${a} - ${b} =`,
-      answer: a - b
-    };
+    return createSubtractionQuestion(grade, difficulty);
   }
 
   if (selectedOperation === "multiplication") {
-    const gradeNumber = parseInt(String(grade).replace(/\D/g, ""), 10) || 2;
-    const level = String(difficulty).toLowerCase();
-
-    if (gradeNumber <= 2 || level === "easy") {
-      a = getRandomNumber(1, 10);
-      b = getRandomNumber(1, 10);
-    } else if (gradeNumber <= 4 || level === "medium") {
-      a = getRandomNumber(2, 12);
-      b = getRandomNumber(2, 12);
-    } else {
-      a = getRandomNumber(10, 99);
-      b = getRandomNumber(2, 12);
-    }
-
-    return {
-      operation: "Multiplication",
-      text: `${a} × ${b} =`,
-      answer: a * b
-    };
+    return createMultiplicationQuestion(grade, difficulty);
   }
 
   if (selectedOperation === "division") {
-    const divisor = getRandomNumber(2, 12);
-    const quotient = getRandomNumber(2, 12);
-    const dividend = divisor * quotient;
-
-    return {
-      operation: "Division",
-      text: `${dividend} ÷ ${divisor} =`,
-      answer: quotient
-    };
+    return createDivisionQuestion(grade, difficulty);
   }
 
-  return {
-    operation: "Addition",
-    text: `${a} + ${b} =`,
-    answer: a + b
-  };
-}
-
-function formatOperation(operation) {
-  const names = {
-    addition: "Addition",
-    subtraction: "Subtraction",
-    multiplication: "Multiplication",
-    division: "Division",
-    mixed: "Mixed Operations"
-  };
-
-  return names[operation] || operation;
+  return createAdditionQuestion(grade, difficulty);
 }
 
 function getWorksheetData() {
   return {
-    grade: document.getElementById("grade").value,
-    operation: document.getElementById("operation").value,
-    difficulty: document.getElementById("difficulty").value,
-    questionCount: parseInt(document.getElementById("questionCount").value, 10),
-    studentName: normalizeText(document.getElementById("studentName").value)
+    grade: getElementValue("grade"),
+    operation: getElementValue("operation"),
+    difficulty: getElementValue("difficulty"),
+    questionCount: parseInt(getElementValue("questionCount"), 10) || 15,
+    studentName: getElementValue("studentName").trim(),
+    date: new Date().toLocaleDateString()
   };
 }
 
 function generateWorksheet() {
-  const data = getWorksheetData();
-
+  currentWorksheetData = getWorksheetData();
   currentQuestions = [];
 
-  for (let i = 0; i < data.questionCount; i++) {
+  for (let i = 0; i < currentWorksheetData.questionCount; i++) {
     currentQuestions.push(
-      createQuestion(data.operation, data.grade, data.difficulty)
+      createQuestion(
+        currentWorksheetData.operation,
+        currentWorksheetData.grade,
+        currentWorksheetData.difficulty
+      )
     );
   }
 
-  renderWorksheet(data);
+  renderWorksheet();
 }
 
-function renderWorksheet(data) {
+function renderWorksheet() {
   const worksheet = document.getElementById("worksheet");
   const questionsContainer = document.getElementById("questions");
+
+  if (!worksheet || !questionsContainer || !currentWorksheetData) return;
+
+  const studentName = currentWorksheetData.studentName || "________________";
 
   worksheet.querySelector(".worksheet-header").innerHTML = `
     <h2>Math Worksheet</h2>
     <p>Generated by TeachSheet AI</p>
 
     <div class="meta">
-      <div><strong>Name:</strong> ${data.studentName || "________________"}</div>
-      <div><strong>Grade:</strong> ${data.grade}</div>
-      <div><strong>Operation:</strong> ${formatOperation(data.operation)}</div>
-      <div><strong>Difficulty:</strong> ${data.difficulty}</div>
+      <div><strong>Name:</strong> ${studentName}</div>
+      <div><strong>Date:</strong> ${currentWorksheetData.date}</div>
+      <div><strong>Grade:</strong> ${currentWorksheetData.grade}</div>
+      <div><strong>Operation:</strong> ${formatOperation(currentWorksheetData.operation)}</div>
+      <div><strong>Difficulty:</strong> ${currentWorksheetData.difficulty}</div>
+      <div><strong>Questions:</strong> ${currentWorksheetData.questionCount}</div>
     </div>
   `;
 
@@ -172,14 +225,14 @@ function renderWorksheet(data) {
   questionsContainer.innerHTML = "";
 
   currentQuestions.forEach((question, index) => {
-    const questionElement = document.createElement("div");
-    questionElement.className = "question";
-    questionElement.innerHTML = `
+    const questionBox = document.createElement("div");
+    questionBox.className = "question";
+    questionBox.innerHTML = `
       <strong>${index + 1}.</strong>
       ${question.text}
       <span class="answer-line"></span>
     `;
-    questionsContainer.appendChild(questionElement);
+    questionsContainer.appendChild(questionBox);
   });
 
   const oldAnswerKey = worksheet.querySelector(".answer-key");
@@ -203,8 +256,11 @@ function renderWorksheet(data) {
 
 function clearWorksheet() {
   currentQuestions = [];
+  currentWorksheetData = null;
 
   const worksheet = document.getElementById("worksheet");
+
+  if (!worksheet) return;
 
   worksheet.innerHTML = `
     <div class="worksheet-header">
@@ -219,7 +275,7 @@ function clearWorksheet() {
 }
 
 function downloadPDF() {
-  if (!currentQuestions.length) {
+  if (!currentQuestions.length || !currentWorksheetData) {
     alert("Please generate a worksheet first.");
     return;
   }
@@ -232,8 +288,14 @@ function downloadPDF() {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF("p", "mm", "a4");
 
-  const data = getWorksheetData();
-  const today = new Date().toLocaleDateString();
+  drawWorksheetPDF(pdf);
+  drawAnswerKeyPDF(pdf);
+
+  pdf.save("teachsheet-ai-worksheet.pdf");
+}
+
+function drawWorksheetPDF(pdf) {
+  const data = currentWorksheetData;
 
   let y = 18;
 
@@ -246,13 +308,19 @@ function downloadPDF() {
   pdf.setFontSize(15);
   pdf.text("Math Worksheet", 105, y, { align: "center" });
 
-  y += 12;
+  y += 10;
+
+  pdf.setDrawColor(0);
+  pdf.setLineWidth(0.3);
+  pdf.line(18, y, 192, y);
+
+  y += 9;
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(10);
 
   pdf.text(`Name: ${data.studentName || "________________________"}`, 18, y);
-  pdf.text(`Date: ${today}`, 145, y);
+  pdf.text(`Date: ${data.date}`, 145, y);
 
   y += 7;
 
@@ -260,51 +328,54 @@ function downloadPDF() {
   pdf.text(`Operation: ${formatOperation(data.operation)}`, 75, y);
   pdf.text(`Difficulty: ${data.difficulty}`, 145, y);
 
-  y += 8;
-
-  pdf.setLineWidth(0.4);
-  pdf.line(18, y, 192, y);
-
   y += 12;
 
   pdf.setFontSize(13);
 
   currentQuestions.forEach((question, index) => {
-    if (y > 265) {
-      addFooter(pdf);
+    if (y > 260) {
+      addPdfFooter(pdf);
       pdf.addPage();
-      y = 18;
+      y = 20;
     }
 
-    const leftColumn = index % 2 === 0;
-    const x = leftColumn ? 20 : 110;
+    const isLeft = index % 2 === 0;
+    const x = isLeft ? 20 : 110;
 
     pdf.text(`${index + 1}. ${question.text}`, x, y);
-    pdf.line(x + 37, y + 1, x + 75, y + 1);
+    pdf.line(x + 37, y + 1, x + 78, y + 1);
 
-    if (!leftColumn) {
+    if (!isLeft) {
       y += 14;
     }
   });
 
-  addFooter(pdf);
+  addPdfFooter(pdf);
+}
 
+function drawAnswerKeyPDF(pdf) {
   pdf.addPage();
 
-  y = 20;
+  let y = 20;
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
   pdf.text("Answer Key", 105, y, { align: "center" });
 
-  y += 14;
+  y += 12;
+
+  pdf.setDrawColor(0);
+  pdf.setLineWidth(0.3);
+  pdf.line(18, y, 192, y);
+
+  y += 12;
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(12);
 
   currentQuestions.forEach((question, index) => {
     if (y > 270) {
-      addFooter(pdf);
+      addPdfFooter(pdf);
       pdf.addPage();
       y = 20;
     }
@@ -319,20 +390,15 @@ function downloadPDF() {
     }
   });
 
-  addFooter(pdf);
-
-  pdf.save("teachsheet-ai-worksheet.pdf");
+  addPdfFooter(pdf);
 }
 
-function addFooter(pdf) {
+function addPdfFooter(pdf) {
   const pageHeight = pdf.internal.pageSize.height;
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
-  pdf.text(
-    "Generated by TeachSheet AI",
-    105,
-    pageHeight - 10,
-    { align: "center" }
-  );
+  pdf.text("Generated by TeachSheet AI", 105, pageHeight - 10, {
+    align: "center"
+  });
 }
