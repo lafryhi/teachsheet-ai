@@ -12,13 +12,17 @@ function escapeHtml(value = "") {
 function createQuestionMarkup(question, index, startIndex) {
   return `
     <div class="question">
-      <strong>${startIndex + index + 1}.</strong> ${escapeHtml(question.text)} ${question.answerLine === false ? "" : '<span class="answer-line"></span>'}
+      <span class="question-number"><strong>${startIndex + index + 1}.</strong></span>
+      ${escapeHtml(question.text)}
+      ${question.answerLine === false ? "" : '<span class="answer-line"></span>'}
     </div>
   `;
 }
 
 function createAnswerKeyMarkup(questions) {
-  return questions.map((question, index) => `<div>${index + 1}) ${escapeHtml(question.answer)}</div>`).join("");
+  return questions
+    .map((question, index) => `<div class="answer-item">${index + 1}) ${escapeHtml(question.answer)}</div>`)
+    .join("");
 }
 
 function applyTemplatePresentation(worksheetElement, template) {
@@ -50,7 +54,8 @@ export function renderWorksheetPreview({
   template,
   pageSize,
   worksheetTitle,
-  showAnswerKey
+  showAnswerKey,
+  templateDescription
 }) {
   const showAnswerKeyPage = showAnswerKey && currentPage === totalPages;
   const startIndex = (currentPage - 1) * pageSize;
@@ -58,12 +63,13 @@ export function renderWorksheetPreview({
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
       <h2>${escapeHtml(worksheetTitle)}</h2>
-      <p>${escapeHtml(template.name)} · Page ${currentPage} of ${totalPages}</p>
+      <p>${escapeHtml(template.name)} - Page ${currentPage} of ${totalPages}</p>
+      <div class="worksheet-template-summary">${escapeHtml(templateDescription || template.description || template.name)}</div>
       <div class="meta">
-        <div><strong>Name:</strong> ${escapeHtml(studentName || "________________")}</div>
-        <div><strong>Grade:</strong> ${escapeHtml(grade || "—")}</div>
-        <div><strong>Subject:</strong> ${escapeHtml(subjectLabel)}</div>
-        <div><strong>Focus:</strong> ${escapeHtml(focusLabel)}</div>
+        <div class="meta-item"><strong>Name:</strong> ${escapeHtml(studentName || "________________")}</div>
+        <div class="meta-item"><strong>Grade:</strong> ${escapeHtml(grade || "--")}</div>
+        <div class="meta-item"><strong>Subject:</strong> ${escapeHtml(subjectLabel)}</div>
+        <div class="meta-item"><strong>Focus:</strong> ${escapeHtml(focusLabel)}</div>
       </div>
     </div>
     <div id="questions" class="questions">
@@ -89,9 +95,15 @@ export function renderEmptyWorksheet(worksheetElement, template) {
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
       <h2>Worksheet</h2>
-      <p>${escapeHtml(template.name)} · Choose settings and click Generate Worksheet.</p>
+      <p>${escapeHtml(template.name)} - Choose settings and click Generate Worksheet.</p>
+      <div class="worksheet-template-summary">${escapeHtml(template.description || template.name)}</div>
     </div>
-    <div id="questions" class="questions empty">No worksheet generated yet.</div>
+    <div id="questions" class="questions empty">
+      <div class="empty-state">
+        <h3>No worksheet generated yet.</h3>
+        <p>Pick a template, try one of the example prompts, or use the form settings to create a printable worksheet preview.</p>
+      </div>
+    </div>
   `;
 
   applyTemplatePresentation(worksheetElement, template);

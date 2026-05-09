@@ -13,10 +13,20 @@ function formatDate(dateValue) {
   const date = new Date(dateValue);
 
   if (Number.isNaN(date.getTime())) {
-    return "Unknown date";
+    return {
+      full: "Unknown date",
+      short: "Unknown time"
+    };
   }
 
-  return date.toLocaleString();
+  return {
+    full: date.toLocaleString(),
+    short: date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    })
+  };
 }
 
 function buildProjectTitle(project) {
@@ -26,23 +36,38 @@ function buildProjectTitle(project) {
 
   const grade = project.settings?.grade || "Worksheet";
   const operation = project.settings?.operation || "practice";
-  return `${grade} · ${operation}`;
+  return `${grade} - ${operation}`;
+}
+
+function sortProjects(projects) {
+  return [...projects].sort((left, right) => {
+    const leftTime = new Date(left.createdAt).getTime() || 0;
+    const rightTime = new Date(right.createdAt).getTime() || 0;
+    return rightTime - leftTime;
+  });
 }
 
 export function renderSavedProjects(projects, activeProjectId = null) {
   if (!projects.length) {
-    return `<div class="saved-projects-empty">No saved projects yet.</div>`;
+    return `
+      <div class="saved-projects-empty">
+        Save a generated worksheet to keep it ready for quick edits, PDF export, or later reuse.
+      </div>
+    `;
   }
 
-  return projects.map((project) => {
+  return sortProjects(projects).map((project) => {
     const isActive = project.id === activeProjectId ? " active-project" : "";
+    const formattedDate = formatDate(project.createdAt);
+    const templateName = getTemplateById(project.template || "classic-math").name;
 
     return `
       <div class="saved-project-card${isActive}">
         <h4>${escapeHtml(buildProjectTitle(project))}</h4>
         <div class="saved-project-meta">
-          <div><strong>Saved:</strong> ${escapeHtml(formatDate(project.createdAt))}</div>
-          <div><strong>Template:</strong> ${escapeHtml(getTemplateById(project.template || "classic-math").name)}</div>
+          <div><strong>Saved:</strong> ${escapeHtml(formattedDate.full)}</div>
+          <div><strong>Day:</strong> ${escapeHtml(formattedDate.short)}</div>
+          <div><strong>Template:</strong> ${escapeHtml(templateName)}</div>
         </div>
         <div class="saved-project-actions">
           <button type="button" data-load-project="${escapeHtml(project.id)}">Load</button>

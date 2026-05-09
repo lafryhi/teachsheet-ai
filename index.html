@@ -180,9 +180,20 @@
         <input
           id="promptInput"
           type="text"
-          placeholder="grade 2 + addition + 20 questions"
+          placeholder="Try: grade 2 + addition + 20 questions, grammar + verbs + 15 questions, tracing + letter A"
         />
       </label>
+
+      <div class="example-prompts">
+        <h3>Example Prompts</h3>
+        <div class="example-prompts-list">
+          <button type="button" class="example-prompt-chip" data-example-prompt="grade 2 + addition + 20 questions">grade 2 + addition + 20 questions</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="grammar + verbs + 15 questions">grammar + verbs + 15 questions</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="reading + short passage + 5 questions">reading + short passage + 5 questions</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="tracing + letter A">tracing + letter A</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="coloring + animals">coloring + animals</button>
+        </div>
+      </div>
 
       <label>Student Name
         <input id="studentName" type="text" placeholder="Student name" />
@@ -190,9 +201,10 @@
 
       <button id="promptGenerateButton" type="button">Generate From Prompt</button>
       <button id="saveProjectButton" type="button">Save Project</button>
-      <button onclick="generateWorksheet()">Generate Worksheet</button>
+      <button id="generateButton" onclick="generateWorksheet()">Generate Worksheet</button>
       <button class="green" onclick="downloadPDF()">Download PDF</button>
       <button class="red" onclick="clearWorksheet()">Clear</button>
+      <div id="generationStatus" class="status-message" aria-live="polite"></div>
 
       <div class="saved-projects">
         <h3>Saved Projects</h3>
@@ -211,6 +223,11 @@
           No worksheet generated yet.
         </div>
       </div>
+      <div class="preview-controls">
+        <button id="previewPrevButton" type="button" class="preview-nav" onclick="previousPreviewPage()">Previous Page</button>
+        <div id="previewPageIndicator" class="preview-page-indicator">Page 1 of 1</div>
+        <button id="previewNextButton" type="button" class="preview-nav" onclick="nextPreviewPage()">Next Page</button>
+      </div>
     </section>
   </main>
 </section>
@@ -220,6 +237,6 @@
   <p>AI-powered printable worksheets for teachers.</p>
 </footer>
 
-<script type="module" src="js/app.js?v=multi-generators"></script>
+<script type="module" src="js/app.js?v=refine-ux"></script>
 </body>
 </html>

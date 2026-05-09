@@ -7,12 +7,13 @@ import {
 import {
   loadSettings,
   loadProjects,
+  loadWorksheet,
   saveProject,
   saveSettings,
   saveWorksheet,
   clearWorksheetStorage,
   deleteProject
-} from "./core/storage.js?v=multi-generators";
+} from "./core/storage.js?v=refine-ux";
 import {
   hasRecognizedWorksheetPrompt,
   parseWorksheetPrompt
@@ -46,6 +47,7 @@ const state = {
   currentProject: null,
   currentRequest: null,
   currentWorksheetMeta: null,
+  isGenerating: false,
   pagination: createPaginationState(0),
   savedProjects: [],
   template: getDefaultTemplate(),
@@ -53,8 +55,38 @@ const state = {
   zoom: 100
 };
 
+let statusTimerId = null;
+
 function getWorksheetElement() {
   return document.getElementById("worksheet");
+}
+
+function getGenerateButton() {
+  return document.getElementById("generateButton");
+}
+
+function getPromptGenerateButton() {
+  return document.getElementById("promptGenerateButton");
+}
+
+function getSaveProjectButton() {
+  return document.getElementById("saveProjectButton");
+}
+
+function getStatusElement() {
+  return document.getElementById("generationStatus");
+}
+
+function getPreviewPageIndicator() {
+  return document.getElementById("previewPageIndicator");
+}
+
+function getPreviewPreviousButton() {
+  return document.getElementById("previewPrevButton");
+}
+
+function getPreviewNextButton() {
+  return document.getElementById("previewNextButton");
 }
 
 function getSmartPromptDefaults() {
@@ -100,7 +132,7 @@ function getFocusLabel(request) {
     return topicLabel;
   }
 
-  return request.difficulty ? `${topicLabel} · ${capitalizeWords(request.difficulty)}` : topicLabel;
+  return request.difficulty ? `${topicLabel} - ${capitalizeWords(request.difficulty)}` : topicLabel;
 }
 
 function ensureSelectOption(selectElement, value, label) {
@@ -131,6 +163,60 @@ function getPromptValue() {
 
 function getProjectAnswers(questions) {
   return questions.map((question) => question.answer);
+}
+
+function waitForPaint() {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.setTimeout(resolve, 120);
+    });
+  });
+}
+
+function clearStatusMessageTimer() {
+  if (!statusTimerId) {
+    return;
+  }
+
+  window.clearTimeout(statusTimerId);
+  statusTimerId = null;
+}
+
+function setStatusMessage(message = "", tone = "") {
+  const statusElement = getStatusElement();
+  clearStatusMessageTimer();
+
+  statusElement.textContent = message;
+  statusElement.className = "status-message";
+
+  if (tone) {
+    statusElement.classList.add(`is-${tone}`);
+  }
+
+  if (tone === "success" && message) {
+    statusTimerId = window.setTimeout(() => {
+      statusElement.textContent = "";
+      statusElement.className = "status-message";
+      statusTimerId = null;
+    }, 2600);
+  }
+}
+
+function setGeneratingState(isGenerating) {
+  state.isGenerating = isGenerating;
+  getGenerateButton().disabled = isGenerating;
+  getPromptGenerateButton().disabled = isGenerating;
+  getSaveProjectButton().disabled = isGenerating;
+  getGenerateButton().textContent = isGenerating ? "Generating..." : "Generate Worksheet";
+}
+
+function updatePreviewControls() {
+  const totalPages = Math.max(1, state.pagination.totalPages || 1);
+  const currentPage = Math.min(Math.max(1, state.pagination.currentPage || 1), totalPages);
+
+  getPreviewPageIndicator().textContent = `Page ${currentPage} of ${totalPages}`;
+  getPreviewPreviousButton().disabled = state.currentQuestions.length === 0 || currentPage <= 1;
+  getPreviewNextButton().disabled = state.currentQuestions.length === 0 || currentPage >= totalPages;
 }
 
 function createProjectId() {
@@ -217,7 +303,8 @@ function getWorksheetMeta(request, generatorResult) {
     worksheetTitle: getWorksheetTitle(request.type),
     subjectLabel: getSubjectLabel(request),
     focusLabel: getFocusLabel(request),
-    showAnswerKey: generatorResult.showAnswerKey !== false
+    showAnswerKey: generatorResult.showAnswerKey !== false,
+    templateDescription: state.template.description
   };
 }
 
@@ -241,6 +328,7 @@ function syncPreview() {
   if (state.currentQuestions.length === 0) {
     renderEmptyWorksheet(getWorksheetElement(), state.template);
     applyPreviewState();
+    updatePreviewControls();
     return;
   }
 
@@ -255,7 +343,7 @@ function syncPreview() {
     worksheetElement: getWorksheetElement(),
     grade: state.currentRequest?.grade || formValues.grade,
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
-    focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition · Medium",
+    focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
     studentName: formValues.studentName,
     questions: pageQuestions,
     allQuestions: state.currentQuestions,
@@ -264,10 +352,12 @@ function syncPreview() {
     template: state.template,
     pageSize: state.pagination.pageSize,
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
-    showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false
+    showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false,
+    templateDescription: state.currentWorksheetMeta?.templateDescription || state.template.description
   });
 
   applyPreviewState();
+  updatePreviewControls();
 }
 
 function renderSavedProjectsList() {
@@ -277,8 +367,7 @@ function renderSavedProjectsList() {
   );
 }
 
-function generateWorksheet() {
-  const worksheetRequest = getWorksheetRequest();
+function buildWorksheetFromRequest(worksheetRequest) {
   const generator = GENERATORS[worksheetRequest.type] || generateMathWorksheet;
   const generatorResult = generator(worksheetRequest);
 
@@ -309,7 +398,27 @@ function generateWorksheet() {
   });
 }
 
+async function generateWorksheet() {
+  if (state.isGenerating) {
+    return;
+  }
+
+  try {
+    setGeneratingState(true);
+    setStatusMessage("Generating worksheet...", "loading");
+    await waitForPaint();
+    buildWorksheetFromRequest(getWorksheetRequest());
+    setStatusMessage("Worksheet generated successfully.", "success");
+  } catch (error) {
+    console.error(error);
+    setStatusMessage("Unable to generate the worksheet.", "error");
+  } finally {
+    setGeneratingState(false);
+  }
+}
+
 function clearWorksheet() {
+  clearStatusMessageTimer();
   state.currentQuestions = [];
   state.currentProject = null;
   state.currentRequest = null;
@@ -320,9 +429,14 @@ function clearWorksheet() {
   renderSavedProjectsList();
   clearWorksheetStorage();
   persistSettings();
+  setStatusMessage("");
 }
 
-function applyPrompt() {
+async function applyPrompt() {
+  if (state.isGenerating) {
+    return;
+  }
+
   const promptText = getPromptValue();
 
   if (!hasRecognizedWorksheetPrompt(promptText)) {
@@ -336,7 +450,7 @@ function applyPrompt() {
   };
 
   applyParsedPromptSettings(parsedPrompt);
-  generateWorksheet();
+  await generateWorksheet();
 }
 
 function loadProjectIntoInterface(project) {
@@ -354,6 +468,33 @@ function loadProjectIntoInterface(project) {
   document.getElementById("studentName").value = project.settings.studentName || "";
 }
 
+function getRequestFromProject(project) {
+  if (project.request) {
+    return {
+      ...getSmartPromptDefaults(),
+      ...project.request,
+      template: project.template || project.request.template || getDefaultTemplate().id
+    };
+  }
+
+  if (project.prompt && hasRecognizedWorksheetPrompt(project.prompt)) {
+    return {
+      ...getSmartPromptDefaults(),
+      ...parseWorksheetPrompt(project.prompt),
+      template: project.template || getDefaultTemplate().id
+    };
+  }
+
+  return buildMathRequestFromFormValues({
+    grade: project.settings.grade,
+    operation: project.settings.operation,
+    difficulty: project.settings.difficulty,
+    questionCount: project.settings.questionCount,
+    templateId: project.template,
+    studentName: project.settings.studentName || ""
+  });
+}
+
 function loadProject(projectId) {
   const project = state.savedProjects.find((entry) => entry.id === projectId);
 
@@ -364,11 +505,7 @@ function loadProject(projectId) {
   state.template = getTemplateById(project.template);
   state.theme = state.template.theme;
   state.currentQuestions = Array.isArray(project.questions) ? project.questions : [];
-  state.currentRequest = project.request || (
-    project.prompt && hasRecognizedWorksheetPrompt(project.prompt)
-      ? parseWorksheetPrompt(project.prompt)
-      : buildMathRequestFromFormValues(project.settings)
-  );
+  state.currentRequest = getRequestFromProject(project);
   state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
     showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
   });
@@ -396,9 +533,14 @@ function loadProject(projectId) {
     theme: state.theme,
     zoom: state.zoom
   });
+  setStatusMessage("Saved project loaded.", "success");
 }
 
 function saveCurrentProject() {
+  if (state.isGenerating) {
+    return;
+  }
+
   if (state.currentQuestions.length === 0) {
     window.alert("Please generate a worksheet first.");
     return;
@@ -409,6 +551,7 @@ function saveCurrentProject() {
   state.currentProject = buildProjectObject(existingProjectId, existingCreatedAt);
   state.savedProjects = saveProject(state.currentProject);
   renderSavedProjectsList();
+  setStatusMessage("Project saved locally.", "success");
 }
 
 function removeProject(projectId) {
@@ -419,6 +562,7 @@ function removeProject(projectId) {
   }
 
   renderSavedProjectsList();
+  setStatusMessage("Project deleted.", "success");
 }
 
 function downloadPDF() {
@@ -435,7 +579,7 @@ function downloadPDF() {
     grade: state.currentRequest?.grade || getFormValues().grade,
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
-    focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition · Medium",
+    focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
     showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false
   });
 }
@@ -496,6 +640,50 @@ function hydrateSettings() {
   state.zoom = normalizeZoomValue(savedSettings.zoom ?? 100);
 }
 
+function hydrateLastWorksheet() {
+  const savedWorksheet = loadWorksheet();
+
+  if (!savedWorksheet?.questions?.length) {
+    return;
+  }
+
+  state.template = getTemplateById(savedWorksheet.templateId || state.template.id);
+  state.theme = getTheme(savedWorksheet.theme || state.template.theme).id;
+  state.zoom = normalizeZoomValue(savedWorksheet.zoom ?? state.zoom);
+  state.currentQuestions = Array.isArray(savedWorksheet.questions) ? savedWorksheet.questions : [];
+
+  if (savedWorksheet.settings) {
+    loadProjectIntoInterface({
+      prompt: savedWorksheet.prompt || "",
+      template: savedWorksheet.templateId || state.template.id,
+      settings: savedWorksheet.settings
+    });
+  } else if (savedWorksheet.prompt) {
+    document.getElementById("promptInput").value = savedWorksheet.prompt;
+  }
+
+  const worksheetProject = savedWorksheet.project || null;
+  state.currentRequest = worksheetProject
+    ? getRequestFromProject(worksheetProject)
+    : (savedWorksheet.prompt && hasRecognizedWorksheetPrompt(savedWorksheet.prompt)
+      ? {
+        ...getSmartPromptDefaults(),
+        ...parseWorksheetPrompt(savedWorksheet.prompt),
+        template: savedWorksheet.templateId || state.template.id
+      }
+      : buildMathRequestFromFormValues(getFormValues()));
+
+  state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
+    showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
+  });
+  state.currentProject = worksheetProject;
+  state.pagination = resetPagination(
+    state.pagination,
+    state.currentQuestions.length,
+    state.template.questionsPerPage
+  );
+}
+
 function hydrateSavedProjects() {
   state.savedProjects = loadProjects();
   renderSavedProjectsList();
@@ -518,6 +706,12 @@ function bindFormPersistence() {
       state.currentQuestions.length,
       state.template.questionsPerPage
     );
+    state.currentWorksheetMeta = state.currentWorksheetMeta
+      ? {
+        ...state.currentWorksheetMeta,
+        templateDescription: state.template.description
+      }
+      : state.currentWorksheetMeta;
     syncPreview();
     persistSettings();
 
@@ -539,7 +733,7 @@ function bindFormPersistence() {
     }
   });
 
-  document.getElementById("promptGenerateButton").addEventListener("click", () => {
+  getPromptGenerateButton().addEventListener("click", () => {
     applyPrompt();
   });
 
@@ -550,7 +744,18 @@ function bindFormPersistence() {
     }
   });
 
-  document.getElementById("saveProjectButton").addEventListener("click", () => {
+  document.querySelector(".example-prompts-list").addEventListener("click", (event) => {
+    const examplePrompt = event.target.dataset.examplePrompt;
+
+    if (!examplePrompt) {
+      return;
+    }
+
+    document.getElementById("promptInput").value = examplePrompt;
+    setStatusMessage("");
+  });
+
+  getSaveProjectButton().addEventListener("click", () => {
     saveCurrentProject();
   });
 
@@ -579,6 +784,7 @@ function populateTemplateOptions() {
 function init() {
   populateTemplateOptions();
   hydrateSettings();
+  hydrateLastWorksheet();
   hydrateSavedProjects();
   bindFormPersistence();
   syncPreview();

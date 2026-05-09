@@ -1,15 +1,5 @@
 import { getTemplatePresentation } from "../templates/templates.js";
 
-function chunkQuestions(questions, pageSize) {
-  const pages = [];
-
-  for (let index = 0; index < questions.length; index += pageSize) {
-    pages.push(questions.slice(index, index + pageSize));
-  }
-
-  return pages;
-}
-
 function getPdfFontFamily(template) {
   if (template.layout === "single-column") {
     return "times";
@@ -32,6 +22,222 @@ function hexToRgb(hexColor) {
   };
 }
 
+function buildQuestionRows(pdf, questions, presentation, questionFontSize, columnWidth) {
+  const rows = [];
+  const columnsCount = presentation.columnsCount;
+  const boxPadding = 4;
+  const lineHeight = Math.max(5.4, questionFontSize * 0.42);
+
+  for (let index = 0; index < questions.length; index += columnsCount) {
+    const rowQuestions = questions.slice(index, index + columnsCount).map((question, offset) => {
+      const absoluteIndex = index + offset + 1;
+      const label = `${absoluteIndex}. ${question.text}`;
+      const textLines = pdf.splitTextToSize(label, columnWidth - (boxPadding * 2));
+      const baseHeight = (textLines.length * lineHeight) + (question.answerLine === false ? 10 : 17);
+
+      return {
+        question,
+        textLines,
+        boxHeight: Math.max(18, baseHeight)
+      };
+    });
+
+    rows.push({
+      items: rowQuestions,
+      rowHeight: Math.max(...rowQuestions.map((item) => item.boxHeight))
+    });
+  }
+
+  return rows;
+}
+
+function paginateRows(rows, usableHeight, rowGap) {
+  const pages = [];
+  let currentPageRows = [];
+  let usedHeight = 0;
+
+  rows.forEach((row) => {
+    const totalRowHeight = row.rowHeight + (currentPageRows.length > 0 ? rowGap : 0);
+
+    if (currentPageRows.length > 0 && usedHeight + totalRowHeight > usableHeight) {
+      pages.push(currentPageRows);
+      currentPageRows = [row];
+      usedHeight = row.rowHeight;
+      return;
+    }
+
+    currentPageRows.push(row);
+    usedHeight += totalRowHeight;
+  });
+
+  if (currentPageRows.length > 0) {
+    pages.push(currentPageRows);
+  }
+
+  return pages;
+}
+
+function drawPageHeader(pdf, {
+  fontFamily,
+  accentColor,
+  worksheetTitle,
+  studentName,
+  grade,
+  subjectLabel,
+  focusLabel,
+  pageLabel,
+  margins,
+  pageWidth
+}) {
+  let y = margins.top;
+
+  pdf.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+  pdf.setFont(fontFamily, "bold");
+  pdf.setFontSize(20);
+  pdf.text("TeachSheet AI", pageWidth / 2, y, { align: "center" });
+
+  y += 8;
+  pdf.setFontSize(15);
+  pdf.text(worksheetTitle, pageWidth / 2, y, { align: "center" });
+
+  y += 10;
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont(fontFamily, "normal");
+  pdf.setFontSize(10.5);
+  pdf.text(`Name: ${studentName || "________________________"}`, margins.left, y);
+  pdf.text(`Grade: ${grade || "--"}`, pageWidth - margins.right, y, { align: "right" });
+
+  y += 6.5;
+  pdf.text(`Subject: ${subjectLabel}`, margins.left, y);
+  pdf.text(`Focus: ${focusLabel}`, pageWidth - margins.right, y, { align: "right" });
+
+  y += 6.5;
+  pdf.text(pageLabel, margins.left, y);
+
+  y += 5.5;
+  pdf.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
+  pdf.setLineWidth(0.5);
+  pdf.line(margins.left, y, pageWidth - margins.right, y);
+
+  return y + 7;
+}
+
+function drawQuestionPages(pdf, questionPages, options) {
+  const {
+    fontFamily,
+    accentColor,
+    worksheetTitle,
+    studentName,
+    grade,
+    subjectLabel,
+    focusLabel,
+    margins,
+    pageWidth,
+    questionFontSize,
+    columnWidth,
+    columnGap,
+    rowGap
+  } = options;
+
+  questionPages.forEach((pageRows, pageIndex) => {
+    if (pageIndex > 0) {
+      pdf.addPage();
+    }
+
+    let y = drawPageHeader(pdf, {
+      fontFamily,
+      accentColor,
+      worksheetTitle,
+      studentName,
+      grade,
+      subjectLabel,
+      focusLabel,
+      pageLabel: `Page ${pageIndex + 1} of ${questionPages.length}`,
+      margins,
+      pageWidth
+    });
+
+    pdf.setFont(fontFamily, "normal");
+    pdf.setFontSize(questionFontSize);
+    pdf.setTextColor(20, 24, 39);
+
+    pageRows.forEach((row) => {
+      row.items.forEach((item, itemIndex) => {
+        const x = margins.left + (itemIndex * (columnWidth + columnGap));
+        const boxHeight = row.rowHeight;
+
+        pdf.setDrawColor(183, 217, 245);
+        pdf.setFillColor(255, 255, 255);
+        pdf.roundedRect(x, y, columnWidth, boxHeight, 3, 3, "FD");
+        pdf.text(item.textLines, x + 4, y + 6);
+
+        if (item.question.answerLine !== false) {
+          pdf.line(x + 4, y + boxHeight - 5, x + columnWidth - 4, y + boxHeight - 5);
+        }
+      });
+
+      y += row.rowHeight + rowGap;
+    });
+  });
+}
+
+function drawAnswerKeyPages(pdf, questions, options) {
+  const {
+    fontFamily,
+    accentColor,
+    studentName,
+    grade,
+    subjectLabel,
+    focusLabel,
+    margins,
+    pageWidth
+  } = options;
+  const answerColumns = Math.min(4, options.columnsCount === 1 ? 3 : 4);
+  const answerGap = 6;
+  const cardHeight = 10;
+  const rowsPerPage = 18;
+  const cardsPerPage = answerColumns * rowsPerPage;
+  const answerColumnWidth = (
+    pageWidth - margins.left - margins.right - ((answerColumns - 1) * answerGap)
+  ) / answerColumns;
+  const totalAnswerPages = Math.max(1, Math.ceil(questions.length / cardsPerPage));
+
+  for (let pageIndex = 0; pageIndex < totalAnswerPages; pageIndex += 1) {
+    const pageQuestions = questions.slice(pageIndex * cardsPerPage, (pageIndex + 1) * cardsPerPage);
+
+    pdf.addPage();
+    const startY = drawPageHeader(pdf, {
+      fontFamily,
+      accentColor,
+      worksheetTitle: "Answer Key",
+      studentName,
+      grade,
+      subjectLabel,
+      focusLabel,
+      pageLabel: `Answers ${pageIndex + 1} of ${totalAnswerPages}`,
+      margins,
+      pageWidth
+    });
+
+    pdf.setFont(fontFamily, "normal");
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(20, 24, 39);
+
+    pageQuestions.forEach((question, localIndex) => {
+      const columnIndex = localIndex % answerColumns;
+      const rowIndex = Math.floor(localIndex / answerColumns);
+      const x = margins.left + (columnIndex * (answerColumnWidth + answerGap));
+      const y = startY + (rowIndex * (cardHeight + 4));
+      const absoluteIndex = (pageIndex * cardsPerPage) + localIndex + 1;
+
+      pdf.setDrawColor(220, 232, 245);
+      pdf.setFillColor(247, 251, 255);
+      pdf.roundedRect(x, y, answerColumnWidth, cardHeight, 2, 2, "FD");
+      pdf.text(`${absoluteIndex}) ${question.answer}`, x + 3, y + 6.2);
+    });
+  }
+}
+
 export function downloadWorksheetPDF({
   questions,
   grade,
@@ -44,97 +250,61 @@ export function downloadWorksheetPDF({
   showAnswerKey
 }) {
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("p", "mm", "a4");
+  const pdf = new jsPDF({
+    orientation: "p",
+    unit: "mm",
+    format: "a4",
+    compress: true
+  });
   const presentation = getTemplatePresentation(template);
-  const questionPages = chunkQuestions(questions, presentation.questionsPerPage);
   const fontFamily = getPdfFontFamily(presentation);
-  const questionFontSize = Math.max(12, presentation.fontSize - 6);
-  const questionLineHeight = Math.max(10, Math.round(presentation.spacing * 0.7));
-  const questionColumns = presentation.columnsCount;
-  const xPositions = questionColumns === 1 ? [20] : [20, 110];
   const accentColor = hexToRgb(theme?.accent);
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margins = {
+    top: 16,
+    right: 14,
+    bottom: 16,
+    left: 14
+  };
+  const contentTop = 58;
+  const usableHeight = pageHeight - contentTop - margins.bottom;
+  const rowGap = Math.max(5, Math.round(presentation.spacing * 0.28));
+  const questionFontSize = Math.max(11.5, presentation.fontSize - 7);
+  const columnGap = 8;
+  const columnWidth = presentation.columnsCount === 1
+    ? pageWidth - margins.left - margins.right
+    : ((pageWidth - margins.left - margins.right - columnGap) / 2);
+  const questionRows = buildQuestionRows(pdf, questions, presentation, questionFontSize, columnWidth);
+  const questionPages = paginateRows(questionRows, usableHeight, rowGap);
 
-  function renderWorksheetPage(pageQuestions, pageNumber, totalPages) {
-    let y = 20;
-
-    if (pageNumber > 1) {
-      pdf.addPage();
-    }
-
-    pdf.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-    pdf.setFont(fontFamily, "bold");
-    pdf.setFontSize(22);
-    pdf.text("TeachSheet AI", 105, y, { align: "center" });
-
-    y += 10;
-    pdf.setFontSize(16);
-    pdf.text(worksheetTitle, 105, y, { align: "center" });
-
-    y += 14;
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont(fontFamily, "normal");
-    pdf.setFontSize(11);
-
-    pdf.text(`Name: ${studentName || "________________________"}`, 20, y);
-    pdf.text(`Grade: ${grade || "—"}`, 130, y);
-
-    y += 8;
-    pdf.text(`Subject: ${subjectLabel}`, 20, y);
-    pdf.text(`Focus: ${focusLabel}`, 130, y);
-
-    y += 8;
-    pdf.text(`Page: ${pageNumber} / ${totalPages}`, 20, y);
-
-    y += 12;
-    pdf.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
-    pdf.line(20, y, 190, y);
-    y += 12;
-
-    pdf.setFontSize(questionFontSize);
-
-    pageQuestions.forEach((question, index) => {
-      const absoluteIndex = ((pageNumber - 1) * presentation.questionsPerPage) + index;
-      const columnIndex = index % questionColumns;
-      const x = xPositions[columnIndex];
-      const answerLine = question.answerLine === false ? "" : " __________________";
-      const questionText = `${absoluteIndex + 1}. ${question.text}${answerLine}`;
-
-      pdf.text(questionText, x, y);
-
-      if (columnIndex === questionColumns - 1 || questionColumns === 1) {
-        y += questionLineHeight;
-      }
-    });
-  }
-
-  questionPages.forEach((pageQuestions, index) => {
-    renderWorksheetPage(pageQuestions, index + 1, questionPages.length);
+  drawQuestionPages(pdf, questionPages, {
+    fontFamily,
+    accentColor,
+    worksheetTitle,
+    studentName,
+    grade,
+    subjectLabel,
+    focusLabel,
+    margins,
+    pageWidth,
+    questionFontSize,
+    columnWidth,
+    columnGap,
+    rowGap
   });
 
   if (showAnswerKey) {
-    let y = 20;
-    pdf.addPage();
-    pdf.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-    pdf.setFont(fontFamily, "bold");
-    pdf.setFontSize(18);
-    pdf.text("Answer Key", 105, y, { align: "center" });
-
-    y += 15;
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont(fontFamily, "normal");
-    pdf.setFontSize(12);
-
-    questions.forEach((question, index) => {
-      if (y > 270) {
-        pdf.addPage();
-        y = 20;
-      }
-
-      pdf.text(`${index + 1}) ${question.answer}`, 25 + ((index % 4) * 45), y);
-
-      if (index % 4 === 3) {
-        y += 10;
-      }
+    drawAnswerKeyPages(pdf, questions, {
+      fontFamily,
+      accentColor,
+      studentName,
+      grade,
+      subjectLabel,
+      focusLabel,
+      margins,
+      pageWidth,
+      columnsCount: presentation.columnsCount
     });
   }
 
