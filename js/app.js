@@ -5,34 +5,37 @@ import {
   resetPagination
 } from "./core/pagination.js";
 import {
-  loadSettings,
+  deleteProject,
+  getGuestScope,
   loadProjects,
+  loadSettings,
   loadWorksheet,
   saveProject,
   saveSettings,
   saveWorksheet,
-  clearWorksheetStorage,
-  deleteProject
-} from "./core/storage.js?v=refine-ux";
+  clearWorksheetStorage
+} from "./core/storage.js?v=auth-dashboard";
 import {
   hasRecognizedWorksheetPrompt,
   parseWorksheetPrompt
 } from "./core/parser.js";
-import { renderEmptyWorksheet, renderWorksheetPreview } from "./ui/preview.js";
-import { renderSavedProjects } from "./ui/projects.js";
-import { applyTheme, getTheme } from "./ui/themes.js";
-import { applyZoom, normalizeZoomValue } from "./ui/zoom.js";
+import { createAuthController } from "./auth/auth.js";
+import { renderDashboard } from "./auth/dashboard.js";
 import { downloadWorksheetPDF } from "./export/pdf.js";
+import { generateColoringWorksheet } from "./generators/coloringGenerator.js";
+import { generateGrammarWorksheet } from "./generators/grammarGenerator.js";
+import { generateMathWorksheet } from "./generators/mathGenerator.js";
+import { generateReadingWorksheet } from "./generators/readingGenerator.js";
+import { generateTracingWorksheet } from "./generators/tracingGenerator.js";
 import {
   getDefaultTemplate,
   getTemplateById,
   getTemplateOptions
 } from "./templates/templates.js";
-import { generateMathWorksheet } from "./generators/mathGenerator.js";
-import { generateGrammarWorksheet } from "./generators/grammarGenerator.js";
-import { generateReadingWorksheet } from "./generators/readingGenerator.js";
-import { generateTracingWorksheet } from "./generators/tracingGenerator.js";
-import { generateColoringWorksheet } from "./generators/coloringGenerator.js";
+import { renderSavedProjects } from "./ui/projects.js";
+import { renderEmptyWorksheet, renderWorksheetPreview } from "./ui/preview.js";
+import { applyTheme, getTheme } from "./ui/themes.js";
+import { applyZoom, normalizeZoomValue } from "./ui/zoom.js";
 
 const GENERATORS = {
   math: generateMathWorksheet,
@@ -46,10 +49,12 @@ const state = {
   currentQuestions: [],
   currentProject: null,
   currentRequest: null,
+  currentUser: null,
   currentWorksheetMeta: null,
   isGenerating: false,
   pagination: createPaginationState(0),
   savedProjects: [],
+  storageScope: getGuestScope(),
   template: getDefaultTemplate(),
   theme: getDefaultTemplate().theme,
   zoom: 100
@@ -57,36 +62,56 @@ const state = {
 
 let statusTimerId = null;
 
+const authController = createAuthController({
+  onUserChanged(user) {
+    state.currentUser = user;
+    state.storageScope = getStorageScopeForUser(user);
+    hydrateScopedWorkspace();
+  }
+});
+
+function getElement(id) {
+  return document.getElementById(id);
+}
+
 function getWorksheetElement() {
-  return document.getElementById("worksheet");
+  return getElement("worksheet");
 }
 
 function getGenerateButton() {
-  return document.getElementById("generateButton");
+  return getElement("generateButton");
 }
 
 function getPromptGenerateButton() {
-  return document.getElementById("promptGenerateButton");
+  return getElement("promptGenerateButton");
 }
 
 function getSaveProjectButton() {
-  return document.getElementById("saveProjectButton");
+  return getElement("saveProjectButton");
 }
 
 function getStatusElement() {
-  return document.getElementById("generationStatus");
+  return getElement("generationStatus");
 }
 
 function getPreviewPageIndicator() {
-  return document.getElementById("previewPageIndicator");
+  return getElement("previewPageIndicator");
 }
 
 function getPreviewPreviousButton() {
-  return document.getElementById("previewPrevButton");
+  return getElement("previewPrevButton");
 }
 
 function getPreviewNextButton() {
-  return document.getElementById("previewNextButton");
+  return getElement("previewNextButton");
+}
+
+function getSavedProjectsListElement() {
+  return getElement("savedProjectsList");
+}
+
+function getDashboardContainer() {
+  return getElement("dashboardContainer");
 }
 
 function getSmartPromptDefaults() {
@@ -99,6 +124,10 @@ function getSmartPromptDefaults() {
     grade: "Grade 2",
     template: "classic-math"
   };
+}
+
+function getStorageScopeForUser(user) {
+  return user?.uid || getGuestScope();
 }
 
 function capitalizeWords(text = "") {
@@ -148,17 +177,17 @@ function ensureSelectOption(selectElement, value, label) {
 
 function getFormValues() {
   return {
-    grade: document.getElementById("grade").value,
-    operation: document.getElementById("operation").value,
-    difficulty: document.getElementById("difficulty").value,
-    questionCount: Number.parseInt(document.getElementById("questionCount").value, 10),
-    templateId: document.getElementById("template").value,
-    studentName: document.getElementById("studentName").value.trim()
+    grade: getElement("grade").value,
+    operation: getElement("operation").value,
+    difficulty: getElement("difficulty").value,
+    questionCount: Number.parseInt(getElement("questionCount").value, 10),
+    templateId: getElement("template").value,
+    studentName: getElement("studentName").value.trim()
   };
 }
 
 function getPromptValue() {
-  return document.getElementById("promptInput").value.trim();
+  return getElement("promptInput").value.trim();
 }
 
 function getProjectAnswers(questions) {
@@ -245,6 +274,8 @@ function buildProjectObject(existingProjectId = null, existingCreatedAt = null) 
   return {
     id: existingProjectId || createProjectId(),
     createdAt: existingCreatedAt || new Date().toISOString(),
+    ownerId: state.currentUser?.uid || getGuestScope(),
+    ownerEmail: state.currentUser?.email || "guest@local",
     prompt: getPromptValue(),
     template: state.template.id,
     settings,
@@ -262,23 +293,19 @@ function applyPreviewState() {
 
 function applyParsedPromptSettings(parsedPrompt) {
   if (parsedPrompt.grade) {
-    document.getElementById("grade").value = parsedPrompt.grade;
+    getElement("grade").value = parsedPrompt.grade;
   }
 
   if (parsedPrompt.type === "math") {
-    document.getElementById("operation").value = parsedPrompt.topic;
+    getElement("operation").value = parsedPrompt.topic;
   }
 
-  document.getElementById("difficulty").value = parsedPrompt.difficulty;
-  ensureSelectOption(
-    document.getElementById("questionCount"),
-    parsedPrompt.count,
-    `${parsedPrompt.count} Questions`
-  );
-  document.getElementById("questionCount").value = String(parsedPrompt.count);
+  getElement("difficulty").value = parsedPrompt.difficulty;
+  ensureSelectOption(getElement("questionCount"), parsedPrompt.count, `${parsedPrompt.count} Questions`);
+  getElement("questionCount").value = String(parsedPrompt.count);
 
   if (parsedPrompt.template) {
-    document.getElementById("template").value = parsedPrompt.template;
+    getElement("template").value = parsedPrompt.template;
   }
 }
 
@@ -324,11 +351,104 @@ function persistSettings(partialSettings = {}) {
   });
 }
 
+function renderDashboardSection() {
+  const dashboardContainer = getDashboardContainer();
+  dashboardContainer.innerHTML = renderDashboard({
+    user: state.currentUser,
+    projects: state.savedProjects,
+    currentProject: state.currentProject
+  });
+
+  const createButton = getElement("dashboardCreateButton");
+
+  if (createButton) {
+    createButton.addEventListener("click", () => {
+      getElement("app").scrollIntoView({ behavior: "smooth", block: "start" });
+      getElement("promptInput").focus();
+    });
+  }
+}
+
+function resetWorksheetState() {
+  state.currentQuestions = [];
+  state.currentProject = null;
+  state.currentRequest = null;
+  state.currentWorksheetMeta = null;
+  state.pagination = resetPagination(state.pagination, 0);
+}
+
+function loadProjectIntoInterface(project) {
+  getElement("promptInput").value = project.prompt || "";
+  getElement("grade").value = project.settings.grade;
+  getElement("operation").value = project.settings.operation;
+  getElement("difficulty").value = project.settings.difficulty;
+  ensureSelectOption(
+    getElement("questionCount"),
+    project.settings.questionCount,
+    `${project.settings.questionCount} Questions`
+  );
+  getElement("questionCount").value = String(project.settings.questionCount);
+  getElement("template").value = project.template;
+  getElement("studentName").value = project.settings.studentName || "";
+}
+
+function getRequestFromProject(project) {
+  if (project.request) {
+    return {
+      ...getSmartPromptDefaults(),
+      ...project.request,
+      template: project.template || project.request.template || getDefaultTemplate().id
+    };
+  }
+
+  if (project.prompt && hasRecognizedWorksheetPrompt(project.prompt)) {
+    return {
+      ...getSmartPromptDefaults(),
+      ...parseWorksheetPrompt(project.prompt),
+      template: project.template || getDefaultTemplate().id
+    };
+  }
+
+  return buildMathRequestFromFormValues({
+    grade: project.settings.grade,
+    operation: project.settings.operation,
+    difficulty: project.settings.difficulty,
+    questionCount: project.settings.questionCount,
+    templateId: project.template,
+    studentName: project.settings.studentName || ""
+  });
+}
+
+function buildStoredWorksheetPayload() {
+  return {
+    project: state.currentProject,
+    questions: state.currentQuestions,
+    settings: getFormValues(),
+    templateId: state.template.id,
+    prompt: getPromptValue(),
+    answers: state.currentProject?.answers || getProjectAnswers(state.currentQuestions),
+    theme: state.theme,
+    zoom: state.zoom
+  };
+}
+
+function persistCurrentWorksheet() {
+  saveWorksheet(buildStoredWorksheetPayload(), state.storageScope);
+}
+
+function renderSavedProjectsList() {
+  getSavedProjectsListElement().innerHTML = renderSavedProjects(
+    state.savedProjects,
+    state.currentProject?.id || null
+  );
+}
+
 function syncPreview() {
   if (state.currentQuestions.length === 0) {
     renderEmptyWorksheet(getWorksheetElement(), state.template);
     applyPreviewState();
     updatePreviewControls();
+    renderDashboardSection();
     return;
   }
 
@@ -358,13 +478,64 @@ function syncPreview() {
 
   applyPreviewState();
   updatePreviewControls();
+  renderDashboardSection();
 }
 
-function renderSavedProjectsList() {
-  document.getElementById("savedProjectsList").innerHTML = renderSavedProjects(
-    state.savedProjects,
-    state.currentProject?.id || null
+function applyStoredWorksheet(savedWorksheet) {
+  if (!savedWorksheet?.questions?.length) {
+    resetWorksheetState();
+    return;
+  }
+
+  state.template = getTemplateById(savedWorksheet.templateId || state.template.id);
+  state.theme = getTheme(savedWorksheet.theme || state.template.theme).id;
+  state.zoom = normalizeZoomValue(savedWorksheet.zoom ?? state.zoom);
+  state.currentQuestions = Array.isArray(savedWorksheet.questions) ? savedWorksheet.questions : [];
+
+  if (savedWorksheet.settings) {
+    loadProjectIntoInterface({
+      prompt: savedWorksheet.prompt || "",
+      template: savedWorksheet.templateId || state.template.id,
+      settings: savedWorksheet.settings
+    });
+  } else if (savedWorksheet.prompt) {
+    getElement("promptInput").value = savedWorksheet.prompt;
+  }
+
+  const worksheetProject = savedWorksheet.project || null;
+  state.currentRequest = worksheetProject
+    ? getRequestFromProject(worksheetProject)
+    : (savedWorksheet.prompt && hasRecognizedWorksheetPrompt(savedWorksheet.prompt)
+      ? {
+        ...getSmartPromptDefaults(),
+        ...parseWorksheetPrompt(savedWorksheet.prompt),
+        template: savedWorksheet.templateId || state.template.id
+      }
+      : buildMathRequestFromFormValues(getFormValues()));
+
+  state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
+    showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
+  });
+  state.currentProject = worksheetProject;
+  state.pagination = resetPagination(
+    state.pagination,
+    state.currentQuestions.length,
+    state.template.questionsPerPage
   );
+}
+
+function hydrateScopedWorkspace() {
+  state.savedProjects = loadProjects(state.storageScope);
+  const savedWorksheet = loadWorksheet(state.storageScope);
+
+  if (savedWorksheet?.questions?.length) {
+    applyStoredWorksheet(savedWorksheet);
+  } else {
+    resetWorksheetState();
+  }
+
+  renderSavedProjectsList();
+  syncPreview();
 }
 
 function buildWorksheetFromRequest(worksheetRequest) {
@@ -386,16 +557,7 @@ function buildWorksheetFromRequest(worksheetRequest) {
   syncPreview();
   renderSavedProjectsList();
   persistSettings();
-  saveWorksheet({
-    project: state.currentProject,
-    questions: state.currentQuestions,
-    settings: getFormValues(),
-    templateId: state.template.id,
-    prompt: getPromptValue(),
-    answers: state.currentProject.answers,
-    theme: state.theme,
-    zoom: state.zoom
-  });
+  persistCurrentWorksheet();
 }
 
 async function generateWorksheet() {
@@ -419,15 +581,10 @@ async function generateWorksheet() {
 
 function clearWorksheet() {
   clearStatusMessageTimer();
-  state.currentQuestions = [];
-  state.currentProject = null;
-  state.currentRequest = null;
-  state.currentWorksheetMeta = null;
-  state.pagination = resetPagination(state.pagination, 0);
-
-  syncPreview();
+  resetWorksheetState();
   renderSavedProjectsList();
-  clearWorksheetStorage();
+  syncPreview();
+  clearWorksheetStorage(state.storageScope);
   persistSettings();
   setStatusMessage("");
 }
@@ -451,48 +608,6 @@ async function applyPrompt() {
 
   applyParsedPromptSettings(parsedPrompt);
   await generateWorksheet();
-}
-
-function loadProjectIntoInterface(project) {
-  document.getElementById("promptInput").value = project.prompt || "";
-  document.getElementById("grade").value = project.settings.grade;
-  document.getElementById("operation").value = project.settings.operation;
-  document.getElementById("difficulty").value = project.settings.difficulty;
-  ensureSelectOption(
-    document.getElementById("questionCount"),
-    project.settings.questionCount,
-    `${project.settings.questionCount} Questions`
-  );
-  document.getElementById("questionCount").value = String(project.settings.questionCount);
-  document.getElementById("template").value = project.template;
-  document.getElementById("studentName").value = project.settings.studentName || "";
-}
-
-function getRequestFromProject(project) {
-  if (project.request) {
-    return {
-      ...getSmartPromptDefaults(),
-      ...project.request,
-      template: project.template || project.request.template || getDefaultTemplate().id
-    };
-  }
-
-  if (project.prompt && hasRecognizedWorksheetPrompt(project.prompt)) {
-    return {
-      ...getSmartPromptDefaults(),
-      ...parseWorksheetPrompt(project.prompt),
-      template: project.template || getDefaultTemplate().id
-    };
-  }
-
-  return buildMathRequestFromFormValues({
-    grade: project.settings.grade,
-    operation: project.settings.operation,
-    difficulty: project.settings.difficulty,
-    questionCount: project.settings.questionCount,
-    templateId: project.template,
-    studentName: project.settings.studentName || ""
-  });
 }
 
 function loadProject(projectId) {
@@ -523,16 +638,7 @@ function loadProject(projectId) {
   syncPreview();
   renderSavedProjectsList();
   persistSettings();
-  saveWorksheet({
-    project: state.currentProject,
-    questions: state.currentQuestions,
-    settings: project.settings,
-    templateId: state.template.id,
-    prompt: project.prompt || "",
-    answers: state.currentProject.answers,
-    theme: state.theme,
-    zoom: state.zoom
-  });
+  persistCurrentWorksheet();
   setStatusMessage("Saved project loaded.", "success");
 }
 
@@ -549,19 +655,26 @@ function saveCurrentProject() {
   const existingProjectId = state.currentProject?.id || null;
   const existingCreatedAt = state.currentProject?.createdAt || null;
   state.currentProject = buildProjectObject(existingProjectId, existingCreatedAt);
-  state.savedProjects = saveProject(state.currentProject);
+  state.savedProjects = saveProject(state.currentProject, state.storageScope);
   renderSavedProjectsList();
+  renderDashboardSection();
+  persistCurrentWorksheet();
   setStatusMessage("Project saved locally.", "success");
 }
 
 function removeProject(projectId) {
-  state.savedProjects = deleteProject(projectId);
+  state.savedProjects = deleteProject(projectId, state.storageScope);
 
   if (state.currentProject?.id === projectId) {
     state.currentProject = null;
+
+    if (state.currentQuestions.length > 0) {
+      persistCurrentWorksheet();
+    }
   }
 
   renderSavedProjectsList();
+  renderDashboardSection();
   setStatusMessage("Project deleted.", "success");
 }
 
@@ -606,6 +719,10 @@ function updateZoom(value) {
   state.zoom = normalizeZoomValue(value);
   applyZoom(getWorksheetElement(), state.zoom);
   persistSettings();
+
+  if (state.currentQuestions.length > 0) {
+    persistCurrentWorksheet();
+  }
 }
 
 function setTheme(theme) {
@@ -613,8 +730,12 @@ function setTheme(theme) {
   applyTheme(getWorksheetElement(), state.theme);
   persistSettings();
 
-  if (state.currentProject) {
-    state.currentProject.template = state.template.id;
+  if (state.currentQuestions.length > 0) {
+    if (state.currentProject) {
+      state.currentProject.template = state.template.id;
+    }
+
+    persistCurrentWorksheet();
   }
 }
 
@@ -622,7 +743,7 @@ function hydrateSettings() {
   const savedSettings = loadSettings();
 
   if (!savedSettings) {
-    document.getElementById("template").value = state.template.id;
+    getElement("template").value = state.template.id;
     return;
   }
 
@@ -630,75 +751,26 @@ function hydrateSettings() {
 
   for (const fieldId of fieldIds) {
     if (savedSettings[fieldId] !== undefined && savedSettings[fieldId] !== null) {
-      document.getElementById(fieldId).value = String(savedSettings[fieldId]);
+      getElement(fieldId).value = String(savedSettings[fieldId]);
     }
   }
 
   state.template = getTemplateById(savedSettings.templateId);
-  document.getElementById("template").value = state.template.id;
+  getElement("template").value = state.template.id;
   state.theme = getTheme(savedSettings.theme).id;
   state.zoom = normalizeZoomValue(savedSettings.zoom ?? 100);
-}
-
-function hydrateLastWorksheet() {
-  const savedWorksheet = loadWorksheet();
-
-  if (!savedWorksheet?.questions?.length) {
-    return;
-  }
-
-  state.template = getTemplateById(savedWorksheet.templateId || state.template.id);
-  state.theme = getTheme(savedWorksheet.theme || state.template.theme).id;
-  state.zoom = normalizeZoomValue(savedWorksheet.zoom ?? state.zoom);
-  state.currentQuestions = Array.isArray(savedWorksheet.questions) ? savedWorksheet.questions : [];
-
-  if (savedWorksheet.settings) {
-    loadProjectIntoInterface({
-      prompt: savedWorksheet.prompt || "",
-      template: savedWorksheet.templateId || state.template.id,
-      settings: savedWorksheet.settings
-    });
-  } else if (savedWorksheet.prompt) {
-    document.getElementById("promptInput").value = savedWorksheet.prompt;
-  }
-
-  const worksheetProject = savedWorksheet.project || null;
-  state.currentRequest = worksheetProject
-    ? getRequestFromProject(worksheetProject)
-    : (savedWorksheet.prompt && hasRecognizedWorksheetPrompt(savedWorksheet.prompt)
-      ? {
-        ...getSmartPromptDefaults(),
-        ...parseWorksheetPrompt(savedWorksheet.prompt),
-        template: savedWorksheet.templateId || state.template.id
-      }
-      : buildMathRequestFromFormValues(getFormValues()));
-
-  state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
-    showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
-  });
-  state.currentProject = worksheetProject;
-  state.pagination = resetPagination(
-    state.pagination,
-    state.currentQuestions.length,
-    state.template.questionsPerPage
-  );
-}
-
-function hydrateSavedProjects() {
-  state.savedProjects = loadProjects();
-  renderSavedProjectsList();
 }
 
 function bindFormPersistence() {
   const fieldIds = ["grade", "operation", "difficulty", "questionCount", "studentName"];
 
   for (const fieldId of fieldIds) {
-    document.getElementById(fieldId).addEventListener("change", () => {
+    getElement(fieldId).addEventListener("change", () => {
       persistSettings();
     });
   }
 
-  document.getElementById("template").addEventListener("change", (event) => {
+  getElement("template").addEventListener("change", (event) => {
     state.template = getTemplateById(event.target.value);
     state.theme = state.template.theme;
     state.pagination = resetPagination(
@@ -720,16 +792,7 @@ function bindFormPersistence() {
         state.currentProject?.id || null,
         state.currentProject?.createdAt || null
       );
-      saveWorksheet({
-        project: state.currentProject,
-        questions: state.currentQuestions,
-        settings: getFormValues(),
-        templateId: state.template.id,
-        prompt: getPromptValue(),
-        answers: state.currentProject.answers,
-        theme: state.theme,
-        zoom: state.zoom
-      });
+      persistCurrentWorksheet();
     }
   });
 
@@ -737,10 +800,16 @@ function bindFormPersistence() {
     applyPrompt();
   });
 
-  document.getElementById("promptInput").addEventListener("keydown", (event) => {
+  getElement("promptInput").addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       applyPrompt();
+    }
+  });
+
+  getElement("promptInput").addEventListener("input", () => {
+    if (state.currentProject) {
+      state.currentProject.prompt = getPromptValue();
     }
   });
 
@@ -751,7 +820,7 @@ function bindFormPersistence() {
       return;
     }
 
-    document.getElementById("promptInput").value = examplePrompt;
+    getElement("promptInput").value = examplePrompt;
     setStatusMessage("");
   });
 
@@ -759,7 +828,7 @@ function bindFormPersistence() {
     saveCurrentProject();
   });
 
-  document.getElementById("savedProjectsList").addEventListener("click", (event) => {
+  getSavedProjectsListElement().addEventListener("click", (event) => {
     const loadProjectId = event.target.dataset.loadProject;
     const deleteProjectId = event.target.dataset.deleteProject;
 
@@ -775,18 +844,17 @@ function bindFormPersistence() {
 }
 
 function populateTemplateOptions() {
-  const templateSelect = document.getElementById("template");
+  const templateSelect = getElement("template");
   templateSelect.innerHTML = getTemplateOptions()
     .map((templateOption) => `<option value="${templateOption.value}">${templateOption.label}</option>`)
     .join("");
 }
 
-function init() {
+async function init() {
   populateTemplateOptions();
   hydrateSettings();
-  hydrateLastWorksheet();
-  hydrateSavedProjects();
   bindFormPersistence();
+  await authController.init();
   syncPreview();
 }
 
@@ -800,4 +868,7 @@ window.setTheme = setTheme;
 window.applyPrompt = applyPrompt;
 window.saveCurrentProject = saveCurrentProject;
 
-init();
+init().catch((error) => {
+  console.error(error);
+  setStatusMessage("App initialization failed.", "error");
+});

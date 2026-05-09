@@ -19,6 +19,17 @@
     <a href="#demo">Demo</a>
     <a href="#pricing">Pricing</a>
     <a href="#app" class="nav-btn">Try Free</a>
+    <div class="auth-nav">
+      <div id="authLoadingState" class="auth-loading-state">Checking account...</div>
+      <div id="signedOutActions" class="auth-actions">
+        <button id="openLoginButton" type="button" class="auth-nav-button auth-nav-secondary">Login</button>
+        <button id="openSignupButton" type="button" class="auth-nav-button auth-nav-primary">Sign Up</button>
+      </div>
+      <div id="signedInActions" class="auth-session" hidden>
+        <span id="userIdentity" class="user-identity"></span>
+        <button id="logoutButton" type="button" class="auth-nav-button auth-nav-secondary">Logout</button>
+      </div>
+    </div>
   </div>
 </nav>
 
@@ -129,6 +140,7 @@
 <section id="app" class="app-section">
   <h2>Try TeachSheet AI</h2>
   <p class="section-subtitle">Generate your first worksheet now.</p>
+  <div id="dashboardContainer"></div>
 
   <main class="app-layout">
     <section class="panel">
@@ -232,11 +244,41 @@
   </main>
 </section>
 
+<div id="authModal" class="auth-modal" hidden>
+  <div class="auth-modal-card">
+    <button id="closeAuthModalButton" type="button" class="auth-close-button" aria-label="Close authentication modal">×</button>
+    <div class="auth-modal-header">
+      <h3 id="authModalTitle">Welcome back</h3>
+      <p id="authModalSubtitle">Sign in to access your saved worksheets on this account.</p>
+    </div>
+    <div class="auth-mode-switch">
+      <button id="showLoginModeButton" type="button" class="auth-mode-button active">Login</button>
+      <button id="showSignupModeButton" type="button" class="auth-mode-button">Create Account</button>
+    </div>
+    <form id="authForm" class="auth-form">
+      <label id="authNameField" hidden>Full Name
+        <input id="authNameInput" type="text" autocomplete="name" placeholder="Teacher name" />
+      </label>
+      <label>Email Address
+        <input id="authEmailInput" type="email" autocomplete="email" placeholder="teacher@example.com" required />
+      </label>
+      <label>Password
+        <input id="authPasswordInput" type="password" autocomplete="current-password" placeholder="At least 6 characters" required />
+      </label>
+      <button id="authSubmitButton" type="submit">Login</button>
+    </form>
+    <div class="auth-divider"><span>or continue with</span></div>
+    <button id="googleLoginButton" type="button" class="google-login-button">Google Sign In</button>
+    <div id="authStatus" class="auth-status" aria-live="polite"></div>
+    <p id="authConfigNote" class="auth-config-note"></p>
+  </div>
+</div>
+
 <footer>
   <strong>TeachSheet AI</strong>
   <p>AI-powered printable worksheets for teachers.</p>
 </footer>
 
-<script type="module" src="js/app.js?v=refine-ux"></script>
+<script type="module" src="js/app.js?v=auth-dashboard"></script>
 </body>
 </html>
