@@ -11,6 +11,7 @@ import {
   saveWorksheet,
   clearWorksheetStorage
 } from "./core/storage.js";
+import { hasRecognizedPromptFields, parsePrompt } from "./core/promptParser.js";
 import { renderEmptyWorksheet, renderWorksheetPreview } from "./ui/preview.js";
 import { applyTheme, getTheme } from "./ui/themes.js";
 import { applyZoom, normalizeZoomValue } from "./ui/zoom.js";
@@ -33,6 +34,27 @@ function getWorksheetElement() {
   return document.getElementById("worksheet");
 }
 
+function getSmartPromptDefaults() {
+  return {
+    grade: "Grade 2",
+    operation: "addition",
+    difficulty: "medium",
+    questionCount: 15,
+    template: "classic-math"
+  };
+}
+
+function ensureSelectOption(selectElement, value, label) {
+  if ([...selectElement.options].some((option) => option.value === String(value))) {
+    return;
+  }
+
+  const optionElement = document.createElement("option");
+  optionElement.value = String(value);
+  optionElement.textContent = label;
+  selectElement.appendChild(optionElement);
+}
+
 function getFormValues() {
   return {
     grade: document.getElementById("grade").value,
@@ -48,6 +70,19 @@ function applyPreviewState() {
   const worksheetElement = getWorksheetElement();
   applyTheme(worksheetElement, state.theme);
   applyZoom(worksheetElement, state.zoom);
+}
+
+function applyParsedPromptSettings(parsedPrompt) {
+  document.getElementById("grade").value = parsedPrompt.grade;
+  document.getElementById("operation").value = parsedPrompt.operation;
+  document.getElementById("difficulty").value = parsedPrompt.difficulty;
+  ensureSelectOption(
+    document.getElementById("questionCount"),
+    parsedPrompt.questionCount,
+    `${parsedPrompt.questionCount} Questions`
+  );
+  document.getElementById("questionCount").value = String(parsedPrompt.questionCount);
+  document.getElementById("template").value = parsedPrompt.template;
 }
 
 function persistSettings(partialSettings = {}) {
@@ -135,6 +170,20 @@ function clearWorksheet() {
   syncPreview();
   clearWorksheetStorage();
   persistSettings();
+}
+
+function applyPrompt() {
+  const promptInput = document.getElementById("promptInput");
+  const promptText = promptInput.value.trim();
+
+  if (!hasRecognizedPromptFields(promptText)) {
+    window.alert("Please enter a structured prompt like: grade 2 + addition + 20 questions");
+    return;
+  }
+
+  const parsedPrompt = parsePrompt(promptText, getSmartPromptDefaults());
+  applyParsedPromptSettings(parsedPrompt);
+  generateWorksheet();
 }
 
 function downloadPDF() {
@@ -235,6 +284,17 @@ function bindFormPersistence() {
       });
     }
   });
+
+  document.getElementById("promptGenerateButton").addEventListener("click", () => {
+    applyPrompt();
+  });
+
+  document.getElementById("promptInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      applyPrompt();
+    }
+  });
 }
 
 function populateTemplateOptions() {
@@ -258,5 +318,6 @@ window.previousPreviewPage = previousPreviewPage;
 window.nextPreviewPage = nextPreviewPage;
 window.updateZoom = updateZoom;
 window.setTheme = setTheme;
+window.applyPrompt = applyPrompt;
 
 init();

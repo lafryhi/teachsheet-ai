@@ -168,6 +168,7 @@
           <option value="15" selected>15 Questions</option>
           <option value="20">20 Questions</option>
           <option value="25">25 Questions</option>
+          <option value="30">30 Questions</option>
         </select>
       </label>
 
@@ -175,10 +176,19 @@
         <select id="template"></select>
       </label>
 
+      <label>Prompt
+        <input
+          id="promptInput"
+          type="text"
+          placeholder="grade 2 + addition + 20 questions"
+        />
+      </label>
+
       <label>Student Name
         <input id="studentName" type="text" placeholder="Student name" />
       </label>
 
+      <button id="promptGenerateButton" type="button">Generate From Prompt</button>
       <button onclick="generateWorksheet()">Generate Worksheet</button>
       <button class="green" onclick="downloadPDF()">Download PDF</button>
       <button class="red" onclick="clearWorksheet()">Clear</button>
