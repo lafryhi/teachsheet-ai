@@ -19,10 +19,15 @@ function getDisplayName(user) {
 
 function formatAuthError(error, fallbackMessage) {
   const code = error?.code || "";
+  const rawMessage = String(error?.message || "");
+  const normalizedMessage = rawMessage.toLowerCase();
   const knownMessages = {
     "auth/email-already-in-use": "This email is already in use. Try logging in instead.",
+    "auth/invalid-api-key": "The Firebase API key is invalid. Update the apiKey in js/auth/firebase.js.",
     "auth/invalid-email": "Enter a valid email address.",
     "auth/missing-password": "Enter your password to continue.",
+    "auth/network-request-failed": "A network error interrupted authentication. Try again.",
+    "auth/operation-not-allowed": "This sign-in method is not enabled in your Firebase project.",
     "auth/weak-password": "Use a stronger password with at least 6 characters.",
     "auth/invalid-credential": "The email or password is incorrect.",
     "auth/user-not-found": "No account was found for this email.",
@@ -31,6 +36,14 @@ function formatAuthError(error, fallbackMessage) {
     "auth/popup-blocked": "Your browser blocked the popup. Allow popups and try again.",
     "auth/unauthorized-domain": "This domain is not authorized in your Firebase project settings."
   };
+
+  if (normalizedMessage.includes("api-key-not-valid")) {
+    return "The Firebase API key is invalid. Update the apiKey in js/auth/firebase.js.";
+  }
+
+  if (normalizedMessage.includes("unauthorized-domain")) {
+    return "This domain is not authorized in your Firebase project settings.";
+  }
 
   return knownMessages[code] || error?.message || fallbackMessage;
 }

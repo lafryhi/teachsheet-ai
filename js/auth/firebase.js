@@ -1,9 +1,12 @@
 const FIREBASE_VERSION = "11.0.2";
-const FIREBASE_CONFIG_PLACEHOLDER = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-  projectId: "YOUR_FIREBASE_PROJECT_ID",
-  appId: "YOUR_FIREBASE_APP_ID"
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "teachsheet-ai.firebaseapp.com",
+  projectId: "teachsheet-ai",
+  storageBucket: "teachsheet-ai.firebasestorage.app",
+  messagingSenderId: "922661764176",
+  appId: "1:922661764176:web:d91eab25cbb70a5a40e555"
 };
 
 const FIREBASE_APP_URL = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`;
@@ -12,35 +15,16 @@ const FIREBASE_AUTH_URL = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION
 let cachedAuthServicePromise = null;
 let cachedAuthInstance = null;
 
-function getInjectedConfig() {
-  if (typeof window === "undefined") {
-    return {};
-  }
-
-  return window.__TEACHSHEET_FIREBASE_CONFIG__ || {};
-}
-
-export function getFirebaseConfig() {
-  return {
-    ...FIREBASE_CONFIG_PLACEHOLDER,
-    ...getInjectedConfig()
-  };
-}
-
-export function isFirebaseConfigured() {
-  const config = getFirebaseConfig();
-
-  return Object.values(config).every((value) => (
-    typeof value === "string" &&
-    value.length > 0 &&
-    !value.startsWith("YOUR_FIREBASE_")
+function isFirebaseConfigured() {
+  return Object.values(firebaseConfig).every((value) => (
+    typeof value === "string" && value.trim().length > 0
   ));
 }
 
-function createUnavailableAuthService(reason, configured = false) {
+function createUnavailableAuthService(reason) {
   return {
     available: false,
-    configured,
+    configured: isFirebaseConfigured(),
     reason,
     getCurrentUser() {
       return null;
@@ -64,41 +48,10 @@ function createUnavailableAuthService(reason, configured = false) {
   };
 }
 
-function createTestAuthService(testApi) {
-  return {
-    available: true,
-    configured: true,
-    reason: "",
-    getCurrentUser() {
-      return typeof testApi.getCurrentUser === "function" ? testApi.getCurrentUser() : null;
-    },
-    onAuthStateChanged(callback) {
-      return testApi.onAuthStateChanged(callback);
-    },
-    async signUp({ name, email, password }) {
-      return testApi.signUp({ name, email, password });
-    },
-    async signIn({ email, password }) {
-      return testApi.signIn({ email, password });
-    },
-    async signInWithGoogle() {
-      return testApi.signInWithGoogle();
-    },
-    async signOut() {
-      return testApi.signOut();
-    }
-  };
-}
-
 async function createFirebaseAuthService() {
-  if (typeof window !== "undefined" && window.__TEACHSHEET_FIREBASE_TEST_API__) {
-    return createTestAuthService(window.__TEACHSHEET_FIREBASE_TEST_API__);
-  }
-
   if (!isFirebaseConfigured()) {
     return createUnavailableAuthService(
-      "Firebase Auth is not configured. Add your Firebase web config in js/auth/firebase.js or window.__TEACHSHEET_FIREBASE_CONFIG__.",
-      false
+      "Firebase Auth is not configured. Complete the Firebase web config in js/auth/firebase.js."
     );
   }
 
@@ -107,7 +60,7 @@ async function createFirebaseAuthService() {
       import(FIREBASE_APP_URL),
       import(FIREBASE_AUTH_URL)
     ]);
-    const app = getApps().length ? getApp() : initializeApp(getFirebaseConfig());
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
     if (!cachedAuthInstance) {
       cachedAuthInstance = authModule.initializeAuth(app, {
@@ -154,8 +107,7 @@ async function createFirebaseAuthService() {
   } catch (error) {
     console.error(error);
     return createUnavailableAuthService(
-      "Firebase Auth could not be initialized. Check your Firebase config and enabled providers.",
-      true
+      "Firebase Auth could not be initialized. Check the Firebase web config and enabled providers."
     );
   }
 }
