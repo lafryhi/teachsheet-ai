@@ -7,12 +7,16 @@ import {
 } from "./core/pagination.js";
 import {
   loadSettings,
+  loadProjects,
+  saveProject,
   saveSettings,
   saveWorksheet,
-  clearWorksheetStorage
-} from "./core/storage.js";
+  clearWorksheetStorage,
+  deleteProject
+} from "./core/storage.js?v=projects";
 import { hasRecognizedPromptFields, parsePrompt } from "./core/promptParser.js";
 import { renderEmptyWorksheet, renderWorksheetPreview } from "./ui/preview.js";
+import { renderSavedProjects } from "./ui/projects.js";
 import { applyTheme, getTheme } from "./ui/themes.js";
 import { applyZoom, normalizeZoomValue } from "./ui/zoom.js";
 import { downloadWorksheetPDF } from "./export/pdf.js";
@@ -24,7 +28,9 @@ import {
 
 const state = {
   currentQuestions: [],
+  currentProject: null,
   pagination: createPaginationState(0),
+  savedProjects: [],
   template: getDefaultTemplate(),
   theme: getDefaultTemplate().theme,
   zoom: 100
@@ -63,6 +69,36 @@ function getFormValues() {
     questionCount: Number.parseInt(document.getElementById("questionCount").value, 10),
     templateId: document.getElementById("template").value,
     studentName: document.getElementById("studentName").value.trim()
+  };
+}
+
+function getPromptValue() {
+  return document.getElementById("promptInput").value.trim();
+}
+
+function getProjectAnswers(questions) {
+  return questions.map((question) => question.answer);
+}
+
+function createProjectId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `project-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+function buildProjectObject(existingProjectId = null, existingCreatedAt = null) {
+  const settings = getFormValues();
+
+  return {
+    id: existingProjectId || createProjectId(),
+    createdAt: existingCreatedAt || new Date().toISOString(),
+    prompt: getPromptValue(),
+    template: state.template.id,
+    settings,
+    questions: state.currentQuestions,
+    answers: getProjectAnswers(state.currentQuestions)
   };
 }
 
@@ -134,6 +170,13 @@ function syncPreview() {
   applyPreviewState();
 }
 
+function renderSavedProjectsList() {
+  document.getElementById("savedProjectsList").innerHTML = renderSavedProjects(
+    state.savedProjects,
+    state.currentProject?.id || null
+  );
+}
+
 function generateWorksheet() {
   const formValues = getFormValues();
   state.template = getTemplateById(formValues.templateId);
@@ -150,14 +193,19 @@ function generateWorksheet() {
     state.currentQuestions.length,
     state.template.questionsPerPage
   );
+  state.currentProject = buildProjectObject();
 
   syncPreview();
+  renderSavedProjectsList();
 
   persistSettings();
   saveWorksheet({
+    project: state.currentProject,
     questions: state.currentQuestions,
     settings: formValues,
     templateId: state.template.id,
+    prompt: getPromptValue(),
+    answers: state.currentProject.answers,
     theme: state.theme,
     zoom: state.zoom
   });
@@ -165,9 +213,11 @@ function generateWorksheet() {
 
 function clearWorksheet() {
   state.currentQuestions = [];
+  state.currentProject = null;
   state.pagination = resetPagination(state.pagination, 0);
 
   syncPreview();
+  renderSavedProjectsList();
   clearWorksheetStorage();
   persistSettings();
 }
@@ -184,6 +234,80 @@ function applyPrompt() {
   const parsedPrompt = parsePrompt(promptText, getSmartPromptDefaults());
   applyParsedPromptSettings(parsedPrompt);
   generateWorksheet();
+}
+
+function loadProjectIntoInterface(project) {
+  document.getElementById("promptInput").value = project.prompt || "";
+  document.getElementById("grade").value = project.settings.grade;
+  document.getElementById("operation").value = project.settings.operation;
+  document.getElementById("difficulty").value = project.settings.difficulty;
+  ensureSelectOption(
+    document.getElementById("questionCount"),
+    project.settings.questionCount,
+    `${project.settings.questionCount} Questions`
+  );
+  document.getElementById("questionCount").value = String(project.settings.questionCount);
+  document.getElementById("template").value = project.template;
+  document.getElementById("studentName").value = project.settings.studentName || "";
+}
+
+function loadProject(projectId) {
+  const project = state.savedProjects.find((entry) => entry.id === projectId);
+
+  if (!project) {
+    return;
+  }
+
+  state.template = getTemplateById(project.template);
+  state.theme = state.template.theme;
+  state.currentQuestions = Array.isArray(project.questions) ? project.questions : [];
+  state.pagination = resetPagination(
+    state.pagination,
+    state.currentQuestions.length,
+    state.template.questionsPerPage
+  );
+  state.currentProject = {
+    ...project,
+    answers: Array.isArray(project.answers) ? project.answers : getProjectAnswers(project.questions || [])
+  };
+
+  loadProjectIntoInterface(project);
+  syncPreview();
+  renderSavedProjectsList();
+  persistSettings();
+  saveWorksheet({
+    project: state.currentProject,
+    questions: state.currentQuestions,
+    settings: project.settings,
+    templateId: state.template.id,
+    prompt: project.prompt || "",
+    answers: state.currentProject.answers,
+    theme: state.theme,
+    zoom: state.zoom
+  });
+}
+
+function saveCurrentProject() {
+  if (state.currentQuestions.length === 0) {
+    window.alert("Please generate a worksheet first.");
+    return;
+  }
+
+  const existingProjectId = state.currentProject?.id || null;
+  const existingCreatedAt = state.currentProject?.createdAt || null;
+  state.currentProject = buildProjectObject(existingProjectId, existingCreatedAt);
+  state.savedProjects = saveProject(state.currentProject);
+  renderSavedProjectsList();
+}
+
+function removeProject(projectId) {
+  state.savedProjects = deleteProject(projectId);
+
+  if (state.currentProject?.id === projectId) {
+    state.currentProject = null;
+  }
+
+  renderSavedProjectsList();
 }
 
 function downloadPDF() {
@@ -230,6 +354,10 @@ function setTheme(theme) {
   state.theme = getTheme(theme).id;
   applyTheme(getWorksheetElement(), state.theme);
   persistSettings();
+
+  if (state.currentProject) {
+    state.currentProject.template = state.template.id;
+  }
 }
 
 function hydrateSettings() {
@@ -254,6 +382,11 @@ function hydrateSettings() {
   state.zoom = normalizeZoomValue(savedSettings.zoom ?? 100);
 }
 
+function hydrateSavedProjects() {
+  state.savedProjects = loadProjects();
+  renderSavedProjectsList();
+}
+
 function bindFormPersistence() {
   const fieldIds = ["grade", "operation", "difficulty", "questionCount", "studentName"];
 
@@ -275,10 +408,17 @@ function bindFormPersistence() {
     persistSettings();
 
     if (state.currentQuestions.length > 0) {
+      state.currentProject = buildProjectObject(
+        state.currentProject?.id || null,
+        state.currentProject?.createdAt || null
+      );
       saveWorksheet({
+        project: state.currentProject,
         questions: state.currentQuestions,
         settings: getFormValues(),
         templateId: state.template.id,
+        prompt: getPromptValue(),
+        answers: state.currentProject.answers,
         theme: state.theme,
         zoom: state.zoom
       });
@@ -295,6 +435,24 @@ function bindFormPersistence() {
       applyPrompt();
     }
   });
+
+  document.getElementById("saveProjectButton").addEventListener("click", () => {
+    saveCurrentProject();
+  });
+
+  document.getElementById("savedProjectsList").addEventListener("click", (event) => {
+    const loadProjectId = event.target.dataset.loadProject;
+    const deleteProjectId = event.target.dataset.deleteProject;
+
+    if (loadProjectId) {
+      loadProject(loadProjectId);
+      return;
+    }
+
+    if (deleteProjectId) {
+      removeProject(deleteProjectId);
+    }
+  });
 }
 
 function populateTemplateOptions() {
@@ -307,6 +465,7 @@ function populateTemplateOptions() {
 function init() {
   populateTemplateOptions();
   hydrateSettings();
+  hydrateSavedProjects();
   bindFormPersistence();
   syncPreview();
 }
@@ -319,5 +478,6 @@ window.nextPreviewPage = nextPreviewPage;
 window.updateZoom = updateZoom;
 window.setTheme = setTheme;
 window.applyPrompt = applyPrompt;
+window.saveCurrentProject = saveCurrentProject;
 
 init();

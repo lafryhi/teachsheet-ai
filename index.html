@@ -189,9 +189,15 @@
       </label>
 
       <button id="promptGenerateButton" type="button">Generate From Prompt</button>
+      <button id="saveProjectButton" type="button">Save Project</button>
       <button onclick="generateWorksheet()">Generate Worksheet</button>
       <button class="green" onclick="downloadPDF()">Download PDF</button>
       <button class="red" onclick="clearWorksheet()">Clear</button>
+
+      <div class="saved-projects">
+        <h3>Saved Projects</h3>
+        <div id="savedProjectsList" class="saved-projects-list"></div>
+      </div>
     </section>
 
     <section class="preview">
@@ -214,6 +220,6 @@
   <p>AI-powered printable worksheets for teachers.</p>
 </footer>
 
-<script type="module" src="js/app.js"></script>
+<script type="module" src="js/app.js?v=save-projects"></script>
 </body>
 </html>

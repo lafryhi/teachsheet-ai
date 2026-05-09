@@ -1,5 +1,6 @@
 const SETTINGS_KEY = "teachsheet-ai:settings";
 const WORKSHEET_KEY = "teachsheet-ai:worksheet";
+const PROJECTS_KEY = "teachsheet-ai:projects";
 
 function canUseStorage() {
   try {
@@ -57,4 +58,33 @@ export function clearWorksheetStorage() {
   }
 
   window.localStorage.removeItem(WORKSHEET_KEY);
+}
+
+export function loadProjects() {
+  const projects = readJson(PROJECTS_KEY);
+  return Array.isArray(projects) ? projects : [];
+}
+
+export function saveProjects(projects) {
+  writeJson(PROJECTS_KEY, projects);
+}
+
+export function saveProject(project) {
+  const projects = loadProjects();
+  const existingIndex = projects.findIndex((entry) => entry.id === project.id);
+
+  if (existingIndex >= 0) {
+    projects[existingIndex] = project;
+  } else {
+    projects.unshift(project);
+  }
+
+  saveProjects(projects);
+  return projects;
+}
+
+export function deleteProject(projectId) {
+  const projects = loadProjects().filter((project) => project.id !== projectId);
+  saveProjects(projects);
+  return projects;
 }

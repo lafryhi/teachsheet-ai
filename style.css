@@ -332,6 +332,72 @@ button {
   background: #ff4d4d;
 }
 
+.saved-projects {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 2px solid #e5eef7;
+}
+
+.saved-projects h3 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+
+.saved-projects-list {
+  display: grid;
+  gap: 12px;
+}
+
+.saved-project-card {
+  border: 2px solid #d7e7f5;
+  border-radius: 16px;
+  padding: 14px;
+  background: #f9fcff;
+}
+
+.saved-project-card.active-project {
+  border-color: #1d9bf0;
+  box-shadow: 0 10px 20px rgba(29, 155, 240, 0.08);
+}
+
+.saved-project-card h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.saved-project-meta {
+  display: grid;
+  gap: 4px;
+  color: #5b6472;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.saved-project-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.saved-project-actions button {
+  margin-top: 0;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.saved-project-actions .delete-project {
+  background: #ff4d4d;
+}
+
+.saved-projects-empty {
+  color: #6b7280;
+  font-size: 14px;
+  background: #f9fcff;
+  border: 2px dashed #d7e7f5;
+  border-radius: 16px;
+  padding: 16px;
+}
+
 .worksheet {
   background: white;
   border: 3px solid #1d9bf0;
