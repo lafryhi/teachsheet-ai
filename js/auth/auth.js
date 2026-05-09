@@ -54,7 +54,8 @@ export function createAuthController({ onUserChanged }) {
     user: null,
     mode: "login",
     isLoading: true,
-    isSubmitting: false
+    isSubmitting: false,
+    pendingDisplayName: ""
   };
 
   function getElement(id) {
@@ -154,11 +155,14 @@ export function createAuthController({ onUserChanged }) {
   function renderAuthChrome() {
     const user = state.user;
     const isSignedIn = Boolean(user);
+    const userIdentity = isSignedIn
+      ? (state.pendingDisplayName || getDisplayName(user))
+      : "";
 
     getAuthLoadingState().hidden = !state.isLoading;
     getSignedOutActions().hidden = state.isLoading || isSignedIn;
     getSignedInActions().hidden = state.isLoading || !isSignedIn;
-    getUserIdentity().textContent = isSignedIn ? getDisplayName(user) : "";
+    getUserIdentity().textContent = userIdentity;
 
     const configNote = state.authService?.configured
       ? ""
@@ -185,10 +189,19 @@ export function createAuthController({ onUserChanged }) {
       setSubmittingState(true);
       setAuthStatus(state.mode === "signup" ? "Creating account..." : "Signing you in...", "loading");
 
-      if (state.mode === "signup") {
-        await state.authService.signUp({ name, email, password });
-      } else {
-        await state.authService.signIn({ email, password });
+      const user = state.mode === "signup"
+        ? await state.authService.signUp({ name, email, password })
+        : await state.authService.signIn({ email, password });
+
+      if (state.mode === "signup" && name) {
+        state.pendingDisplayName = name;
+      }
+
+      if (user) {
+        state.user = user;
+        state.isLoading = false;
+        renderAuthChrome();
+        onUserChanged?.(user);
       }
 
       closeModal();
@@ -280,10 +293,21 @@ export function createAuthController({ onUserChanged }) {
       let initialResolved = false;
 
       state.authService.onAuthStateChanged((user) => {
-        state.user = user;
+        const resolvedUser = state.pendingDisplayName && user && !user.displayName
+          ? {
+            uid: user.uid,
+            email: user.email,
+            displayName: state.pendingDisplayName
+          }
+          : user;
+
+        state.user = resolvedUser;
         state.isLoading = false;
+        if (!user || user.displayName) {
+          state.pendingDisplayName = "";
+        }
         renderAuthChrome();
-        onUserChanged?.(user);
+        onUserChanged?.(resolvedUser);
 
         if (!initialResolved) {
           initialResolved = true;

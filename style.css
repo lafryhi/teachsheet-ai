@@ -430,6 +430,10 @@ a {
   min-width: 0;
 }
 
+.dashboard-stat-empty strong {
+  font-size: 18px;
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: 340px 1fr;
@@ -513,6 +517,34 @@ button:disabled {
 
 .example-prompts {
   margin-bottom: 16px;
+}
+
+.active-template-indicator {
+  display: grid;
+  gap: 4px;
+  margin: -4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f7fbff;
+  border: 2px solid #dbe7f3;
+}
+
+.active-template-indicator strong {
+  font-size: 16px;
+}
+
+.active-template-badge,
+.template-summary-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #008cff;
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .example-prompts h3 {
@@ -669,6 +701,7 @@ button:disabled {
 .worksheet-template-summary {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
   padding: 8px 14px;
@@ -711,6 +744,7 @@ button:disabled {
   background: var(--question-background, white);
   line-height: var(--question-line-height, 1.4);
   overflow-wrap: anywhere;
+  white-space: pre-line;
   break-inside: avoid;
   page-break-inside: avoid;
   min-height: 78px;
@@ -954,18 +988,52 @@ footer {
     font-size: 44px;
   }
 
+  .navbar {
+    padding: 10px 4%;
+  }
+
+  .logo {
+    font-size: 18px;
+    line-height: 1.05;
+    max-width: 92px;
+  }
+
   .nav-links {
     width: 100%;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 6px;
   }
 
   .nav-links > a:not(.nav-btn) {
     display: none;
   }
 
+  .nav-btn {
+    display: none;
+  }
+
   .auth-nav {
     margin-left: 0;
+    gap: 6px;
+  }
+
+  .auth-loading-state {
+    font-size: 11px;
+  }
+
+  .auth-actions,
+  .auth-session {
+    gap: 6px;
+  }
+
+  .auth-nav-button {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .user-identity {
+    max-width: 82px;
+    font-size: 12px;
   }
 
   .dashboard-header,

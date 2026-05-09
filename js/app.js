@@ -52,10 +52,12 @@ const state = {
   currentUser: null,
   currentWorksheetMeta: null,
   isGenerating: false,
+  lastGeneratedAt: null,
   pagination: createPaginationState(0),
   savedProjects: [],
   storageScope: getGuestScope(),
   template: getDefaultTemplate(),
+  templateManuallySelected: false,
   theme: getDefaultTemplate().theme,
   zoom: 100
 };
@@ -112,6 +114,10 @@ function getSavedProjectsListElement() {
 
 function getDashboardContainer() {
   return getElement("dashboardContainer");
+}
+
+function getActiveTemplateIndicator() {
+  return getElement("activeTemplateIndicator");
 }
 
 function getSmartPromptDefaults() {
@@ -184,6 +190,10 @@ function getFormValues() {
     templateId: getElement("template").value,
     studentName: getElement("studentName").value.trim()
   };
+}
+
+function getSelectedTemplateId() {
+  return getFormValues().templateId;
 }
 
 function getPromptValue() {
@@ -274,6 +284,7 @@ function buildProjectObject(existingProjectId = null, existingCreatedAt = null) 
   return {
     id: existingProjectId || createProjectId(),
     createdAt: existingCreatedAt || new Date().toISOString(),
+    generatedAt: state.lastGeneratedAt || new Date().toISOString(),
     ownerId: state.currentUser?.uid || getGuestScope(),
     ownerEmail: state.currentUser?.email || "guest@local",
     prompt: getPromptValue(),
@@ -291,7 +302,20 @@ function applyPreviewState() {
   applyZoom(worksheetElement, state.zoom);
 }
 
-function applyParsedPromptSettings(parsedPrompt) {
+function updateActiveTemplateIndicator() {
+  const indicator = getActiveTemplateIndicator();
+
+  indicator.innerHTML = `
+    <span class="active-template-badge">Active Template</span>
+    <strong>${state.template.name}</strong>
+    <span>${state.template.description}</span>
+  `;
+  indicator.dataset.templateId = state.template.id;
+}
+
+function applyParsedPromptSettings(parsedPrompt, options = {}) {
+  const { applyTemplate = false } = options;
+
   if (parsedPrompt.grade) {
     getElement("grade").value = parsedPrompt.grade;
   }
@@ -304,22 +328,31 @@ function applyParsedPromptSettings(parsedPrompt) {
   ensureSelectOption(getElement("questionCount"), parsedPrompt.count, `${parsedPrompt.count} Questions`);
   getElement("questionCount").value = String(parsedPrompt.count);
 
-  if (parsedPrompt.template) {
+  if (applyTemplate && parsedPrompt.template) {
     getElement("template").value = parsedPrompt.template;
   }
 }
 
 function getWorksheetRequest() {
   const promptValue = getPromptValue();
+  const selectedTemplateId = getSelectedTemplateId();
 
   if (promptValue && hasRecognizedWorksheetPrompt(promptValue)) {
     const parsedPrompt = {
       ...getSmartPromptDefaults(),
       ...parseWorksheetPrompt(promptValue)
     };
+    const resolvedRequest = {
+      ...parsedPrompt,
+      template: state.templateManuallySelected
+        ? selectedTemplateId
+        : (parsedPrompt.templateExplicit ? parsedPrompt.template : selectedTemplateId)
+    };
 
-    applyParsedPromptSettings(parsedPrompt);
-    return parsedPrompt;
+    applyParsedPromptSettings(parsedPrompt, {
+      applyTemplate: parsedPrompt.templateExplicit && !state.templateManuallySelected
+    });
+    return resolvedRequest;
   }
 
   return buildMathRequestFromFormValues(getFormValues());
@@ -356,7 +389,12 @@ function renderDashboardSection() {
   dashboardContainer.innerHTML = renderDashboard({
     user: state.currentUser,
     projects: state.savedProjects,
-    currentProject: state.currentProject
+    currentWorksheetSummary: state.currentQuestions.length > 0
+      ? {
+        title: state.currentProject?.prompt || state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
+        timestamp: state.lastGeneratedAt
+      }
+      : null
   });
 
   const createButton = getElement("dashboardCreateButton");
@@ -374,6 +412,7 @@ function resetWorksheetState() {
   state.currentProject = null;
   state.currentRequest = null;
   state.currentWorksheetMeta = null;
+  state.lastGeneratedAt = null;
   state.pagination = resetPagination(state.pagination, 0);
 }
 
@@ -447,6 +486,7 @@ function syncPreview() {
   if (state.currentQuestions.length === 0) {
     renderEmptyWorksheet(getWorksheetElement(), state.template);
     applyPreviewState();
+    updateActiveTemplateIndicator();
     updatePreviewControls();
     renderDashboardSection();
     return;
@@ -477,6 +517,7 @@ function syncPreview() {
   });
 
   applyPreviewState();
+  updateActiveTemplateIndicator();
   updatePreviewControls();
   renderDashboardSection();
 }
@@ -488,6 +529,7 @@ function applyStoredWorksheet(savedWorksheet) {
   }
 
   state.template = getTemplateById(savedWorksheet.templateId || state.template.id);
+  state.templateManuallySelected = true;
   state.theme = getTheme(savedWorksheet.theme || state.template.theme).id;
   state.zoom = normalizeZoomValue(savedWorksheet.zoom ?? state.zoom);
   state.currentQuestions = Array.isArray(savedWorksheet.questions) ? savedWorksheet.questions : [];
@@ -517,6 +559,7 @@ function applyStoredWorksheet(savedWorksheet) {
     showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
   });
   state.currentProject = worksheetProject;
+  state.lastGeneratedAt = worksheetProject?.generatedAt || worksheetProject?.createdAt || null;
   state.pagination = resetPagination(
     state.pagination,
     state.currentQuestions.length,
@@ -546,6 +589,7 @@ function buildWorksheetFromRequest(worksheetRequest) {
   state.template = getTemplateById(worksheetRequest.template || getFormValues().templateId);
   state.theme = state.template.theme;
   state.currentQuestions = generatorResult.questions;
+  state.lastGeneratedAt = new Date().toISOString();
   state.currentWorksheetMeta = getWorksheetMeta(worksheetRequest, generatorResult);
   state.pagination = resetPagination(
     state.pagination,
@@ -618,6 +662,7 @@ function loadProject(projectId) {
   }
 
   state.template = getTemplateById(project.template);
+  state.templateManuallySelected = true;
   state.theme = state.template.theme;
   state.currentQuestions = Array.isArray(project.questions) ? project.questions : [];
   state.currentRequest = getRequestFromProject(project);
@@ -633,6 +678,7 @@ function loadProject(projectId) {
     ...project,
     answers: Array.isArray(project.answers) ? project.answers : getProjectAnswers(project.questions || [])
   };
+  state.lastGeneratedAt = project.generatedAt || project.createdAt || null;
 
   loadProjectIntoInterface(project);
   syncPreview();
@@ -756,9 +802,11 @@ function hydrateSettings() {
   }
 
   state.template = getTemplateById(savedSettings.templateId);
+  state.templateManuallySelected = true;
   getElement("template").value = state.template.id;
   state.theme = getTheme(savedSettings.theme).id;
   state.zoom = normalizeZoomValue(savedSettings.zoom ?? 100);
+  updateActiveTemplateIndicator();
 }
 
 function bindFormPersistence() {
@@ -771,8 +819,12 @@ function bindFormPersistence() {
   }
 
   getElement("template").addEventListener("change", (event) => {
+    state.templateManuallySelected = true;
     state.template = getTemplateById(event.target.value);
     state.theme = state.template.theme;
+    if (state.currentRequest) {
+      state.currentRequest.template = state.template.id;
+    }
     state.pagination = resetPagination(
       state.pagination,
       state.currentQuestions.length,
@@ -784,6 +836,7 @@ function bindFormPersistence() {
         templateDescription: state.template.description
       }
       : state.currentWorksheetMeta;
+    updateActiveTemplateIndicator();
     syncPreview();
     persistSettings();
 

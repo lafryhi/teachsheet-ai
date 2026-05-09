@@ -87,9 +87,10 @@ async function createFirebaseAuthService() {
 
         if (name) {
           await authModule.updateProfile(credential.user, { displayName: name });
+          await credential.user.reload();
         }
 
-        return credential.user;
+        return cachedAuthInstance.currentUser || credential.user;
       },
       async signIn({ email, password }) {
         const credential = await authModule.signInWithEmailAndPassword(cachedAuthInstance, email, password);

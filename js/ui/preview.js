@@ -64,7 +64,10 @@ export function renderWorksheetPreview({
     <div class="worksheet-header">
       <h2>${escapeHtml(worksheetTitle)}</h2>
       <p>${escapeHtml(template.name)} - Page ${currentPage} of ${totalPages}</p>
-      <div class="worksheet-template-summary">${escapeHtml(templateDescription || template.description || template.name)}</div>
+      <div class="worksheet-template-summary">
+        <span class="template-summary-badge">Active Template</span>
+        <span>${escapeHtml(templateDescription || template.description || template.name)}</span>
+      </div>
       <div class="meta">
         <div class="meta-item"><strong>Name:</strong> ${escapeHtml(studentName || "________________")}</div>
         <div class="meta-item"><strong>Grade:</strong> ${escapeHtml(grade || "--")}</div>
@@ -96,7 +99,10 @@ export function renderEmptyWorksheet(worksheetElement, template) {
     <div class="worksheet-header">
       <h2>Worksheet</h2>
       <p>${escapeHtml(template.name)} - Choose settings and click Generate Worksheet.</p>
-      <div class="worksheet-template-summary">${escapeHtml(template.description || template.name)}</div>
+      <div class="worksheet-template-summary">
+        <span class="template-summary-badge">Active Template</span>
+        <span>${escapeHtml(template.description || template.name)}</span>
+      </div>
     </div>
     <div id="questions" class="questions empty">
       <div class="empty-state">

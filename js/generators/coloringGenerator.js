@@ -8,7 +8,11 @@ export function generateColoringWorksheet({ topic, count }) {
 
   return {
     questions: Array.from({ length: count }, (_, index) => ({
-      text: `Color this picture idea: ${items[index % items.length]}. Add your favorite colors.`,
+      text: [
+        `Color the picture idea: ${items[index % items.length]}.`,
+        "Choose 2 or 3 strong colors and keep the outline neat.",
+        `After coloring, say one short fact about the ${items[index % items.length]}.`
+      ].join("\n"),
       answer: "Coloring activity",
       answerLine: false
     })),

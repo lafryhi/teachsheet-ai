@@ -132,6 +132,7 @@ export function parseWorksheetPrompt(prompt) {
   const detectedType = detectType(segments) || "math";
   const defaults = DEFAULTS_BY_TYPE[detectedType];
   const topic = detectTopic(segments, detectedType);
+  const explicitTemplateId = detectTemplate(segments);
 
   return {
     type: detectedType,
@@ -140,6 +141,7 @@ export function parseWorksheetPrompt(prompt) {
     difficulty: detectDifficulty(segments) || defaults.difficulty,
     count: detectCount(segments) || defaults.count,
     grade: detectGrade(segments) || defaults.grade,
-    template: detectTemplate(segments) || defaults.template
+    template: explicitTemplateId || defaults.template,
+    templateExplicit: Boolean(explicitTemplateId)
   };
 }

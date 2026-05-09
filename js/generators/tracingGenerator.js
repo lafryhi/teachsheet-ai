@@ -11,10 +11,17 @@ function extractTraceTarget(topic = "") {
 
 export function generateTracingWorksheet({ topic, count }) {
   const traceTarget = extractTraceTarget(topic);
+  const uppercaseTarget = traceTarget.toUpperCase();
+  const lowercaseTarget = traceTarget.toLowerCase();
+  const supportWord = uppercaseTarget === "A" ? "apple" : `${lowercaseTarget}${lowercaseTarget}${lowercaseTarget}`;
 
   return {
     questions: Array.from({ length: count }, () => ({
-      text: `Trace carefully: ${traceTarget} ${traceTarget} ${traceTarget} ${traceTarget} ${traceTarget}`,
+      text: [
+        `Trace the uppercase form: ${uppercaseTarget} ${uppercaseTarget} ${uppercaseTarget} ${uppercaseTarget} ${uppercaseTarget}`,
+        `Trace the lowercase form: ${lowercaseTarget} ${lowercaseTarget} ${lowercaseTarget} ${lowercaseTarget} ${lowercaseTarget}`,
+        `Say the sound, then trace the word: ${supportWord}`
+      ].join("\n"),
       answer: "Tracing practice",
       answerLine: false
     })),

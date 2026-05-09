@@ -11,7 +11,7 @@ function formatDate(dateValue) {
   const date = new Date(dateValue);
 
   if (Number.isNaN(date.getTime())) {
-    return "No worksheet created yet";
+    return "No worksheet activity yet";
   }
 
   return date.toLocaleString();
@@ -31,11 +31,7 @@ function buildProjectTitle(project) {
   return `${grade} - ${operation}`;
 }
 
-function getLatestProject(projects, currentProject) {
-  if (currentProject) {
-    return currentProject;
-  }
-
+function getLatestSavedProject(projects) {
   return [...projects].sort((left, right) => {
     const leftTime = new Date(left.createdAt).getTime() || 0;
     const rightTime = new Date(right.createdAt).getTime() || 0;
@@ -43,13 +39,33 @@ function getLatestProject(projects, currentProject) {
   })[0] || null;
 }
 
-export function renderDashboard({ user, projects, currentProject }) {
+function renderSummaryCard(label, title, subtitle = "", empty = false) {
+  const emptyClassName = empty ? " dashboard-stat-empty" : "";
+
+  return `
+    <div class="dashboard-stat dashboard-stat-wide${emptyClassName}">
+      <span class="dashboard-stat-label">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(title)}</strong>
+      <span class="dashboard-stat-subtle">${escapeHtml(subtitle)}</span>
+    </div>
+  `;
+}
+
+export function renderDashboard({ user, projects, currentWorksheetSummary }) {
   if (!user) {
     return "";
   }
 
-  const latestProject = getLatestProject(projects, currentProject);
+  const latestSavedProject = getLatestSavedProject(projects);
   const userLabel = user.displayName || user.email || "Teacher";
+  const lastGeneratedTitle = currentWorksheetSummary?.title || "No worksheet generated yet";
+  const lastGeneratedTime = currentWorksheetSummary?.timestamp
+    ? formatDate(currentWorksheetSummary.timestamp)
+    : "Generate a worksheet to see it here.";
+  const lastSavedTitle = latestSavedProject ? buildProjectTitle(latestSavedProject) : "No saved projects yet";
+  const lastSavedTime = latestSavedProject
+    ? `${formatDate(latestSavedProject.createdAt)} - ${latestSavedProject.template || "classic-math"}`
+    : "Save a worksheet to keep it on this account.";
 
   return `
     <div class="dashboard-card">
@@ -66,11 +82,8 @@ export function renderDashboard({ user, projects, currentProject }) {
           <span class="dashboard-stat-label">Saved Projects</span>
           <strong>${projects.length}</strong>
         </div>
-        <div class="dashboard-stat dashboard-stat-wide">
-          <span class="dashboard-stat-label">Last Worksheet</span>
-          <strong>${escapeHtml(buildProjectTitle(latestProject))}</strong>
-          <span class="dashboard-stat-subtle">${escapeHtml(formatDate(latestProject?.createdAt))}</span>
-        </div>
+        ${renderSummaryCard("Last Generated Worksheet", lastGeneratedTitle, lastGeneratedTime, !currentWorksheetSummary)}
+        ${renderSummaryCard("Last Saved Project", lastSavedTitle, lastSavedTime, !latestSavedProject)}
       </div>
     </div>
   `;
