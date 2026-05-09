@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TeachSheet AI - AI Worksheet Generator for Teachers</title>
+  <meta name="description" content="TeachSheet AI helps teachers create printable math worksheets, quizzes, and answer keys in seconds." />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <div class="logo">TeachSheet AI</div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#demo">Demo</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#app" class="nav-btn">Try Free</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-text">
+    <span class="tag">AI Worksheet Generator for Teachers</span>
+    <h1>Create printable worksheets in seconds.</h1>
+    <p>
+      Generate math worksheets, quizzes, and answer keys for primary school students.
+      Save time, teach better, and prepare lessons faster.
+    </p>
+
+    <div class="hero-buttons">
+      <a href="#app" class="primary-btn">Start Free</a>
+      <a href="#demo" class="secondary-btn">See Demo</a>
+    </div>
+
+    <div class="trust">
+      No installation · Teacher-friendly · PDF export
+    </div>
+  </div>
+
+  <div class="hero-card">
+    <h3>Worksheet Preview</h3>
+    <div class="mini-paper">
+      <div class="line big"></div>
+      <div class="line"></div>
+      <div class="question-row">1. 25 + 14 = ______</div>
+      <div class="question-row">2. 80 - 36 = ______</div>
+      <div class="question-row">3. 7 × 8 = ______</div>
+      <div class="question-row">4. 48 ÷ 6 = ______</div>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="section">
+  <h2>Built for busy teachers</h2>
+  <p class="section-subtitle">Everything you need to create simple, clean, printable activities.</p>
+
+  <div class="features">
+    <div class="feature-card">
+      <h3>Fast Worksheet Creation</h3>
+      <p>Create math exercises in seconds without designing pages manually.</p>
+    </div>
+
+    <div class="feature-card">
+      <h3>Answer Key Included</h3>
+      <p>Each worksheet comes with an automatic answer key for quick correction.</p>
+    </div>
+
+    <div class="feature-card">
+      <h3>Printable PDF</h3>
+      <p>Download ready-to-print worksheets for classroom or homework use.</p>
+    </div>
+
+    <div class="feature-card">
+      <h3>Primary Grades</h3>
+      <p>Designed for Grade 1 to Grade 5 with different difficulty levels.</p>
+    </div>
+  </div>
+</section>
+
+<section id="demo" class="demo-section">
+  <div>
+    <h2>Simple workflow</h2>
+    <p>Choose grade, operation, difficulty, and number of questions. Then generate and download.</p>
+  </div>
+
+  <div class="steps">
+    <div><span>1</span> Select worksheet settings</div>
+    <div><span>2</span> Generate exercises</div>
+    <div><span>3</span> Download PDF</div>
+  </div>
+</section>
+
+<section id="pricing" class="section">
+  <h2>Simple pricing</h2>
+  <p class="section-subtitle">Start free. Upgrade later when the product becomes ready for real customers.</p>
+
+  <div class="pricing">
+    <div class="price-card">
+      <h3>Free</h3>
+      <div class="price">$0</div>
+      <p>For testing the prototype.</p>
+      <ul>
+        <li>Math worksheets</li>
+        <li>PDF export</li>
+        <li>Answer key</li>
+      </ul>
+      <a href="#app" class="primary-btn full">Try Free</a>
+    </div>
+
+    <div class="price-card pro">
+      <h3>Pro</h3>
+      <div class="price">$9<span>/month</span></div>
+      <p>Future SaaS plan.</p>
+      <ul>
+        <li>AI word problems</li>
+        <li>Reading worksheets</li>
+        <li>Grammar exercises</li>
+        <li>Saved worksheets</li>
+      </ul>
+      <a href="#app" class="secondary-btn full">Coming Soon</a>
+    </div>
+  </div>
+</section>
+
+<section id="app" class="app-section">
+  <h2>Try TeachSheet AI</h2>
+  <p class="section-subtitle">Generate your first worksheet now.</p>
+
+  <main class="app-layout">
+    <section class="panel">
+      <h2>Worksheet Settings</h2>
+
+      <label>Grade
+        <select id="grade">
+          <option value="Grade 1">Grade 1</option>
+          <option value="Grade 2" selected>Grade 2</option>
+          <option value="Grade 3">Grade 3</option>
+          <option value="Grade 4">Grade 4</option>
+          <option value="Grade 5">Grade 5</option>
+        </select>
+      </label>
+
+      <label>Operation
+        <select id="operation">
+          <option value="addition">Addition</option>
+          <option value="subtraction">Subtraction</option>
+          <option value="multiplication">Multiplication</option>
+          <option value="division">Division</option>
+          <option value="mixed">Mixed Operations</option>
+        </select>
+      </label>
+
+      <label>Difficulty
+        <select id="difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+
+      <label>Number of Questions
+        <select id="questionCount">
+          <option value="10">10 Questions</option>
+          <option value="15" selected>15 Questions</option>
+          <option value="20">20 Questions</option>
+          <option value="25">25 Questions</option>
+        </select>
+      </label>
+
+      <label>Student Name
+        <input id="studentName" type="text" placeholder="Student name" />
+      </label>
+
+      <button onclick="generateWorksheet()">Generate Worksheet</button>
+      <button class="green" onclick="downloadPDF()">Download PDF</button>
+      <button class="red" onclick="clearWorksheet()">Clear</button>
+    </section>
+
+    <section class="preview">
+      <div class="worksheet" id="worksheet">
+        <div class="worksheet-header">
+          <h2>Math Worksheet</h2>
+          <p>Choose settings and click Generate Worksheet.</p>
+        </div>
+
+        <div id="questions" class="questions empty">
+          No worksheet generated yet.
+        </div>
+      </div>
+    </section>
+  </main>
+</section>
+
+<footer>
+  <strong>TeachSheet AI</strong>
+  <p>AI-powered printable worksheets for teachers.</p>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
