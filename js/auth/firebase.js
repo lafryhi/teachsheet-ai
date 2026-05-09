@@ -1,7 +1,7 @@
 const FIREBASE_VERSION = "11.0.2";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
+  apiKey: "AIzaSyD9irNdJb6Cxm-h52zKoW0PCImi8rjhCQw",
   authDomain: "teachsheet-ai.firebaseapp.com",
   projectId: "teachsheet-ai",
   storageBucket: "teachsheet-ai.firebasestorage.app",
