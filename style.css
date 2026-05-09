@@ -338,6 +338,7 @@ button {
   border-radius: 18px;
   padding: 30px;
   min-height: 650px;
+  font-family: var(--worksheet-font-family, Arial, Helvetica, sans-serif);
 }
 
 .worksheet-header {
@@ -358,15 +359,18 @@ button {
 
 .questions {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
+  grid-template-columns: var(--questions-columns, repeat(2, 1fr));
+  gap: var(--questions-gap, 18px);
 }
 
 .question {
-  font-size: 22px;
-  padding: 14px;
+  font-size: var(--question-font-size, 22px);
+  padding: var(--question-padding, 14px);
   border: 2px dashed #b7d9f5;
-  border-radius: 14px;
+  border-radius: var(--question-radius, 14px);
+  border-style: var(--question-border-style, dashed);
+  background: var(--question-background, white);
+  line-height: var(--question-line-height, 1.4);
 }
 
 .answer-line {
@@ -392,8 +396,8 @@ button {
 
 .answer-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  grid-template-columns: var(--answer-columns, repeat(5, 1fr));
+  gap: var(--answer-gap, 8px);
   font-size: 14px;
 }
 

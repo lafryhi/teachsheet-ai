@@ -28,13 +28,24 @@ export function applyTheme(worksheetElement, themeId = "blue") {
 
   worksheetElement.dataset.theme = theme.id;
   worksheetElement.style.borderColor = theme.border;
+  worksheetElement.style.boxShadow = `0 20px 45px ${theme.border}20`;
 
   const headerElement = worksheetElement.querySelector(".worksheet-header");
   if (headerElement) {
     headerElement.style.borderBottomColor = theme.border;
   }
 
+  const headerTitleElement = worksheetElement.querySelector(".worksheet-header h2");
+  if (headerTitleElement) {
+    headerTitleElement.style.color = theme.accent;
+  }
+
   worksheetElement.querySelectorAll(".question").forEach((questionElement) => {
     questionElement.style.borderColor = theme.dashed;
   });
+
+  const answerKeyElement = worksheetElement.querySelector(".answer-key");
+  if (answerKeyElement) {
+    answerKeyElement.style.borderTopColor = theme.border;
+  }
 }

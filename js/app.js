@@ -15,7 +15,11 @@ import { renderEmptyWorksheet, renderWorksheetPreview } from "./ui/preview.js";
 import { applyTheme, getTheme } from "./ui/themes.js";
 import { applyZoom, normalizeZoomValue } from "./ui/zoom.js";
 import { downloadWorksheetPDF } from "./export/pdf.js";
-import { getDefaultTemplate } from "./templates/templates.js";
+import {
+  getDefaultTemplate,
+  getTemplateById,
+  getTemplateOptions
+} from "./templates/templates.js";
 
 const state = {
   currentQuestions: [],
@@ -35,6 +39,7 @@ function getFormValues() {
     operation: document.getElementById("operation").value,
     difficulty: document.getElementById("difficulty").value,
     questionCount: Number.parseInt(document.getElementById("questionCount").value, 10),
+    templateId: document.getElementById("template").value,
     studentName: document.getElementById("studentName").value.trim()
   };
 }
@@ -53,22 +58,27 @@ function persistSettings(partialSettings = {}) {
     operation: formValues.operation,
     difficulty: formValues.difficulty,
     questionCount: formValues.questionCount,
+    templateId: state.template.id,
     studentName: formValues.studentName,
     theme: state.theme,
     zoom: state.zoom,
-    templateId: state.template.id,
     ...partialSettings
   });
 }
 
 function syncPreview() {
   if (state.currentQuestions.length === 0) {
-    renderEmptyWorksheet(getWorksheetElement());
+    renderEmptyWorksheet(getWorksheetElement(), state.template);
     applyPreviewState();
     return;
   }
 
   const formValues = getFormValues();
+  const questionStartIndex = (state.pagination.currentPage - 1) * state.pagination.pageSize;
+  const pageQuestions = state.currentQuestions.slice(
+    questionStartIndex,
+    questionStartIndex + state.pagination.pageSize
+  );
 
   renderWorksheetPreview({
     worksheetElement: getWorksheetElement(),
@@ -76,9 +86,12 @@ function syncPreview() {
     operation: formValues.operation,
     difficulty: formValues.difficulty,
     studentName: formValues.studentName,
-    questions: state.currentQuestions,
+    questions: pageQuestions,
+    allQuestions: state.currentQuestions,
     currentPage: state.pagination.currentPage,
     totalPages: state.pagination.totalPages,
+    template: state.template,
+    pageSize: state.pagination.pageSize,
     formatOperation,
     capitalize
   });
@@ -88,6 +101,8 @@ function syncPreview() {
 
 function generateWorksheet() {
   const formValues = getFormValues();
+  state.template = getTemplateById(formValues.templateId);
+  state.theme = state.template.theme;
 
   state.currentQuestions = generateQuestions({
     operation: formValues.operation,
@@ -98,7 +113,7 @@ function generateWorksheet() {
   state.pagination = resetPagination(
     state.pagination,
     state.currentQuestions.length,
-    state.currentQuestions.length || 1
+    state.template.questionsPerPage
   );
 
   syncPreview();
@@ -107,6 +122,7 @@ function generateWorksheet() {
   saveWorksheet({
     questions: state.currentQuestions,
     settings: formValues,
+    templateId: state.template.id,
     theme: state.theme,
     zoom: state.zoom
   });
@@ -130,6 +146,8 @@ function downloadPDF() {
   downloadWorksheetPDF({
     questions: state.currentQuestions,
     ...getFormValues(),
+    template: state.template,
+    theme: getTheme(state.theme),
     formatOperation,
     capitalize
   });
@@ -169,6 +187,7 @@ function hydrateSettings() {
   const savedSettings = loadSettings();
 
   if (!savedSettings) {
+    document.getElementById("template").value = state.template.id;
     return;
   }
 
@@ -180,6 +199,8 @@ function hydrateSettings() {
     }
   }
 
+  state.template = getTemplateById(savedSettings.templateId);
+  document.getElementById("template").value = state.template.id;
   state.theme = getTheme(savedSettings.theme).id;
   state.zoom = normalizeZoomValue(savedSettings.zoom ?? 100);
 }
@@ -192,9 +213,39 @@ function bindFormPersistence() {
       persistSettings();
     });
   }
+
+  document.getElementById("template").addEventListener("change", (event) => {
+    state.template = getTemplateById(event.target.value);
+    state.theme = state.template.theme;
+    state.pagination = resetPagination(
+      state.pagination,
+      state.currentQuestions.length,
+      state.template.questionsPerPage
+    );
+    syncPreview();
+    persistSettings();
+
+    if (state.currentQuestions.length > 0) {
+      saveWorksheet({
+        questions: state.currentQuestions,
+        settings: getFormValues(),
+        templateId: state.template.id,
+        theme: state.theme,
+        zoom: state.zoom
+      });
+    }
+  });
+}
+
+function populateTemplateOptions() {
+  const templateSelect = document.getElementById("template");
+  templateSelect.innerHTML = getTemplateOptions()
+    .map((templateOption) => `<option value="${templateOption.value}">${templateOption.label}</option>`)
+    .join("");
 }
 
 function init() {
+  populateTemplateOptions();
   hydrateSettings();
   bindFormPersistence();
   syncPreview();
