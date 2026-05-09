@@ -12,7 +12,7 @@ function escapeHtml(value = "") {
 function createQuestionMarkup(question, index, startIndex) {
   return `
     <div class="question">
-      <strong>${startIndex + index + 1}.</strong> ${escapeHtml(question.text)} <span class="answer-line"></span>
+      <strong>${startIndex + index + 1}.</strong> ${escapeHtml(question.text)} ${question.answerLine === false ? "" : '<span class="answer-line"></span>'}
     </div>
   `;
 }
@@ -40,8 +40,8 @@ function applyTemplatePresentation(worksheetElement, template) {
 export function renderWorksheetPreview({
   worksheetElement,
   grade,
-  operation,
-  difficulty,
+  subjectLabel,
+  focusLabel,
   studentName,
   questions,
   allQuestions,
@@ -49,27 +49,27 @@ export function renderWorksheetPreview({
   totalPages,
   template,
   pageSize,
-  formatOperation,
-  capitalize
+  worksheetTitle,
+  showAnswerKey
 }) {
-  const showAnswerKey = currentPage === totalPages;
+  const showAnswerKeyPage = showAnswerKey && currentPage === totalPages;
   const startIndex = (currentPage - 1) * pageSize;
 
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
-      <h2>Math Worksheet</h2>
+      <h2>${escapeHtml(worksheetTitle)}</h2>
       <p>${escapeHtml(template.name)} · Page ${currentPage} of ${totalPages}</p>
       <div class="meta">
         <div><strong>Name:</strong> ${escapeHtml(studentName || "________________")}</div>
-        <div><strong>Grade:</strong> ${escapeHtml(grade)}</div>
-        <div><strong>Operation:</strong> ${escapeHtml(formatOperation(operation))}</div>
-        <div><strong>Difficulty:</strong> ${escapeHtml(capitalize(difficulty))}</div>
+        <div><strong>Grade:</strong> ${escapeHtml(grade || "—")}</div>
+        <div><strong>Subject:</strong> ${escapeHtml(subjectLabel)}</div>
+        <div><strong>Focus:</strong> ${escapeHtml(focusLabel)}</div>
       </div>
     </div>
     <div id="questions" class="questions">
       ${questions.map((question, index) => createQuestionMarkup(question, index, startIndex)).join("")}
     </div>
-    ${showAnswerKey ? `
+    ${showAnswerKeyPage ? `
       <div class="answer-key">
         <h3>Answer Key</h3>
         <div class="answer-grid">
@@ -88,7 +88,7 @@ export function renderWorksheetPreview({
 export function renderEmptyWorksheet(worksheetElement, template) {
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
-      <h2>Math Worksheet</h2>
+      <h2>Worksheet</h2>
       <p>${escapeHtml(template.name)} · Choose settings and click Generate Worksheet.</p>
     </div>
     <div id="questions" class="questions empty">No worksheet generated yet.</div>

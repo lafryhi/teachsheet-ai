@@ -1,4 +1,3 @@
-import { generateQuestions, formatOperation, capitalize } from "./core/generator.js";
 import {
   createPaginationState,
   nextPage,
@@ -13,8 +12,11 @@ import {
   saveWorksheet,
   clearWorksheetStorage,
   deleteProject
-} from "./core/storage.js?v=projects";
-import { hasRecognizedPromptFields, parsePrompt } from "./core/promptParser.js";
+} from "./core/storage.js?v=multi-generators";
+import {
+  hasRecognizedWorksheetPrompt,
+  parseWorksheetPrompt
+} from "./core/parser.js";
 import { renderEmptyWorksheet, renderWorksheetPreview } from "./ui/preview.js";
 import { renderSavedProjects } from "./ui/projects.js";
 import { applyTheme, getTheme } from "./ui/themes.js";
@@ -25,10 +27,25 @@ import {
   getTemplateById,
   getTemplateOptions
 } from "./templates/templates.js";
+import { generateMathWorksheet } from "./generators/mathGenerator.js";
+import { generateGrammarWorksheet } from "./generators/grammarGenerator.js";
+import { generateReadingWorksheet } from "./generators/readingGenerator.js";
+import { generateTracingWorksheet } from "./generators/tracingGenerator.js";
+import { generateColoringWorksheet } from "./generators/coloringGenerator.js";
+
+const GENERATORS = {
+  math: generateMathWorksheet,
+  grammar: generateGrammarWorksheet,
+  reading: generateReadingWorksheet,
+  tracing: generateTracingWorksheet,
+  coloring: generateColoringWorksheet
+};
 
 const state = {
   currentQuestions: [],
   currentProject: null,
+  currentRequest: null,
+  currentWorksheetMeta: null,
   pagination: createPaginationState(0),
   savedProjects: [],
   template: getDefaultTemplate(),
@@ -42,12 +59,48 @@ function getWorksheetElement() {
 
 function getSmartPromptDefaults() {
   return {
-    grade: "Grade 2",
-    operation: "addition",
+    type: "math",
+    subject: "math",
+    topic: "addition",
     difficulty: "medium",
-    questionCount: 15,
+    count: 15,
+    grade: "Grade 2",
     template: "classic-math"
   };
+}
+
+function capitalizeWords(text = "") {
+  return String(text)
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function getWorksheetTitle(type) {
+  const titles = {
+    math: "Math Worksheet",
+    grammar: "Grammar Worksheet",
+    reading: "Reading Worksheet",
+    tracing: "Tracing Practice",
+    coloring: "Coloring Activity"
+  };
+
+  return titles[type] || "Worksheet";
+}
+
+function getSubjectLabel(request) {
+  return request.type === "math" ? "Math" : capitalizeWords(request.subject);
+}
+
+function getFocusLabel(request) {
+  const topicLabel = capitalizeWords(request.topic);
+
+  if (request.type === "tracing" || request.type === "coloring") {
+    return topicLabel;
+  }
+
+  return request.difficulty ? `${topicLabel} · ${capitalizeWords(request.difficulty)}` : topicLabel;
 }
 
 function ensureSelectOption(selectElement, value, label) {
@@ -88,6 +141,18 @@ function createProjectId() {
   return `project-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
 
+function buildMathRequestFromFormValues(formValues) {
+  return {
+    type: "math",
+    subject: "math",
+    topic: formValues.operation,
+    difficulty: formValues.difficulty,
+    count: formValues.questionCount,
+    grade: formValues.grade,
+    template: formValues.templateId
+  };
+}
+
 function buildProjectObject(existingProjectId = null, existingCreatedAt = null) {
   const settings = getFormValues();
 
@@ -97,6 +162,7 @@ function buildProjectObject(existingProjectId = null, existingCreatedAt = null) 
     prompt: getPromptValue(),
     template: state.template.id,
     settings,
+    request: state.currentRequest,
     questions: state.currentQuestions,
     answers: getProjectAnswers(state.currentQuestions)
   };
@@ -109,16 +175,50 @@ function applyPreviewState() {
 }
 
 function applyParsedPromptSettings(parsedPrompt) {
-  document.getElementById("grade").value = parsedPrompt.grade;
-  document.getElementById("operation").value = parsedPrompt.operation;
+  if (parsedPrompt.grade) {
+    document.getElementById("grade").value = parsedPrompt.grade;
+  }
+
+  if (parsedPrompt.type === "math") {
+    document.getElementById("operation").value = parsedPrompt.topic;
+  }
+
   document.getElementById("difficulty").value = parsedPrompt.difficulty;
   ensureSelectOption(
     document.getElementById("questionCount"),
-    parsedPrompt.questionCount,
-    `${parsedPrompt.questionCount} Questions`
+    parsedPrompt.count,
+    `${parsedPrompt.count} Questions`
   );
-  document.getElementById("questionCount").value = String(parsedPrompt.questionCount);
-  document.getElementById("template").value = parsedPrompt.template;
+  document.getElementById("questionCount").value = String(parsedPrompt.count);
+
+  if (parsedPrompt.template) {
+    document.getElementById("template").value = parsedPrompt.template;
+  }
+}
+
+function getWorksheetRequest() {
+  const promptValue = getPromptValue();
+
+  if (promptValue && hasRecognizedWorksheetPrompt(promptValue)) {
+    const parsedPrompt = {
+      ...getSmartPromptDefaults(),
+      ...parseWorksheetPrompt(promptValue)
+    };
+
+    applyParsedPromptSettings(parsedPrompt);
+    return parsedPrompt;
+  }
+
+  return buildMathRequestFromFormValues(getFormValues());
+}
+
+function getWorksheetMeta(request, generatorResult) {
+  return {
+    worksheetTitle: getWorksheetTitle(request.type),
+    subjectLabel: getSubjectLabel(request),
+    focusLabel: getFocusLabel(request),
+    showAnswerKey: generatorResult.showAnswerKey !== false
+  };
 }
 
 function persistSettings(partialSettings = {}) {
@@ -153,9 +253,9 @@ function syncPreview() {
 
   renderWorksheetPreview({
     worksheetElement: getWorksheetElement(),
-    grade: formValues.grade,
-    operation: formValues.operation,
-    difficulty: formValues.difficulty,
+    grade: state.currentRequest?.grade || formValues.grade,
+    subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
+    focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition · Medium",
     studentName: formValues.studentName,
     questions: pageQuestions,
     allQuestions: state.currentQuestions,
@@ -163,8 +263,8 @@ function syncPreview() {
     totalPages: state.pagination.totalPages,
     template: state.template,
     pageSize: state.pagination.pageSize,
-    formatOperation,
-    capitalize
+    worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
+    showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false
   });
 
   applyPreviewState();
@@ -178,16 +278,15 @@ function renderSavedProjectsList() {
 }
 
 function generateWorksheet() {
-  const formValues = getFormValues();
-  state.template = getTemplateById(formValues.templateId);
+  const worksheetRequest = getWorksheetRequest();
+  const generator = GENERATORS[worksheetRequest.type] || generateMathWorksheet;
+  const generatorResult = generator(worksheetRequest);
+
+  state.currentRequest = worksheetRequest;
+  state.template = getTemplateById(worksheetRequest.template || getFormValues().templateId);
   state.theme = state.template.theme;
-
-  state.currentQuestions = generateQuestions({
-    operation: formValues.operation,
-    difficulty: formValues.difficulty,
-    questionCount: formValues.questionCount
-  });
-
+  state.currentQuestions = generatorResult.questions;
+  state.currentWorksheetMeta = getWorksheetMeta(worksheetRequest, generatorResult);
   state.pagination = resetPagination(
     state.pagination,
     state.currentQuestions.length,
@@ -197,12 +296,11 @@ function generateWorksheet() {
 
   syncPreview();
   renderSavedProjectsList();
-
   persistSettings();
   saveWorksheet({
     project: state.currentProject,
     questions: state.currentQuestions,
-    settings: formValues,
+    settings: getFormValues(),
     templateId: state.template.id,
     prompt: getPromptValue(),
     answers: state.currentProject.answers,
@@ -214,6 +312,8 @@ function generateWorksheet() {
 function clearWorksheet() {
   state.currentQuestions = [];
   state.currentProject = null;
+  state.currentRequest = null;
+  state.currentWorksheetMeta = null;
   state.pagination = resetPagination(state.pagination, 0);
 
   syncPreview();
@@ -223,15 +323,18 @@ function clearWorksheet() {
 }
 
 function applyPrompt() {
-  const promptInput = document.getElementById("promptInput");
-  const promptText = promptInput.value.trim();
+  const promptText = getPromptValue();
 
-  if (!hasRecognizedPromptFields(promptText)) {
+  if (!hasRecognizedWorksheetPrompt(promptText)) {
     window.alert("Please enter a structured prompt like: grade 2 + addition + 20 questions");
     return;
   }
 
-  const parsedPrompt = parsePrompt(promptText, getSmartPromptDefaults());
+  const parsedPrompt = {
+    ...getSmartPromptDefaults(),
+    ...parseWorksheetPrompt(promptText)
+  };
+
   applyParsedPromptSettings(parsedPrompt);
   generateWorksheet();
 }
@@ -261,6 +364,14 @@ function loadProject(projectId) {
   state.template = getTemplateById(project.template);
   state.theme = state.template.theme;
   state.currentQuestions = Array.isArray(project.questions) ? project.questions : [];
+  state.currentRequest = project.request || (
+    project.prompt && hasRecognizedWorksheetPrompt(project.prompt)
+      ? parseWorksheetPrompt(project.prompt)
+      : buildMathRequestFromFormValues(project.settings)
+  );
+  state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
+    showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
+  });
   state.pagination = resetPagination(
     state.pagination,
     state.currentQuestions.length,
@@ -318,11 +429,14 @@ function downloadPDF() {
 
   downloadWorksheetPDF({
     questions: state.currentQuestions,
-    ...getFormValues(),
     template: state.template,
     theme: getTheme(state.theme),
-    formatOperation,
-    capitalize
+    studentName: getFormValues().studentName,
+    grade: state.currentRequest?.grade || getFormValues().grade,
+    worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
+    subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
+    focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition · Medium",
+    showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false
   });
 }
 

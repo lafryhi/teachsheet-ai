@@ -35,13 +35,13 @@ function hexToRgb(hexColor) {
 export function downloadWorksheetPDF({
   questions,
   grade,
-  operation,
-  difficulty,
   studentName,
   template,
   theme,
-  formatOperation,
-  capitalize
+  worksheetTitle,
+  subjectLabel,
+  focusLabel,
+  showAnswerKey
 }) {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF("p", "mm", "a4");
@@ -68,7 +68,7 @@ export function downloadWorksheetPDF({
 
     y += 10;
     pdf.setFontSize(16);
-    pdf.text(template.name, 105, y, { align: "center" });
+    pdf.text(worksheetTitle, 105, y, { align: "center" });
 
     y += 14;
     pdf.setTextColor(0, 0, 0);
@@ -76,11 +76,11 @@ export function downloadWorksheetPDF({
     pdf.setFontSize(11);
 
     pdf.text(`Name: ${studentName || "________________________"}`, 20, y);
-    pdf.text(`Grade: ${grade}`, 130, y);
+    pdf.text(`Grade: ${grade || "—"}`, 130, y);
 
     y += 8;
-    pdf.text(`Operation: ${formatOperation(operation)}`, 20, y);
-    pdf.text(`Difficulty: ${capitalize(difficulty)}`, 130, y);
+    pdf.text(`Subject: ${subjectLabel}`, 20, y);
+    pdf.text(`Focus: ${focusLabel}`, 130, y);
 
     y += 8;
     pdf.text(`Page: ${pageNumber} / ${totalPages}`, 20, y);
@@ -96,7 +96,8 @@ export function downloadWorksheetPDF({
       const absoluteIndex = ((pageNumber - 1) * presentation.questionsPerPage) + index;
       const columnIndex = index % questionColumns;
       const x = xPositions[columnIndex];
-      const questionText = `${absoluteIndex + 1}. ${question.text} __________________`;
+      const answerLine = question.answerLine === false ? "" : " __________________";
+      const questionText = `${absoluteIndex + 1}. ${question.text}${answerLine}`;
 
       pdf.text(questionText, x, y);
 
@@ -110,30 +111,32 @@ export function downloadWorksheetPDF({
     renderWorksheetPage(pageQuestions, index + 1, questionPages.length);
   });
 
-  let y = 20;
-  pdf.addPage();
-  pdf.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-  pdf.setFont(fontFamily, "bold");
-  pdf.setFontSize(18);
-  pdf.text("Answer Key", 105, y, { align: "center" });
+  if (showAnswerKey) {
+    let y = 20;
+    pdf.addPage();
+    pdf.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+    pdf.setFont(fontFamily, "bold");
+    pdf.setFontSize(18);
+    pdf.text("Answer Key", 105, y, { align: "center" });
 
-  y += 15;
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont(fontFamily, "normal");
-  pdf.setFontSize(12);
+    y += 15;
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont(fontFamily, "normal");
+    pdf.setFontSize(12);
 
-  questions.forEach((question, index) => {
-    if (y > 270) {
-      pdf.addPage();
-      y = 20;
-    }
+    questions.forEach((question, index) => {
+      if (y > 270) {
+        pdf.addPage();
+        y = 20;
+      }
 
-    pdf.text(`${index + 1}) ${question.answer}`, 25 + ((index % 4) * 45), y);
+      pdf.text(`${index + 1}) ${question.answer}`, 25 + ((index % 4) * 45), y);
 
-    if (index % 4 === 3) {
-      y += 10;
-    }
-  });
+      if (index % 4 === 3) {
+        y += 10;
+      }
+    });
+  }
 
   pdf.save("teachsheet-ai-worksheet.pdf");
 }
