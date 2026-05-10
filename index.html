@@ -315,6 +315,43 @@
     <section class="panel">
       <h2>Worksheet Settings</h2>
 
+      <div class="settings-group">
+        <h3>Worksheet Identity</h3>
+
+        <label>Worksheet Title
+          <input id="worksheetTitle" type="text" placeholder="e.g. Addition Practice Worksheet" />
+        </label>
+
+        <div class="settings-grid">
+          <label>School Name
+            <input id="schoolName" type="text" placeholder="School name" />
+          </label>
+
+          <label>Teacher Name
+            <input id="teacherName" type="text" placeholder="Teacher name" />
+          </label>
+
+          <label>Student Name
+            <input id="studentName" type="text" placeholder="Student name" />
+          </label>
+
+          <label>Date
+            <input id="worksheetDate" type="date" />
+          </label>
+
+          <label>Score / Points
+            <input id="scorePoints" type="text" placeholder="e.g. /20" />
+          </label>
+        </div>
+
+        <label>Instructions
+          <textarea id="instructions" rows="3" placeholder="e.g. Solve each question carefully and show your work."></textarea>
+        </label>
+      </div>
+
+      <div class="settings-group">
+        <h3>Worksheet Generator</h3>
+
       <label>Grade
         <select id="grade">
           <option value="Grade 1">Grade 1</option>
@@ -376,10 +413,7 @@
           <button type="button" class="example-prompt-chip" data-example-prompt="coloring + animals">coloring + animals</button>
         </div>
       </div>
-
-      <label>Student Name
-        <input id="studentName" type="text" placeholder="Student name" />
-      </label>
+      </div>
 
       <button id="promptGenerateButton" type="button">Generate From Prompt</button>
       <button id="saveProjectButton" type="button">Save Project</button>

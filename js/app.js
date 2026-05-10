@@ -19,6 +19,7 @@ import {
   hasRecognizedWorksheetPrompt,
   parseWorksheetPrompt
 } from "./core/parser.js";
+import { getWorksheetPageBreakdown } from "./core/worksheetLayout.js";
 import { createAuthController } from "./auth/auth.js";
 import { renderDashboard } from "./auth/dashboard.js";
 import { downloadWorksheetPDF } from "./export/pdf.js";
@@ -44,6 +45,20 @@ const GENERATORS = {
   tracing: generateTracingWorksheet,
   coloring: generateColoringWorksheet
 };
+
+const PERSISTED_FIELD_IDS = [
+  "grade",
+  "operation",
+  "difficulty",
+  "questionCount",
+  "worksheetTitle",
+  "schoolName",
+  "teacherName",
+  "studentName",
+  "worksheetDate",
+  "instructions",
+  "scorePoints"
+];
 
 const state = {
   currentQuestions: [],
@@ -188,7 +203,13 @@ function getFormValues() {
     difficulty: getElement("difficulty").value,
     questionCount: Number.parseInt(getElement("questionCount").value, 10),
     templateId: getElement("template").value,
-    studentName: getElement("studentName").value.trim()
+    worksheetTitle: getElement("worksheetTitle").value.trim(),
+    schoolName: getElement("schoolName").value.trim(),
+    teacherName: getElement("teacherName").value.trim(),
+    studentName: getElement("studentName").value.trim(),
+    worksheetDate: getElement("worksheetDate").value,
+    instructions: getElement("instructions").value.trim(),
+    scorePoints: getElement("scorePoints").value.trim()
   };
 }
 
@@ -278,6 +299,33 @@ function buildMathRequestFromFormValues(formValues) {
   };
 }
 
+function getResolvedWorksheetIdentity(formValues, request, worksheetTitleFallback = null) {
+  return {
+    worksheetTitle: formValues.worksheetTitle || worksheetTitleFallback || getWorksheetTitle(request.type),
+    schoolName: formValues.schoolName,
+    teacherName: formValues.teacherName,
+    studentName: formValues.studentName,
+    worksheetDate: formValues.worksheetDate,
+    instructions: formValues.instructions,
+    scorePoints: formValues.scorePoints
+  };
+}
+
+function getPaginationExtraPages(showAnswerKey) {
+  if (!state.currentRequest) {
+    return 0;
+  }
+
+  const breakdown = getWorksheetPageBreakdown({
+    totalQuestions: state.currentQuestions.length,
+    questionsPerPage: state.template.questionsPerPage,
+    template: state.template,
+    showAnswerKey
+  });
+
+  return breakdown.answerPages;
+}
+
 function buildProjectObject(existingProjectId = null, existingCreatedAt = null) {
   const settings = getFormValues();
 
@@ -359,12 +407,16 @@ function getWorksheetRequest() {
 }
 
 function getWorksheetMeta(request, generatorResult) {
+  const formValues = getFormValues();
+  const defaultTitle = getWorksheetTitle(request.type);
+
   return {
-    worksheetTitle: getWorksheetTitle(request.type),
+    worksheetTitle: formValues.worksheetTitle || defaultTitle,
     subjectLabel: getSubjectLabel(request),
     focusLabel: getFocusLabel(request),
     showAnswerKey: generatorResult.showAnswerKey !== false,
-    templateDescription: state.template.description
+    templateDescription: state.template.description,
+    identity: getResolvedWorksheetIdentity(formValues, request, defaultTitle)
   };
 }
 
@@ -376,8 +428,14 @@ function persistSettings(partialSettings = {}) {
     operation: formValues.operation,
     difficulty: formValues.difficulty,
     questionCount: formValues.questionCount,
+    worksheetTitle: formValues.worksheetTitle,
+    schoolName: formValues.schoolName,
+    teacherName: formValues.teacherName,
     templateId: state.template.id,
     studentName: formValues.studentName,
+    worksheetDate: formValues.worksheetDate,
+    instructions: formValues.instructions,
+    scorePoints: formValues.scorePoints,
     theme: state.theme,
     zoom: state.zoom,
     ...partialSettings
@@ -428,7 +486,13 @@ function loadProjectIntoInterface(project) {
   );
   getElement("questionCount").value = String(project.settings.questionCount);
   getElement("template").value = project.template;
+  getElement("worksheetTitle").value = project.settings.worksheetTitle || "";
+  getElement("schoolName").value = project.settings.schoolName || "";
+  getElement("teacherName").value = project.settings.teacherName || "";
   getElement("studentName").value = project.settings.studentName || "";
+  getElement("worksheetDate").value = project.settings.worksheetDate || "";
+  getElement("instructions").value = project.settings.instructions || "";
+  getElement("scorePoints").value = project.settings.scorePoints || "";
 }
 
 function getRequestFromProject(project) {
@@ -454,7 +518,13 @@ function getRequestFromProject(project) {
     difficulty: project.settings.difficulty,
     questionCount: project.settings.questionCount,
     templateId: project.template,
-    studentName: project.settings.studentName || ""
+    worksheetTitle: project.settings.worksheetTitle || "",
+    schoolName: project.settings.schoolName || "",
+    teacherName: project.settings.teacherName || "",
+    studentName: project.settings.studentName || "",
+    worksheetDate: project.settings.worksheetDate || "",
+    instructions: project.settings.instructions || "",
+    scorePoints: project.settings.scorePoints || ""
   });
 }
 
@@ -493,26 +563,48 @@ function syncPreview() {
   }
 
   const formValues = getFormValues();
-  const questionStartIndex = (state.pagination.currentPage - 1) * state.pagination.pageSize;
-  const pageQuestions = state.currentQuestions.slice(
-    questionStartIndex,
-    questionStartIndex + state.pagination.pageSize
-  );
+  const showAnswerKey = state.currentWorksheetMeta?.showAnswerKey !== false;
+  const breakdown = getWorksheetPageBreakdown({
+    totalQuestions: state.currentQuestions.length,
+    questionsPerPage: state.pagination.pageSize,
+    template: state.template,
+    showAnswerKey
+  });
+  const isAnswerPage = showAnswerKey && state.pagination.currentPage > breakdown.questionPages;
+  const questionStartIndex = isAnswerPage
+    ? 0
+    : (state.pagination.currentPage - 1) * state.pagination.pageSize;
+  const pageQuestions = isAnswerPage
+    ? []
+    : state.currentQuestions.slice(questionStartIndex, questionStartIndex + state.pagination.pageSize);
+  const answerPageIndex = isAnswerPage ? state.pagination.currentPage - breakdown.questionPages - 1 : 0;
+  const answerStartIndex = answerPageIndex * breakdown.answerCardsPerPage;
+  const answerQuestions = isAnswerPage
+    ? state.currentQuestions.slice(
+      answerStartIndex,
+      answerStartIndex + breakdown.answerCardsPerPage
+    ).map((question, index) => ({
+      ...question,
+      answerIndex: answerStartIndex + index + 1
+    }))
+    : [];
 
   renderWorksheetPreview({
     worksheetElement: getWorksheetElement(),
     grade: state.currentRequest?.grade || formValues.grade,
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
-    studentName: formValues.studentName,
     questions: pageQuestions,
+    answerQuestions,
     allQuestions: state.currentQuestions,
     currentPage: state.pagination.currentPage,
-    totalPages: state.pagination.totalPages,
+    totalPages: breakdown.totalPages,
     template: state.template,
     pageSize: state.pagination.pageSize,
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
-    showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false,
+    showAnswerKey,
+    pageKind: isAnswerPage ? "answer-key" : "questions",
+    identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(formValues, state.currentRequest),
     templateDescription: state.currentWorksheetMeta?.templateDescription || state.template.description
   });
 
@@ -563,7 +655,8 @@ function applyStoredWorksheet(savedWorksheet) {
   state.pagination = resetPagination(
     state.pagination,
     state.currentQuestions.length,
-    state.template.questionsPerPage
+    state.template.questionsPerPage,
+    getPaginationExtraPages(state.currentWorksheetMeta.showAnswerKey)
   );
 }
 
@@ -594,7 +687,8 @@ function buildWorksheetFromRequest(worksheetRequest) {
   state.pagination = resetPagination(
     state.pagination,
     state.currentQuestions.length,
-    state.template.questionsPerPage
+    state.template.questionsPerPage,
+    getPaginationExtraPages(state.currentWorksheetMeta.showAnswerKey)
   );
   state.currentProject = buildProjectObject();
 
@@ -672,7 +766,8 @@ function loadProject(projectId) {
   state.pagination = resetPagination(
     state.pagination,
     state.currentQuestions.length,
-    state.template.questionsPerPage
+    state.template.questionsPerPage,
+    getPaginationExtraPages(state.currentWorksheetMeta.showAnswerKey)
   );
   state.currentProject = {
     ...project,
@@ -734,12 +829,12 @@ function downloadPDF() {
     questions: state.currentQuestions,
     template: state.template,
     theme: getTheme(state.theme),
-    studentName: getFormValues().studentName,
     grade: state.currentRequest?.grade || getFormValues().grade,
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
-    showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false
+    showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false,
+    identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(getFormValues(), state.currentRequest)
   });
 }
 
@@ -794,8 +889,7 @@ function hydrateSettings() {
   }
 
   const fieldIds = ["grade", "operation", "difficulty", "questionCount", "studentName"];
-
-  for (const fieldId of fieldIds) {
+  for (const fieldId of PERSISTED_FIELD_IDS) {
     if (savedSettings[fieldId] !== undefined && savedSettings[fieldId] !== null) {
       getElement(fieldId).value = String(savedSettings[fieldId]);
     }
@@ -810,11 +904,23 @@ function hydrateSettings() {
 }
 
 function bindFormPersistence() {
-  const fieldIds = ["grade", "operation", "difficulty", "questionCount", "studentName"];
-
-  for (const fieldId of fieldIds) {
+  for (const fieldId of PERSISTED_FIELD_IDS) {
     getElement(fieldId).addEventListener("change", () => {
       persistSettings();
+      if (state.currentQuestions.length > 0) {
+        state.currentWorksheetMeta = getWorksheetMeta(
+          state.currentRequest,
+          { showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false }
+        );
+        if (state.currentProject) {
+          state.currentProject = buildProjectObject(
+            state.currentProject?.id || null,
+            state.currentProject?.createdAt || null
+          );
+        }
+        syncPreview();
+        persistCurrentWorksheet();
+      }
     });
   }
 
@@ -828,7 +934,8 @@ function bindFormPersistence() {
     state.pagination = resetPagination(
       state.pagination,
       state.currentQuestions.length,
-      state.template.questionsPerPage
+      state.template.questionsPerPage,
+      getPaginationExtraPages(state.currentWorksheetMeta?.showAnswerKey !== false)
     );
     state.currentWorksheetMeta = state.currentWorksheetMeta
       ? {

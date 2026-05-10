@@ -833,6 +833,21 @@ a {
   margin-top: 0;
 }
 
+.settings-group {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e5eef7;
+}
+
+.settings-group:last-of-type {
+  margin-bottom: 14px;
+}
+
+.settings-group h3 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
 .panel label {
   display: block;
   margin-bottom: 15px;
@@ -840,7 +855,8 @@ a {
 }
 
 select,
-input {
+input,
+textarea {
   width: 100%;
   margin-top: 8px;
   padding: 13px;
@@ -851,11 +867,24 @@ input {
 }
 
 select:focus,
-input:focus {
+input:focus,
+textarea:focus {
   outline: none;
   border-color: #1d9bf0;
   box-shadow: 0 0 0 4px rgba(29, 155, 240, 0.12);
   background: #fcfeff;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 96px;
+  font-family: inherit;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
 }
 
 button {
@@ -1057,10 +1086,27 @@ button:disabled {
 }
 
 .worksheet-header {
-  text-align: center;
+  text-align: left;
   border-bottom: 3px solid #1d9bf0;
   padding-bottom: 20px;
   margin-bottom: 28px;
+}
+
+.worksheet-school {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0f4c81;
+  margin-bottom: 12px;
+}
+
+.worksheet-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .worksheet-header h2 {
@@ -1070,23 +1116,25 @@ button:disabled {
   letter-spacing: -0.02em;
 }
 
-.worksheet-header p {
-  margin: 10px 0 0;
-  color: #4b5563;
-}
-
-.worksheet-template-summary {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-  padding: 8px 14px;
+.worksheet-page-badge {
+  padding: 8px 12px;
   border-radius: 999px;
   background: #eef7ff;
   color: #0f4c81;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.worksheet-page-type {
+  margin-top: 8px;
+  color: #0f4c81;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.worksheet-meta-grid {
+  margin-top: 18px;
 }
 
 .meta {
@@ -1103,6 +1151,32 @@ button:disabled {
   padding: 10px 12px;
   border-radius: 12px;
   background: #f8fbff;
+  display: grid;
+  gap: 6px;
+}
+
+.meta-item span {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.worksheet-instructions {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fbff;
+  border: 1px solid #dbe7f3;
+}
+
+.worksheet-instructions strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.worksheet-instructions p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.65;
 }
 
 .questions {
@@ -1173,6 +1247,12 @@ button:disabled {
   font-size: 22px;
 }
 
+.standalone-answer-key {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+
 .answer-grid {
   display: grid;
   grid-template-columns: var(--answer-columns, repeat(5, 1fr));
@@ -1207,6 +1287,18 @@ button:disabled {
   text-align: center;
   font-weight: 700;
   color: #4b5563;
+}
+
+.worksheet-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 2px solid #dbe7f3;
+  color: #5b6472;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .auth-modal-open {
@@ -1498,8 +1590,14 @@ button:disabled {
     width: 100%;
   }
 
+  .settings-grid,
   .meta {
     grid-template-columns: 1fr;
+  }
+
+  .worksheet-title-row,
+  .worksheet-footer {
+    flex-direction: column;
   }
 
   .questions {

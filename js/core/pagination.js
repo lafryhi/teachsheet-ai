@@ -6,16 +6,25 @@ function getTotalPages(totalItems, pageSize) {
   return Math.max(1, Math.ceil(totalItems / pageSize));
 }
 
-export function createPaginationState(totalItems = 0, pageSize = Math.max(totalItems, 1)) {
+export function createPaginationState(
+  totalItems = 0,
+  pageSize = Math.max(totalItems, 1),
+  extraPages = 0
+) {
   return {
     currentPage: 1,
     pageSize: Math.max(pageSize, 1),
-    totalPages: getTotalPages(totalItems, Math.max(pageSize, 1))
+    totalPages: Math.max(1, getTotalPages(totalItems, Math.max(pageSize, 1)) + Math.max(extraPages, 0))
   };
 }
 
-export function resetPagination(currentState, totalItems = 0, pageSize = currentState?.pageSize ?? 1) {
-  return createPaginationState(totalItems, pageSize);
+export function resetPagination(
+  currentState,
+  totalItems = 0,
+  pageSize = currentState?.pageSize ?? 1,
+  extraPages = 0
+) {
+  return createPaginationState(totalItems, pageSize, extraPages);
 }
 
 export function nextPage(state) {
