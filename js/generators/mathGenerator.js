@@ -1,8 +1,13 @@
-import { createQuestion } from "../core/generator.js";
+import { generateQuestions } from "../core/generator.js";
 
-export function generateMathWorksheet({ topic, difficulty, count }) {
+export function generateMathWorksheet({ topic, difficulty, count, grade }) {
   return {
-    questions: Array.from({ length: count }, () => createQuestion(topic, difficulty)),
+    questions: generateQuestions({
+      operation: topic,
+      difficulty,
+      questionCount: count,
+      grade
+    }),
     showAnswerKey: true
   };
 }
