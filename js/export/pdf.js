@@ -65,6 +65,59 @@ function buildQuestionRows(pdf, questions, presentation, questionFontSize, colum
   return rows;
 }
 
+function getPageRowsHeight(rows, rowGap) {
+  if (!rows.length) {
+    return 0;
+  }
+
+  return rows.reduce((total, row, index) => (
+    total + row.rowHeight + (index > 0 ? rowGap : 0)
+  ), 0);
+}
+
+function rebalanceQuestionPages(pages, usableHeight, rowGap) {
+  const balancedPages = pages
+    .filter((pageRows) => pageRows.length > 0)
+    .map((pageRows) => [...pageRows]);
+
+  if (balancedPages.length < 2) {
+    return balancedPages;
+  }
+
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    for (let pageIndex = balancedPages.length - 1; pageIndex > 0; pageIndex -= 1) {
+      const currentPage = balancedPages[pageIndex];
+      const previousPage = balancedPages[pageIndex - 1];
+
+      if (currentPage.length === 0 || previousPage.length <= 1) {
+        continue;
+      }
+
+      const currentHeight = getPageRowsHeight(currentPage, rowGap);
+      const previousHeight = getPageRowsHeight(previousPage, rowGap);
+      const lastRow = previousPage[previousPage.length - 1];
+      const movedCurrentHeight = currentHeight + rowGap + lastRow.rowHeight;
+      const movedPreviousHeight = previousHeight - lastRow.rowHeight - rowGap;
+      const currentFillRatio = currentHeight / usableHeight;
+
+      if (
+        currentFillRatio < 0.42 &&
+        movedCurrentHeight <= usableHeight &&
+        movedPreviousHeight >= usableHeight * 0.35
+      ) {
+        currentPage.unshift(previousPage.pop());
+        changed = true;
+      }
+    }
+  }
+
+  return balancedPages.filter((pageRows) => pageRows.length > 0);
+}
+
 function paginateRows(rows, usableHeight, rowGap) {
   const pages = [];
   let currentPageRows = [];
@@ -88,12 +141,7 @@ function paginateRows(rows, usableHeight, rowGap) {
     pages.push(currentPageRows);
   }
 
-  if (pages.length > 1 && pages[pages.length - 1].length === 1 && pages[pages.length - 2].length > 1) {
-    const movedRow = pages[pages.length - 2].pop();
-    pages[pages.length - 1].unshift(movedRow);
-  }
-
-  return pages;
+  return rebalanceQuestionPages(pages, usableHeight, rowGap);
 }
 
 function drawMetaRow(pdf, pairs, y, margins, pageWidth) {
@@ -201,6 +249,10 @@ function drawPageChrome(pdf, {
 }
 
 function drawQuestionPages(pdf, questionPages, options) {
+  if (!questionPages.length) {
+    return;
+  }
+
   const {
     fontFamily,
     accentColor,
@@ -265,6 +317,10 @@ function drawQuestionPages(pdf, questionPages, options) {
 }
 
 function drawAnswerKeyPages(pdf, questions, options) {
+  if (!questions.length) {
+    return;
+  }
+
   const {
     fontFamily,
     accentColor,
@@ -278,7 +334,8 @@ function drawAnswerKeyPages(pdf, questions, options) {
     pageHeight,
     totalPages,
     questionPageCount,
-    template
+    template,
+    startOnCurrentPage = false
   } = options;
 
   const cardsPerPage = getAnswerCardsPerPage(template);
@@ -289,12 +346,15 @@ function drawAnswerKeyPages(pdf, questions, options) {
   const answerColumnWidth = (
     pageWidth - margins.left - margins.right - ((answerColumns - 1) * answerGap)
   ) / answerColumns;
-  const totalAnswerPages = Math.max(1, Math.ceil(questions.length / cardsPerPage));
+  const totalAnswerPages = Math.ceil(questions.length / cardsPerPage);
 
   for (let pageIndex = 0; pageIndex < totalAnswerPages; pageIndex += 1) {
     const pageQuestions = questions.slice(pageIndex * cardsPerPage, (pageIndex + 1) * cardsPerPage);
 
-    pdf.addPage();
+    if (!(startOnCurrentPage && pageIndex === 0)) {
+      pdf.addPage();
+    }
+
     const startY = drawPageChrome(pdf, {
       fontFamily,
       accentColor,
@@ -346,6 +406,12 @@ export function downloadWorksheetPDF({
   showAnswerKey,
   identity
 }) {
+  const safeQuestions = Array.isArray(questions) ? questions.filter(Boolean) : [];
+
+  if (safeQuestions.length === 0) {
+    return;
+  }
+
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({
     orientation: "p",
@@ -385,9 +451,9 @@ export function downloadWorksheetPDF({
   const columnWidth = presentation.columnsCount === 1
     ? pageWidth - margins.left - margins.right
     : ((pageWidth - margins.left - margins.right - columnGap) / 2);
-  const questionRows = buildQuestionRows(pdf, questions, presentation, questionFontSize, columnWidth);
+  const questionRows = buildQuestionRows(pdf, safeQuestions, presentation, questionFontSize, columnWidth);
   const questionPages = paginateRows(questionRows, usableHeight, rowGap);
-  const answerPageCount = showAnswerKey ? Math.max(1, Math.ceil(questions.length / getAnswerCardsPerPage(template))) : 0;
+  const answerPageCount = showAnswerKey ? Math.ceil(safeQuestions.length / getAnswerCardsPerPage(template)) : 0;
   const totalPages = questionPages.length + answerPageCount;
 
   drawQuestionPages(pdf, questionPages, {
@@ -409,7 +475,7 @@ export function downloadWorksheetPDF({
   });
 
   if (showAnswerKey) {
-    drawAnswerKeyPages(pdf, questions, {
+    drawAnswerKeyPages(pdf, safeQuestions, {
       fontFamily,
       accentColor,
       identity: resolvedIdentity,
@@ -422,7 +488,8 @@ export function downloadWorksheetPDF({
       pageHeight,
       totalPages,
       questionPageCount: questionPages.length,
-      template
+      template,
+      startOnCurrentPage: questionPages.length === 0
     });
   }
 
