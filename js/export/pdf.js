@@ -75,6 +75,29 @@ function getPageRowsHeight(rows, rowGap) {
   ), 0);
 }
 
+function getHeightAfterRemovingRow(pageHeight, pageLength, rowHeight, rowGap) {
+  if (pageLength <= 0) {
+    return 0;
+  }
+
+  if (pageLength === 1) {
+    return 0;
+  }
+
+  return pageHeight - rowHeight - rowGap;
+}
+
+function getHeightAfterAddingRow(pageHeight, pageLength, rowHeight, rowGap) {
+  return pageHeight + rowHeight + (pageLength > 0 ? rowGap : 0);
+}
+
+function isMoveImprovement(currentLeftHeight, currentRightHeight, nextLeftHeight, nextRightHeight, targetHeight) {
+  const currentDistance = Math.abs(currentLeftHeight - targetHeight) + Math.abs(currentRightHeight - targetHeight);
+  const nextDistance = Math.abs(nextLeftHeight - targetHeight) + Math.abs(nextRightHeight - targetHeight);
+
+  return nextDistance + 1 < currentDistance;
+}
+
 function rebalanceQuestionPages(pages, usableHeight, rowGap) {
   const balancedPages = pages
     .filter((pageRows) => pageRows.length > 0)
@@ -84,33 +107,58 @@ function rebalanceQuestionPages(pages, usableHeight, rowGap) {
     return balancedPages;
   }
 
+  const totalContentHeight = balancedPages.reduce((total, pageRows) => (
+    total + getPageRowsHeight(pageRows, rowGap)
+  ), 0);
+  const targetHeight = Math.min(usableHeight, totalContentHeight / balancedPages.length);
   let changed = true;
+  let iterations = 0;
 
-  while (changed) {
+  while (changed && iterations < 20) {
     changed = false;
+    iterations += 1;
 
-    for (let pageIndex = balancedPages.length - 1; pageIndex > 0; pageIndex -= 1) {
-      const currentPage = balancedPages[pageIndex];
-      const previousPage = balancedPages[pageIndex - 1];
+    for (let pageIndex = 0; pageIndex < balancedPages.length - 1; pageIndex += 1) {
+      const leftPage = balancedPages[pageIndex];
+      const rightPage = balancedPages[pageIndex + 1];
 
-      if (currentPage.length === 0 || previousPage.length <= 1) {
+      if (!leftPage.length || !rightPage.length) {
         continue;
       }
 
-      const currentHeight = getPageRowsHeight(currentPage, rowGap);
-      const previousHeight = getPageRowsHeight(previousPage, rowGap);
-      const lastRow = previousPage[previousPage.length - 1];
-      const movedCurrentHeight = currentHeight + rowGap + lastRow.rowHeight;
-      const movedPreviousHeight = previousHeight - lastRow.rowHeight - rowGap;
-      const currentFillRatio = currentHeight / usableHeight;
+      let leftHeight = getPageRowsHeight(leftPage, rowGap);
+      let rightHeight = getPageRowsHeight(rightPage, rowGap);
 
-      if (
-        currentFillRatio < 0.42 &&
-        movedCurrentHeight <= usableHeight &&
-        movedPreviousHeight >= usableHeight * 0.35
-      ) {
-        currentPage.unshift(previousPage.pop());
-        changed = true;
+      if (leftHeight + 1 < targetHeight && rightPage.length > 1) {
+        const movedRow = rightPage[0];
+        const nextLeftHeight = getHeightAfterAddingRow(leftHeight, leftPage.length, movedRow.rowHeight, rowGap);
+        const nextRightHeight = getHeightAfterRemovingRow(rightHeight, rightPage.length, movedRow.rowHeight, rowGap);
+
+        if (
+          nextLeftHeight <= usableHeight &&
+          nextRightHeight >= usableHeight * 0.25 &&
+          isMoveImprovement(leftHeight, rightHeight, nextLeftHeight, nextRightHeight, targetHeight)
+        ) {
+          leftPage.push(rightPage.shift());
+          leftHeight = nextLeftHeight;
+          rightHeight = nextRightHeight;
+          changed = true;
+        }
+      }
+
+      if (rightHeight + 1 < targetHeight && leftPage.length > 1) {
+        const movedRow = leftPage[leftPage.length - 1];
+        const nextLeftHeight = getHeightAfterRemovingRow(leftHeight, leftPage.length, movedRow.rowHeight, rowGap);
+        const nextRightHeight = getHeightAfterAddingRow(rightHeight, rightPage.length, movedRow.rowHeight, rowGap);
+
+        if (
+          nextRightHeight <= usableHeight &&
+          nextLeftHeight >= usableHeight * 0.25 &&
+          isMoveImprovement(leftHeight, rightHeight, nextLeftHeight, nextRightHeight, targetHeight)
+        ) {
+          rightPage.unshift(leftPage.pop());
+          changed = true;
+        }
       }
     }
   }
