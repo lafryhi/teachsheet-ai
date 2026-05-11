@@ -143,6 +143,7 @@ function getSmartPromptDefaults() {
     difficulty: "medium",
     count: 15,
     grade: "Grade 2",
+    mode: "practice",
     template: "classic-math"
   };
 }
@@ -183,6 +184,15 @@ function getFocusLabel(request) {
   }
 
   return request.difficulty ? `${topicLabel} - ${capitalizeWords(request.difficulty)}` : topicLabel;
+}
+
+function getWorksheetModeLabel(request) {
+  if (request.type !== "math") {
+    return "";
+  }
+
+  const mode = request.mode || "practice";
+  return `${capitalizeWords(mode)} Worksheet`;
 }
 
 function ensureSelectOption(selectElement, value, label) {
@@ -295,6 +305,7 @@ function buildMathRequestFromFormValues(formValues) {
     difficulty: formValues.difficulty,
     count: formValues.questionCount,
     grade: formValues.grade,
+    mode: "practice",
     template: formValues.templateId
   };
 }
@@ -414,6 +425,7 @@ function getWorksheetMeta(request, generatorResult) {
     worksheetTitle: formValues.worksheetTitle || defaultTitle,
     subjectLabel: getSubjectLabel(request),
     focusLabel: getFocusLabel(request),
+    worksheetModeLabel: getWorksheetModeLabel(request),
     showAnswerKey: generatorResult.showAnswerKey !== false,
     templateDescription: state.template.description,
     identity: getResolvedWorksheetIdentity(formValues, request, defaultTitle)
@@ -604,6 +616,7 @@ function syncPreview() {
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
     showAnswerKey,
     pageKind: isAnswerPage ? "answer-key" : "questions",
+    worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || "",
     identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(formValues, state.currentRequest),
     templateDescription: state.currentWorksheetMeta?.templateDescription || state.template.description
   });
@@ -833,6 +846,7 @@ function downloadPDF() {
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
+    worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || "",
     showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false,
     identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(getFormValues(), state.currentRequest)
   });

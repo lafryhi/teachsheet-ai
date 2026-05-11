@@ -2,8 +2,9 @@ import { templates } from "../templates/templates.js";
 
 const WORKSHEET_TYPES = ["math", "grammar", "reading", "tracing", "coloring"];
 const OPERATION_TOPICS = ["addition", "subtraction", "multiplication", "division", "mixed"];
+const MATH_WORKSHEET_MODES = ["practice", "review", "remediation", "challenge"];
 const DEFAULTS_BY_TYPE = {
-  math: { difficulty: "medium", count: 15, grade: "Grade 2", template: "classic-math" },
+  math: { difficulty: "medium", count: 15, grade: "Grade 2", template: "classic-math", mode: "practice" },
   grammar: { difficulty: "medium", count: 15, grade: null, template: "classic-math" },
   reading: { difficulty: "medium", count: 5, grade: null, template: "classic-math" },
   tracing: { difficulty: "easy", count: 1, grade: null, template: "kids-colorful" },
@@ -96,10 +97,21 @@ function detectCount(segments) {
   return null;
 }
 
+function detectMode(segments) {
+  for (const segment of segments) {
+    if (MATH_WORKSHEET_MODES.includes(segment.normalized)) {
+      return segment.normalized;
+    }
+  }
+
+  return null;
+}
+
 function isMetadataSegment(segment) {
   return (
     WORKSHEET_TYPES.includes(segment.normalized) ||
     OPERATION_TOPICS.includes(segment.normalized) ||
+    MATH_WORKSHEET_MODES.includes(segment.normalized) ||
     ["easy", "medium", "hard"].includes(segment.normalized) ||
     /^grade\s*[1-5]$/.test(segment.normalized) ||
     /^\d+\s+questions?$/.test(segment.normalized) ||
@@ -141,6 +153,7 @@ export function parseWorksheetPrompt(prompt) {
     difficulty: detectDifficulty(segments) || defaults.difficulty,
     count: detectCount(segments) || defaults.count,
     grade: detectGrade(segments) || defaults.grade,
+    mode: detectedType === "math" ? (detectMode(segments) || defaults.mode) : null,
     template: explicitTemplateId || defaults.template,
     templateExplicit: Boolean(explicitTemplateId)
   };

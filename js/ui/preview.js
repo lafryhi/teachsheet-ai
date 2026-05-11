@@ -75,17 +75,20 @@ function createWorksheetHeaderMarkup({
   grade,
   subjectLabel,
   focusLabel,
+  worksheetModeLabel,
   currentPage,
   totalPages,
   pageKind
 }) {
+  const subtitle = pageKind === "answer-key" ? "Answer Sheet" : worksheetModeLabel;
+
   return `
     <div class="worksheet-header">
       ${identity.schoolName ? `<div class="worksheet-school">${escapeHtml(identity.schoolName)}</div>` : ""}
       <div class="worksheet-title-row">
         <div>
           <h2>${escapeHtml(identity.worksheetTitle || "Worksheet")}</h2>
-          ${pageKind === "answer-key" ? '<div class="worksheet-page-type">Answer Sheet</div>' : ""}
+          ${subtitle ? `<div class="worksheet-page-type">${escapeHtml(subtitle)}</div>` : ""}
         </div>
         <div class="worksheet-page-badge">Page ${currentPage} of ${totalPages}</div>
       </div>
@@ -135,6 +138,7 @@ export function renderWorksheetPreview({
   pageSize,
   showAnswerKey,
   pageKind,
+  worksheetModeLabel,
   identity
 }) {
   const isAnswerPage = pageKind === "answer-key" && showAnswerKey;
@@ -146,6 +150,7 @@ export function renderWorksheetPreview({
       grade,
       subjectLabel,
       focusLabel,
+      worksheetModeLabel,
       currentPage,
       totalPages,
       pageKind

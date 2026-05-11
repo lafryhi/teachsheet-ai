@@ -90,6 +90,7 @@ function drawPageChrome(pdf, {
   grade,
   subjectLabel,
   focusLabel,
+  worksheetModeLabel,
   pageNumber,
   totalPages,
   margins,
@@ -112,9 +113,9 @@ function drawPageChrome(pdf, {
   pdf.text(identity.worksheetTitle || "Worksheet", pageWidth / 2, y, { align: "center" });
   y += 8;
 
-  if (pageKind === "answer-key") {
+  if (pageKind === "answer-key" || worksheetModeLabel) {
     pdf.setFontSize(11);
-    pdf.text("Answer Sheet", pageWidth / 2, y, { align: "center" });
+    pdf.text(pageKind === "answer-key" ? "Answer Sheet" : worksheetModeLabel, pageWidth / 2, y, { align: "center" });
     y += 6.5;
   }
 
@@ -194,6 +195,7 @@ function drawQuestionPages(pdf, questionPages, options) {
     grade,
     subjectLabel,
     focusLabel,
+    worksheetModeLabel,
     margins,
     pageWidth,
     pageHeight,
@@ -216,6 +218,7 @@ function drawQuestionPages(pdf, questionPages, options) {
       grade,
       subjectLabel,
       focusLabel,
+      worksheetModeLabel,
       pageNumber: pageIndex + 1,
       totalPages,
       margins,
@@ -256,6 +259,7 @@ function drawAnswerKeyPages(pdf, questions, options) {
     grade,
     subjectLabel,
     focusLabel,
+    worksheetModeLabel,
     margins,
     pageWidth,
     pageHeight,
@@ -285,6 +289,7 @@ function drawAnswerKeyPages(pdf, questions, options) {
       grade,
       subjectLabel,
       focusLabel,
+      worksheetModeLabel,
       pageNumber: questionPageCount + pageIndex + 1,
       totalPages,
       margins,
@@ -320,6 +325,7 @@ export function downloadWorksheetPDF({
   worksheetTitle,
   subjectLabel,
   focusLabel,
+  worksheetModeLabel,
   showAnswerKey,
   identity
 }) {
@@ -370,6 +376,7 @@ export function downloadWorksheetPDF({
     grade,
     subjectLabel,
     focusLabel,
+    worksheetModeLabel,
     margins,
     pageWidth,
     pageHeight,
@@ -388,6 +395,7 @@ export function downloadWorksheetPDF({
       grade,
       subjectLabel,
       focusLabel,
+      worksheetModeLabel,
       margins,
       pageWidth,
       pageHeight,
