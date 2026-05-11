@@ -13,15 +13,16 @@ function formatMultilineText(value = "") {
   return escapeHtml(value).replaceAll("\n", "<br />");
 }
 
-function buildMetaValue(value, fallback = "________________") {
-  return escapeHtml(value || fallback);
-}
-
 function createQuestionMarkup(question, index, startIndex) {
+  const isVertical = question.format === "vertical";
+  const questionText = isVertical
+    ? formatMultilineText(question.text).replaceAll(" ", "&nbsp;")
+    : escapeHtml(question.text);
+
   return `
-    <div class="question">
+    <div class="question${isVertical ? " question-vertical" : ""}">
       <span class="question-number"><strong>${startIndex + index + 1}.</strong></span>
-      ${escapeHtml(question.text)}
+      <span class="question-text${isVertical ? " question-text-vertical" : ""}">${questionText}</span>
       ${question.answerLine === false ? "" : '<span class="answer-line"></span>'}
     </div>
   `;
@@ -29,43 +30,46 @@ function createQuestionMarkup(question, index, startIndex) {
 
 function createAnswerKeyMarkup(questions) {
   return questions
-    .map((question) => `<div class="answer-item">${escapeHtml(String(question.answerIndex || ""))}) ${escapeHtml(question.answer)}</div>`)
+    .map((question) => `
+      <div class="answer-item">
+        <span class="answer-item-number">${escapeHtml(String(question.answerIndex || ""))}</span>
+        <span class="answer-item-value">${escapeHtml(question.answer)}</span>
+      </div>
+    `)
     .join("");
 }
 
-function createIdentityMetaMarkup({
-  identity,
-  grade,
-  subjectLabel,
-  focusLabel
-}) {
-  const metaItems = [
+function createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel, requestType }) {
+  const optionalItems = [
     ["Teacher", identity.teacherName],
-    ["Student", identity.studentName],
+    [requestType === "math" ? "Name" : "Student", identity.studentName],
     ["Date", identity.worksheetDate],
-    ["Score", identity.scorePoints],
+    ["Score", identity.scorePoints]
+  ].filter(([, value]) => Boolean(value));
+
+  const baseItems = [
     ["Level", grade || "--"],
     ["Subject", subjectLabel],
     ["Focus", focusLabel]
   ];
 
-  return metaItems.map(([label, value]) => `
+  return [...optionalItems, ...baseItems].map(([label, value]) => `
     <div class="meta-item">
       <strong>${escapeHtml(label)}:</strong>
-      <span>${buildMetaValue(value)}</span>
+      <span>${escapeHtml(value)}</span>
     </div>
   `).join("");
 }
 
-function createInstructionsMarkup(instructions = "") {
-  if (!instructions) {
+function createNotesMarkup(label, value = "") {
+  if (!value) {
     return "";
   }
 
   return `
-    <div class="worksheet-instructions">
-      <strong>Instructions</strong>
-      <p>${formatMultilineText(instructions)}</p>
+    <div class="worksheet-notes-block">
+      <strong>${escapeHtml(label)}</strong>
+      <p>${formatMultilineText(value)}</p>
     </div>
   `;
 }
@@ -78,7 +82,8 @@ function createWorksheetHeaderMarkup({
   worksheetModeLabel,
   currentPage,
   totalPages,
-  pageKind
+  pageKind,
+  requestType
 }) {
   const subtitle = pageKind === "answer-key" ? "Answer Sheet" : worksheetModeLabel;
 
@@ -93,9 +98,10 @@ function createWorksheetHeaderMarkup({
         <div class="worksheet-page-badge">Page ${currentPage} of ${totalPages}</div>
       </div>
       <div class="meta worksheet-meta-grid">
-        ${createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel })}
+        ${createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel, requestType })}
       </div>
-      ${createInstructionsMarkup(identity.instructions)}
+      ${createNotesMarkup("Instructions", identity.instructions)}
+      ${requestType === "math" ? createNotesMarkup("Teacher Notes", identity.teacherNotes) : ""}
     </div>
   `;
 }
@@ -139,7 +145,8 @@ export function renderWorksheetPreview({
   showAnswerKey,
   pageKind,
   worksheetModeLabel,
-  identity
+  identity,
+  requestType
 }) {
   const isAnswerPage = pageKind === "answer-key" && showAnswerKey;
   const questionStartIndex = (currentPage - 1) * pageSize;
@@ -153,7 +160,8 @@ export function renderWorksheetPreview({
       worksheetModeLabel,
       currentPage,
       totalPages,
-      pageKind
+      pageKind,
+      requestType
     })}
     ${isAnswerPage ? `
       <div class="answer-key standalone-answer-key">
@@ -163,7 +171,7 @@ export function renderWorksheetPreview({
         </div>
       </div>
     ` : `
-      <div id="questions" class="questions">
+      <div id="questions" class="questions${requestType === "math" ? " questions-math" : ""}">
         ${questions.map((question, index) => createQuestionMarkup(question, index, questionStartIndex)).join("")}
       </div>
     `}
@@ -174,6 +182,7 @@ export function renderWorksheetPreview({
   worksheetElement.dataset.previewPage = String(currentPage);
   worksheetElement.dataset.previewTotalPages = String(totalPages);
   worksheetElement.dataset.templateId = template.id;
+  worksheetElement.dataset.requestType = requestType || "worksheet";
 }
 
 export function renderEmptyWorksheet(worksheetElement, template) {
@@ -195,4 +204,5 @@ export function renderEmptyWorksheet(worksheetElement, template) {
   worksheetElement.dataset.previewPage = "1";
   worksheetElement.dataset.previewTotalPages = "1";
   worksheetElement.dataset.templateId = template.id;
+  worksheetElement.dataset.requestType = "worksheet";
 }

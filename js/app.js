@@ -57,7 +57,8 @@ const PERSISTED_FIELD_IDS = [
   "studentName",
   "worksheetDate",
   "instructions",
-  "scorePoints"
+  "scorePoints",
+  "teacherNotes"
 ];
 
 const state = {
@@ -141,10 +142,11 @@ function getSmartPromptDefaults() {
     subject: "math",
     topic: "addition",
     difficulty: "medium",
-    count: 15,
-    grade: "Grade 2",
-    mode: "practice",
-    template: "classic-math"
+      count: 15,
+      grade: "Grade 2",
+      mode: "practice",
+      layoutMode: "horizontal",
+      template: "classic-math"
   };
 }
 
@@ -178,12 +180,17 @@ function getSubjectLabel(request) {
 
 function getFocusLabel(request) {
   const topicLabel = capitalizeWords(request.topic);
+  const mathLayoutLabel = request.type === "math" && request.layoutMode
+    ? `${capitalizeWords(request.layoutMode)} ${topicLabel}`
+    : topicLabel;
 
   if (request.type === "tracing" || request.type === "coloring") {
     return topicLabel;
   }
 
-  return request.difficulty ? `${topicLabel} - ${capitalizeWords(request.difficulty)}` : topicLabel;
+  return request.difficulty
+    ? `${mathLayoutLabel} - ${capitalizeWords(request.difficulty)}`
+    : mathLayoutLabel;
 }
 
 function getWorksheetModeLabel(request) {
@@ -214,14 +221,15 @@ function getFormValues() {
     questionCount: Number.parseInt(getElement("questionCount").value, 10),
     templateId: getElement("template").value,
     worksheetTitle: getElement("worksheetTitle").value.trim(),
-    schoolName: getElement("schoolName").value.trim(),
-    teacherName: getElement("teacherName").value.trim(),
-    studentName: getElement("studentName").value.trim(),
-    worksheetDate: getElement("worksheetDate").value,
-    instructions: getElement("instructions").value.trim(),
-    scorePoints: getElement("scorePoints").value.trim()
-  };
-}
+      schoolName: getElement("schoolName").value.trim(),
+      teacherName: getElement("teacherName").value.trim(),
+      studentName: getElement("studentName").value.trim(),
+      worksheetDate: getElement("worksheetDate").value,
+      instructions: getElement("instructions").value.trim(),
+      scorePoints: getElement("scorePoints").value.trim(),
+      teacherNotes: getElement("teacherNotes").value.trim()
+    };
+  }
 
 function getSelectedTemplateId() {
   return getFormValues().templateId;
@@ -303,10 +311,11 @@ function buildMathRequestFromFormValues(formValues) {
     subject: "math",
     topic: formValues.operation,
     difficulty: formValues.difficulty,
-    count: formValues.questionCount,
-    grade: formValues.grade,
-    mode: "practice",
-    template: formValues.templateId
+      count: formValues.questionCount,
+      grade: formValues.grade,
+      mode: "practice",
+      layoutMode: "horizontal",
+      template: formValues.templateId
   };
 }
 
@@ -314,13 +323,14 @@ function getResolvedWorksheetIdentity(formValues, request, worksheetTitleFallbac
   return {
     worksheetTitle: formValues.worksheetTitle || worksheetTitleFallback || getWorksheetTitle(request.type),
     schoolName: formValues.schoolName,
-    teacherName: formValues.teacherName,
-    studentName: formValues.studentName,
-    worksheetDate: formValues.worksheetDate,
-    instructions: formValues.instructions,
-    scorePoints: formValues.scorePoints
-  };
-}
+      teacherName: formValues.teacherName,
+      studentName: formValues.studentName,
+      worksheetDate: formValues.worksheetDate,
+      instructions: formValues.instructions,
+      scorePoints: formValues.scorePoints,
+      teacherNotes: formValues.teacherNotes
+    };
+  }
 
 function getPaginationExtraPages(showAnswerKey) {
   if (!state.currentRequest) {
@@ -444,11 +454,12 @@ function persistSettings(partialSettings = {}) {
     schoolName: formValues.schoolName,
     teacherName: formValues.teacherName,
     templateId: state.template.id,
-    studentName: formValues.studentName,
-    worksheetDate: formValues.worksheetDate,
-    instructions: formValues.instructions,
-    scorePoints: formValues.scorePoints,
-    theme: state.theme,
+      studentName: formValues.studentName,
+      worksheetDate: formValues.worksheetDate,
+      instructions: formValues.instructions,
+      scorePoints: formValues.scorePoints,
+      teacherNotes: formValues.teacherNotes,
+      theme: state.theme,
     zoom: state.zoom,
     ...partialSettings
   });
@@ -505,6 +516,7 @@ function loadProjectIntoInterface(project) {
   getElement("worksheetDate").value = project.settings.worksheetDate || "";
   getElement("instructions").value = project.settings.instructions || "";
   getElement("scorePoints").value = project.settings.scorePoints || "";
+  getElement("teacherNotes").value = project.settings.teacherNotes || "";
 }
 
 function getRequestFromProject(project) {
@@ -533,12 +545,13 @@ function getRequestFromProject(project) {
     worksheetTitle: project.settings.worksheetTitle || "",
     schoolName: project.settings.schoolName || "",
     teacherName: project.settings.teacherName || "",
-    studentName: project.settings.studentName || "",
-    worksheetDate: project.settings.worksheetDate || "",
-    instructions: project.settings.instructions || "",
-    scorePoints: project.settings.scorePoints || ""
-  });
-}
+      studentName: project.settings.studentName || "",
+      worksheetDate: project.settings.worksheetDate || "",
+      instructions: project.settings.instructions || "",
+      scorePoints: project.settings.scorePoints || "",
+      teacherNotes: project.settings.teacherNotes || ""
+    });
+  }
 
 function buildStoredWorksheetPayload() {
   return {
@@ -618,6 +631,7 @@ function syncPreview() {
     pageKind: isAnswerPage ? "answer-key" : "questions",
     worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || "",
     identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(formValues, state.currentRequest),
+    requestType: state.currentRequest?.type || "math",
     templateDescription: state.currentWorksheetMeta?.templateDescription || state.template.description
   });
 

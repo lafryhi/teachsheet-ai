@@ -31,28 +31,57 @@ function normalizeMode(mode = "practice") {
   return ["practice", "review", "remediation", "challenge"].includes(mode) ? mode : "practice";
 }
 
-function buildOperandRange(operation, difficulty, gradeNumber) {
+function normalizeLayoutMode(layoutMode = "horizontal") {
+  return layoutMode === "vertical" ? "vertical" : "horizontal";
+}
+
+function buildOperandRange(operation, difficulty, gradeNumber, mode = "practice") {
   const isEarlyGrade = gradeNumber <= 2;
   const isUpperGrade = gradeNumber >= 4;
+  const resolvedMode = normalizeMode(mode);
 
   if (operation === "multiplication" || operation === "division") {
     if (difficulty === "easy") {
+      if (resolvedMode === "remediation") {
+        return { minA: 1, maxA: 4, minB: 1, maxB: 4 };
+      }
+
       return isEarlyGrade ? { minA: 1, maxA: 5, minB: 1, maxB: 5 } : { minA: 2, maxA: 8, minB: 2, maxB: 8 };
     }
 
     if (difficulty === "medium") {
+      if (resolvedMode === "challenge") {
+        return isUpperGrade ? { minA: 4, maxA: 12, minB: 4, maxB: 12 } : { minA: 3, maxA: 11, minB: 3, maxB: 11 };
+      }
+
       return isUpperGrade ? { minA: 3, maxA: 12, minB: 3, maxB: 12 } : { minA: 2, maxA: 10, minB: 2, maxB: 10 };
+    }
+
+    if (resolvedMode === "challenge") {
+      return isUpperGrade ? { minA: 7, maxA: 12, minB: 5, maxB: 12 } : { minA: 4, maxA: 12, minB: 4, maxB: 12 };
     }
 
     return isUpperGrade ? { minA: 6, maxA: 12, minB: 4, maxB: 12 } : { minA: 3, maxA: 12, minB: 3, maxB: 12 };
   }
 
   if (difficulty === "easy") {
+    if (resolvedMode === "remediation") {
+      return isEarlyGrade ? { min: 0, max: 15 } : { min: 0, max: 30 };
+    }
+
     return isEarlyGrade ? { min: 0, max: 20 } : { min: 0, max: 50 };
   }
 
   if (difficulty === "medium") {
+    if (resolvedMode === "challenge") {
+      return isUpperGrade ? { min: 40, max: 250 } : { min: 20, max: 130 };
+    }
+
     return isUpperGrade ? { min: 20, max: 200 } : { min: 10, max: 100 };
+  }
+
+  if (resolvedMode === "challenge") {
+    return isUpperGrade ? { min: 150, max: 999 } : { min: 60, max: 320 };
   }
 
   return isUpperGrade ? { min: 100, max: 999 } : { min: 40, max: 250 };
@@ -62,8 +91,25 @@ function createAnswer(text) {
   return String(text);
 }
 
-function buildAdditionQuestion(difficulty, gradeNumber, mode = "practice") {
-  const range = buildOperandRange("addition", difficulty, gradeNumber);
+function formatVerticalOperation(topLine, bottomLine, answerPlaceholder = "____") {
+  return [topLine, bottomLine, "----", answerPlaceholder].join("\n");
+}
+
+function padLeft(value, width) {
+  return String(value).padStart(width, " ");
+}
+
+function createStandardQuestion(text, answer, layoutMode) {
+  return {
+    text,
+    answer: createAnswer(answer),
+    answerLine: layoutMode !== "vertical",
+    format: layoutMode
+  };
+}
+
+function buildAdditionQuestion(difficulty, gradeNumber, mode = "practice", layoutMode = "horizontal") {
+  const range = buildOperandRange("addition", difficulty, gradeNumber, mode);
   const a = getRandomNumber(range.min, range.max);
   const b = getRandomNumber(range.min, range.max);
   const patternPool = mode === "remediation"
@@ -72,29 +118,30 @@ function buildAdditionQuestion(difficulty, gradeNumber, mode = "practice") {
       ? ["missing-addend", "compare", "missing-addend", "standard"]
       : ["standard", "missing-addend", "compare"];
   const pattern = pickRandom(patternPool);
+  const resolvedLayout = normalizeLayoutMode(layoutMode);
 
   if (pattern === "missing-addend") {
-    return {
-      text: `${a} + ___ = ${a + b}`,
-      answer: createAnswer(`Missing number: ${b}`)
-    };
+    return createStandardQuestion(`${a} + ___ = ${a + b}`, `Missing number: ${b}`, "horizontal");
   }
 
   if (pattern === "compare") {
-    return {
-      text: `Find the sum: ${a} + ${b} =`,
-      answer: a + b
-    };
+    return createStandardQuestion(`Find the sum: ${a} + ${b} =`, a + b, "horizontal");
   }
 
-  return {
-    text: `${a} + ${b} =`,
-    answer: createAnswer(a + b)
-  };
+  if (resolvedLayout === "vertical") {
+    const width = Math.max(String(a).length, String(b).length) + 1;
+    return createStandardQuestion(
+      formatVerticalOperation(padLeft(a, width), `+${padLeft(b, width - 1)}`),
+      a + b,
+      "vertical"
+    );
+  }
+
+  return createStandardQuestion(`${a} + ${b} =`, a + b, "horizontal");
 }
 
-function buildSubtractionQuestion(difficulty, gradeNumber, mode = "practice") {
-  const range = buildOperandRange("subtraction", difficulty, gradeNumber);
+function buildSubtractionQuestion(difficulty, gradeNumber, mode = "practice", layoutMode = "horizontal") {
+  const range = buildOperandRange("subtraction", difficulty, gradeNumber, mode);
   let a = getRandomNumber(range.min, range.max);
   let b = getRandomNumber(range.min, range.max);
 
@@ -108,29 +155,30 @@ function buildSubtractionQuestion(difficulty, gradeNumber, mode = "practice") {
       ? ["missing-number", "wording", "standard", "missing-number"]
       : ["standard", "missing-number", "wording"];
   const pattern = pickRandom(patternPool);
+  const resolvedLayout = normalizeLayoutMode(layoutMode);
 
   if (pattern === "missing-number") {
-    return {
-      text: `${a} - ___ = ${a - b}`,
-      answer: createAnswer(`Missing number: ${b}`)
-    };
+    return createStandardQuestion(`${a} - ___ = ${a - b}`, `Missing number: ${b}`, "horizontal");
   }
 
   if (pattern === "wording") {
-    return {
-      text: `Subtract: ${a} - ${b} =`,
-      answer: a - b
-    };
+    return createStandardQuestion(`Subtract: ${a} - ${b} =`, a - b, "horizontal");
   }
 
-  return {
-    text: `${a} - ${b} =`,
-    answer: createAnswer(a - b)
-  };
+  if (resolvedLayout === "vertical") {
+    const width = Math.max(String(a).length, String(b).length) + 1;
+    return createStandardQuestion(
+      formatVerticalOperation(padLeft(a, width), `-${padLeft(b, width - 1)}`),
+      a - b,
+      "vertical"
+    );
+  }
+
+  return createStandardQuestion(`${a} - ${b} =`, a - b, "horizontal");
 }
 
-function buildMultiplicationQuestion(difficulty, gradeNumber, mode = "practice") {
-  const range = buildOperandRange("multiplication", difficulty, gradeNumber);
+function buildMultiplicationQuestion(difficulty, gradeNumber, mode = "practice", layoutMode = "horizontal") {
+  const range = buildOperandRange("multiplication", difficulty, gradeNumber, mode);
   const a = getRandomNumber(range.minA, range.maxA);
   const b = getRandomNumber(range.minB, range.maxB);
   const patternPool = mode === "remediation"
@@ -139,29 +187,30 @@ function buildMultiplicationQuestion(difficulty, gradeNumber, mode = "practice")
       ? ["missing-factor", "groups", "standard", "missing-factor"]
       : ["standard", "missing-factor", "groups"];
   const pattern = pickRandom(patternPool);
+  const resolvedLayout = normalizeLayoutMode(layoutMode);
 
   if (pattern === "missing-factor") {
-    return {
-      text: `${a} × ___ = ${a * b}`,
-      answer: createAnswer(`Missing factor: ${b}`)
-    };
+    return createStandardQuestion(`${a} x ___ = ${a * b}`, `Missing factor: ${b}`, "horizontal");
   }
 
   if (pattern === "groups") {
-    return {
-      text: `${a} groups of ${b} =`,
-      answer: createAnswer(`Total: ${a * b}`)
-    };
+    return createStandardQuestion(`${a} groups of ${b} =`, `Total: ${a * b}`, "horizontal");
   }
 
-  return {
-    text: `${a} × ${b} =`,
-    answer: createAnswer(a * b)
-  };
+  if (resolvedLayout === "vertical") {
+    const width = Math.max(String(a).length, String(b).length) + 1;
+    return createStandardQuestion(
+      formatVerticalOperation(padLeft(a, width), `x${padLeft(b, width - 1)}`),
+      a * b,
+      "vertical"
+    );
+  }
+
+  return createStandardQuestion(`${a} x ${b} =`, a * b, "horizontal");
 }
 
-function buildDivisionQuestion(difficulty, gradeNumber, mode = "practice") {
-  const range = buildOperandRange("division", difficulty, gradeNumber);
+function buildDivisionQuestion(difficulty, gradeNumber, mode = "practice", layoutMode = "horizontal") {
+  const range = buildOperandRange("division", difficulty, gradeNumber, mode);
   const divisor = getRandomNumber(range.minB, range.maxB);
   const quotient = getRandomNumber(range.minA, range.maxA);
   const dividend = divisor * quotient;
@@ -171,45 +220,45 @@ function buildDivisionQuestion(difficulty, gradeNumber, mode = "practice") {
       ? ["missing-divisor", "share", "standard", "missing-divisor"]
       : ["standard", "missing-divisor", "share"];
   const pattern = pickRandom(patternPool);
+  const resolvedLayout = normalizeLayoutMode(layoutMode);
 
   if (pattern === "missing-divisor") {
-    return {
-      text: `${dividend} ÷ ___ = ${quotient}`,
-      answer: createAnswer(`Missing divisor: ${divisor}`)
-    };
+    return createStandardQuestion(`${dividend} / ___ = ${quotient}`, `Missing divisor: ${divisor}`, "horizontal");
   }
 
   if (pattern === "share") {
-    return {
-      text: `Share ${dividend} into ${divisor} equal groups =`,
-      answer: createAnswer(`Each group: ${quotient}`)
-    };
+    return createStandardQuestion(`Share ${dividend} into ${divisor} equal groups =`, `Each group: ${quotient}`, "horizontal");
   }
 
-  return {
-    text: `${dividend} ÷ ${divisor} =`,
-    answer: createAnswer(quotient)
-  };
+  if (resolvedLayout === "vertical") {
+    return createStandardQuestion(
+      `  ${dividend}\n${divisor})____`,
+      quotient,
+      "vertical"
+    );
+  }
+
+  return createStandardQuestion(`${dividend} / ${divisor} =`, quotient, "horizontal");
 }
 
-function buildQuestionByOperation(operation, difficulty, gradeNumber, mode) {
+function buildQuestionByOperation(operation, difficulty, gradeNumber, mode, layoutMode) {
   if (operation === "addition") {
-    return buildAdditionQuestion(difficulty, gradeNumber, mode);
+    return buildAdditionQuestion(difficulty, gradeNumber, mode, layoutMode);
   }
 
   if (operation === "subtraction") {
-    return buildSubtractionQuestion(difficulty, gradeNumber, mode);
+    return buildSubtractionQuestion(difficulty, gradeNumber, mode, layoutMode);
   }
 
   if (operation === "multiplication") {
-    return buildMultiplicationQuestion(difficulty, gradeNumber, mode);
+    return buildMultiplicationQuestion(difficulty, gradeNumber, mode, layoutMode);
   }
 
   if (operation === "division") {
-    return buildDivisionQuestion(difficulty, gradeNumber, mode);
+    return buildDivisionQuestion(difficulty, gradeNumber, mode, layoutMode);
   }
 
-  return buildAdditionQuestion(difficulty, gradeNumber, mode);
+  return buildAdditionQuestion(difficulty, gradeNumber, mode, layoutMode);
 }
 
 function getProgressiveDifficultySequence({ difficulty, count, mode }) {
@@ -255,16 +304,35 @@ function getProgressiveDifficultySequence({ difficulty, count, mode }) {
   });
 }
 
-export function createQuestion(operation, difficulty, grade = "Grade 2", mode = "practice") {
+export function createQuestion(
+  operation,
+  difficulty,
+  grade = "Grade 2",
+  mode = "practice",
+  layoutMode = "horizontal"
+) {
   const gradeNumber = getGradeNumber(grade);
   const resolvedOperation = operation === "mixed"
     ? pickRandom(["addition", "subtraction", "multiplication", "division"])
     : operation;
 
-  return buildQuestionByOperation(resolvedOperation, difficulty, gradeNumber, normalizeMode(mode));
+  return buildQuestionByOperation(
+    resolvedOperation,
+    difficulty,
+    gradeNumber,
+    normalizeMode(mode),
+    normalizeLayoutMode(layoutMode)
+  );
 }
 
-export function generateQuestions({ operation, difficulty, questionCount, grade, mode = "practice" }) {
+export function generateQuestions({
+  operation,
+  difficulty,
+  questionCount,
+  grade,
+  mode = "practice",
+  layoutMode = "horizontal"
+}) {
   const uniqueQuestions = new Map();
   const difficultySequence = getProgressiveDifficultySequence({
     difficulty,
@@ -277,7 +345,7 @@ export function generateQuestions({ operation, difficulty, questionCount, grade,
     let attempts = 0;
 
     while (attempts < 20) {
-      const question = createQuestion(operation, effectiveDifficulty, grade, mode);
+      const question = createQuestion(operation, effectiveDifficulty, grade, mode, layoutMode);
 
       if (!uniqueQuestions.has(question.text)) {
         uniqueQuestions.set(question.text, question);
@@ -289,7 +357,7 @@ export function generateQuestions({ operation, difficulty, questionCount, grade,
   }
 
   while (uniqueQuestions.size < questionCount) {
-    const fallbackQuestion = createQuestion(operation, difficulty, grade, mode);
+    const fallbackQuestion = createQuestion(operation, difficulty, grade, mode, layoutMode);
     uniqueQuestions.set(`${fallbackQuestion.text} ${uniqueQuestions.size}`, fallbackQuestion);
   }
 

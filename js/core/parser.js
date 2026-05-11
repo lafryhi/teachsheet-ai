@@ -3,8 +3,16 @@ import { templates } from "../templates/templates.js";
 const WORKSHEET_TYPES = ["math", "grammar", "reading", "tracing", "coloring"];
 const OPERATION_TOPICS = ["addition", "subtraction", "multiplication", "division", "mixed"];
 const MATH_WORKSHEET_MODES = ["practice", "review", "remediation", "challenge"];
+const MATH_LAYOUT_MODES = ["vertical", "horizontal"];
 const DEFAULTS_BY_TYPE = {
-  math: { difficulty: "medium", count: 15, grade: "Grade 2", template: "classic-math", mode: "practice" },
+  math: {
+    difficulty: "medium",
+    count: 15,
+    grade: "Grade 2",
+    template: "classic-math",
+    mode: "practice",
+    layoutMode: "horizontal"
+  },
   grammar: { difficulty: "medium", count: 15, grade: null, template: "classic-math" },
   reading: { difficulty: "medium", count: 5, grade: null, template: "classic-math" },
   tracing: { difficulty: "easy", count: 1, grade: null, template: "kids-colorful" },
@@ -107,11 +115,44 @@ function detectMode(segments) {
   return null;
 }
 
+function detectLayoutMode(segments) {
+  for (const segment of segments) {
+    for (const layoutMode of MATH_LAYOUT_MODES) {
+      if (segment.normalized === layoutMode || segment.normalized.startsWith(`${layoutMode} `)) {
+        return layoutMode;
+      }
+    }
+  }
+
+  return null;
+}
+
+function detectOperation(segments) {
+  for (const segment of segments) {
+    const directMatch = OPERATION_TOPICS.find((operation) => segment.normalized === operation);
+
+    if (directMatch) {
+      return directMatch;
+    }
+
+    const embeddedMatch = OPERATION_TOPICS.find((operation) => segment.normalized.endsWith(` ${operation}`));
+
+    if (embeddedMatch) {
+      return embeddedMatch;
+    }
+  }
+
+  return null;
+}
+
 function isMetadataSegment(segment) {
   return (
     WORKSHEET_TYPES.includes(segment.normalized) ||
     OPERATION_TOPICS.includes(segment.normalized) ||
     MATH_WORKSHEET_MODES.includes(segment.normalized) ||
+    MATH_LAYOUT_MODES.includes(segment.normalized) ||
+    MATH_LAYOUT_MODES.some((layoutMode) => segment.normalized.startsWith(`${layoutMode} `)) ||
+    OPERATION_TOPICS.some((operation) => segment.normalized.endsWith(` ${operation}`)) ||
     ["easy", "medium", "hard"].includes(segment.normalized) ||
     /^grade\s*[1-5]$/.test(segment.normalized) ||
     /^\d+\s+questions?$/.test(segment.normalized) ||
@@ -121,8 +162,7 @@ function isMetadataSegment(segment) {
 
 function detectTopic(segments, type) {
   if (type === "math") {
-    const operationSegment = segments.find((segment) => OPERATION_TOPICS.includes(segment.normalized));
-    return operationSegment ? operationSegment.normalized : "addition";
+    return detectOperation(segments) || "addition";
   }
 
   const topicSegment = segments.find((segment) => !isMetadataSegment(segment));
@@ -154,6 +194,7 @@ export function parseWorksheetPrompt(prompt) {
     count: detectCount(segments) || defaults.count,
     grade: detectGrade(segments) || defaults.grade,
     mode: detectedType === "math" ? (detectMode(segments) || defaults.mode) : null,
+    layoutMode: detectedType === "math" ? (detectLayoutMode(segments) || defaults.layoutMode) : null,
     template: explicitTemplateId || defaults.template,
     templateExplicit: Boolean(explicitTemplateId)
   };

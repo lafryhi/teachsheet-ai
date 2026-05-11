@@ -2,11 +2,7 @@ import { getAnswerCardsPerPage } from "../core/worksheetLayout.js";
 import { getTemplatePresentation } from "../templates/templates.js";
 
 function getPdfFontFamily(template) {
-  if (template.layout === "single-column") {
-    return "times";
-  }
-
-  return "helvetica";
+  return template.layout === "single-column" ? "times" : "helvetica";
 }
 
 function hexToRgb(hexColor) {
@@ -23,23 +19,40 @@ function hexToRgb(hexColor) {
   };
 }
 
+function buildQuestionLines(pdf, questionLabel, columnWidth) {
+  const rawLines = String(questionLabel).split("\n");
+  const lines = [];
+
+  rawLines.forEach((line) => {
+    const splitLines = pdf.splitTextToSize(line, columnWidth);
+
+    if (splitLines.length === 0) {
+      lines.push("");
+      return;
+    }
+
+    splitLines.forEach((splitLine) => lines.push(splitLine));
+  });
+
+  return lines;
+}
+
 function buildQuestionRows(pdf, questions, presentation, questionFontSize, columnWidth) {
   const rows = [];
   const columnsCount = presentation.columnsCount;
-  const boxPadding = 4;
-  const lineHeight = Math.max(5.4, questionFontSize * 0.42);
+  const lineHeight = Math.max(5.6, questionFontSize * 0.44);
 
   for (let index = 0; index < questions.length; index += columnsCount) {
     const rowQuestions = questions.slice(index, index + columnsCount).map((question, offset) => {
       const absoluteIndex = index + offset + 1;
-      const label = `${absoluteIndex}. ${question.text}`;
-      const textLines = pdf.splitTextToSize(label, columnWidth - (boxPadding * 2));
-      const baseHeight = (textLines.length * lineHeight) + (question.answerLine === false ? 10 : 17);
+      const label = `${absoluteIndex}.\n${question.text}`;
+      const textLines = buildQuestionLines(pdf, label, columnWidth - 8);
+      const baseHeight = (textLines.length * lineHeight) + (question.answerLine === false ? 12 : 20);
 
       return {
         question,
         textLines,
-        boxHeight: Math.max(18, baseHeight)
+        boxHeight: Math.max(question.format === "vertical" ? 34 : 24, baseHeight)
       };
     });
 
@@ -75,12 +88,41 @@ function paginateRows(rows, usableHeight, rowGap) {
     pages.push(currentPageRows);
   }
 
+  if (pages.length > 1 && pages[pages.length - 1].length === 1 && pages[pages.length - 2].length > 1) {
+    const movedRow = pages[pages.length - 2].pop();
+    pages[pages.length - 1].unshift(movedRow);
+  }
+
   return pages;
 }
 
-function drawMetaPair(pdf, leftLabel, leftValue, rightLabel, rightValue, y, margins, pageWidth) {
-  pdf.text(`${leftLabel}: ${leftValue}`, margins.left, y);
-  pdf.text(`${rightLabel}: ${rightValue}`, pageWidth - margins.right, y, { align: "right" });
+function drawMetaRow(pdf, pairs, y, margins, pageWidth) {
+  if (pairs.length === 0) {
+    return y;
+  }
+
+  if (pairs.length === 1) {
+    pdf.text(`${pairs[0][0]}: ${pairs[0][1]}`, margins.left, y);
+    return y;
+  }
+
+  pdf.text(`${pairs[0][0]}: ${pairs[0][1]}`, margins.left, y);
+  pdf.text(`${pairs[1][0]}: ${pairs[1][1]}`, pageWidth - margins.right, y, { align: "right" });
+  return y;
+}
+
+function drawNotesBlock(pdf, label, value, y, margins, pageWidth) {
+  if (!value) {
+    return y;
+  }
+
+  const lines = pdf.splitTextToSize(`${label}: ${value}`, pageWidth - margins.left - margins.right - 6);
+  const boxHeight = Math.max(11, (lines.length * 4.7) + 5);
+  pdf.setFillColor(247, 251, 255);
+  pdf.setDrawColor(220, 232, 245);
+  pdf.roundedRect(margins.left, y - 3.6, pageWidth - margins.left - margins.right, boxHeight, 2, 2, "FD");
+  pdf.text(lines, margins.left + 3, y);
+  return y + boxHeight + 2;
 }
 
 function drawPageChrome(pdf, {
@@ -122,54 +164,25 @@ function drawPageChrome(pdf, {
   pdf.setTextColor(20, 24, 39);
   pdf.setFont(fontFamily, "normal");
   pdf.setFontSize(10.2);
-  drawMetaPair(
-    pdf,
-    "Teacher",
-    identity.teacherName || "________________",
-    "Student",
-    identity.studentName || "________________",
-    y,
-    margins,
-    pageWidth
-  );
-  y += 6.2;
 
-  drawMetaPair(
-    pdf,
-    "Date",
-    identity.worksheetDate || "________________",
-    "Score",
-    identity.scorePoints || "________________",
-    y,
-    margins,
-    pageWidth
-  );
-  y += 6.2;
+  const optionalPairs = [
+    identity.teacherName ? ["Teacher", identity.teacherName] : null,
+    identity.studentName ? ["Name", identity.studentName] : null,
+    identity.worksheetDate ? ["Date", identity.worksheetDate] : null,
+    identity.scorePoints ? ["Score", identity.scorePoints] : null
+  ].filter(Boolean);
 
-  drawMetaPair(
-    pdf,
-    "Level",
-    grade || "--",
-    "Subject",
-    subjectLabel || "--",
-    y,
-    margins,
-    pageWidth
-  );
-  y += 6.2;
-
-  pdf.text(`Focus: ${focusLabel || "--"}`, margins.left, y);
-  y += 5.5;
-
-  if (identity.instructions) {
-    const instructionLines = pdf.splitTextToSize(`Instructions: ${identity.instructions}`, pageWidth - margins.left - margins.right);
-    pdf.setFillColor(247, 251, 255);
-    pdf.setDrawColor(220, 232, 245);
-    const boxHeight = Math.max(11, (instructionLines.length * 4.8) + 5);
-    pdf.roundedRect(margins.left, y - 3.6, pageWidth - margins.left - margins.right, boxHeight, 2, 2, "FD");
-    pdf.text(instructionLines, margins.left + 3, y);
-    y += boxHeight + 1.5;
+  while (optionalPairs.length > 0) {
+    const pairChunk = optionalPairs.splice(0, 2);
+    y = drawMetaRow(pdf, pairChunk, y, margins, pageWidth) + 6.2;
   }
+
+  y = drawMetaRow(pdf, [["Level", grade || "--"], ["Subject", subjectLabel || "--"]], y, margins, pageWidth) + 6.2;
+  pdf.text(`Focus: ${focusLabel || "--"}`, margins.left, y);
+  y += 5.8;
+
+  y = drawNotesBlock(pdf, "Instructions", identity.instructions, y, margins, pageWidth);
+  y = drawNotesBlock(pdf, "Teacher Notes", identity.teacherNotes, y, margins, pageWidth);
 
   pdf.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
   pdf.setLineWidth(0.45);
@@ -272,7 +285,7 @@ function drawAnswerKeyPages(pdf, questions, options) {
   const presentation = getTemplatePresentation(template);
   const answerColumns = Math.min(4, presentation.columnsCount === 1 ? 3 : 4);
   const answerGap = 6;
-  const cardHeight = 10;
+  const cardHeight = 14;
   const answerColumnWidth = (
     pageWidth - margins.left - margins.right - ((answerColumns - 1) * answerGap)
   ) / answerColumns;
@@ -299,20 +312,24 @@ function drawAnswerKeyPages(pdf, questions, options) {
     });
 
     pdf.setFont(fontFamily, "normal");
-    pdf.setFontSize(10.5);
+    pdf.setFontSize(9.6);
     pdf.setTextColor(20, 24, 39);
 
     pageQuestions.forEach((question, localIndex) => {
       const columnIndex = localIndex % answerColumns;
       const rowIndex = Math.floor(localIndex / answerColumns);
       const x = margins.left + (columnIndex * (answerColumnWidth + answerGap));
-      const y = startY + (rowIndex * (cardHeight + 4));
+      const y = startY + (rowIndex * (cardHeight + 5));
       const absoluteIndex = (pageIndex * cardsPerPage) + localIndex + 1;
+      const answerLines = pdf.splitTextToSize(String(question.answer), answerColumnWidth - 14);
 
       pdf.setDrawColor(220, 232, 245);
       pdf.setFillColor(247, 251, 255);
       pdf.roundedRect(x, y, answerColumnWidth, cardHeight, 2, 2, "FD");
-      pdf.text(`${absoluteIndex}) ${question.answer}`, x + 3, y + 6.2);
+      pdf.setFont(fontFamily, "bold");
+      pdf.text(`${absoluteIndex}.`, x + 3, y + 5.6);
+      pdf.setFont(fontFamily, "normal");
+      pdf.text(answerLines, x + 10, y + 5.6);
     });
   }
 }
@@ -347,9 +364,22 @@ export function downloadWorksheetPDF({
     bottom: 12,
     left: 14
   };
-  const estimatedHeaderHeight = identity?.instructions ? 58 : 46;
+  const resolvedIdentity = {
+    worksheetTitle: identity?.worksheetTitle || worksheetTitle || "Worksheet",
+    schoolName: identity?.schoolName || "",
+    teacherName: identity?.teacherName || "",
+    studentName: identity?.studentName || "",
+    worksheetDate: identity?.worksheetDate || "",
+    instructions: identity?.instructions || "",
+    scorePoints: identity?.scorePoints || "",
+    teacherNotes: identity?.teacherNotes || ""
+  };
+  const notesLinesCount = [resolvedIdentity.instructions, resolvedIdentity.teacherNotes]
+    .filter(Boolean)
+    .reduce((count, text) => count + Math.ceil(String(text).length / 70), 0);
+  const estimatedHeaderHeight = 42 + (notesLinesCount * 4.8);
   const usableHeight = pageHeight - estimatedHeaderHeight - margins.bottom - 10;
-  const rowGap = Math.max(5, Math.round(presentation.spacing * 0.28));
+  const rowGap = Math.max(7, Math.round(presentation.spacing * 0.34));
   const questionFontSize = Math.max(11.5, presentation.fontSize - 7);
   const columnGap = 8;
   const columnWidth = presentation.columnsCount === 1
@@ -359,15 +389,6 @@ export function downloadWorksheetPDF({
   const questionPages = paginateRows(questionRows, usableHeight, rowGap);
   const answerPageCount = showAnswerKey ? Math.max(1, Math.ceil(questions.length / getAnswerCardsPerPage(template))) : 0;
   const totalPages = questionPages.length + answerPageCount;
-  const resolvedIdentity = {
-    worksheetTitle: identity?.worksheetTitle || worksheetTitle || "Worksheet",
-    schoolName: identity?.schoolName || "",
-    teacherName: identity?.teacherName || "",
-    studentName: identity?.studentName || "",
-    worksheetDate: identity?.worksheetDate || "",
-    instructions: identity?.instructions || "",
-    scorePoints: identity?.scorePoints || ""
-  };
 
   drawQuestionPages(pdf, questionPages, {
     fontFamily,
