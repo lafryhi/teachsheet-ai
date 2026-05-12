@@ -47,12 +47,18 @@ function createHeaderFieldMarkup(label, value, placeholder = "Write here") {
 function createQuestionMarkup(question, index, startIndex) {
   const isVertical = question.format === "vertical";
   const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
+  const hint = question.layoutHints || {};
   const questionMarkup = isVertical
     ? `<pre class="question-text question-text-vertical">${escapeHtml(question.text)}</pre>`
     : `<span class="question-text">${escapeHtml(question.text)}</span>`;
+  const questionStyles = [
+    hint.previewUnits > 1.35 ? "--question-card-min-height: 148px" : "",
+    hint.answerLineWidth ? `--question-card-answer-width: ${Math.round(hint.answerLineWidth * 3.2)}px` : "",
+    hint.answerAreaHeight ? `--question-card-answer-height: ${Math.max(20, Math.round(hint.answerAreaHeight * 2.2))}px` : ""
+  ].filter(Boolean).join("; ");
 
   return `
-    <div class="question${isVertical ? " question-vertical" : ""}">
+    <div class="question${isVertical ? " question-vertical" : ""}"${questionStyles ? ` style="${questionStyles}"` : ""}>
       <span class="question-number">${startIndex + index + 1}</span>
       <div class="question-content">
         ${questionMarkup}

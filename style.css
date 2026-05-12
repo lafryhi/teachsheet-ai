@@ -1295,7 +1295,7 @@ button:disabled {
   white-space: pre-line;
   break-inside: avoid;
   page-break-inside: avoid;
-  min-height: var(--question-min-height, 96px);
+  min-height: var(--question-card-min-height, var(--question-min-height, 96px));
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
@@ -1354,8 +1354,8 @@ button:disabled {
 
 .answer-line {
   display: inline-block;
-  width: min(100%, var(--answer-line-width, 124px));
-  min-height: 20px;
+  width: min(100%, var(--question-card-answer-width, var(--answer-line-width, 124px)));
+  min-height: var(--question-card-answer-height, 20px);
   border-bottom: 1.8px solid rgba(24, 49, 83, 0.72);
   margin-top: 2px;
 }

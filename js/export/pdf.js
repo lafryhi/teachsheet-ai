@@ -149,8 +149,11 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
     const rowQuestions = questions.slice(index, index + columnsCount).map((question, offset) => {
       const absoluteIndex = index + offset + 1;
       const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
+      const hint = question.layoutHints || {};
       const textLines = buildQuestionLines(pdf, question.text, columnWidth - (horizontalPadding * 2));
-      const answerReserve = question.answerLine !== false && !hasInlineAnswerSpace ? answerAreaHeight : 0;
+      const answerReserve = question.answerLine !== false && !hasInlineAnswerSpace
+        ? (hint.answerAreaHeight || answerAreaHeight)
+        : 0;
       const baseHeight = (textLines.length * lineHeight) + answerReserve + 12.5;
 
       return {
@@ -159,7 +162,9 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
         hasInlineAnswerSpace,
         textLines,
         boxHeight: Math.max(
-          question.format === "vertical" ? metrics.verticalQuestionMinHeight : metrics.questionMinHeight,
+          question.format === "vertical"
+            ? Math.max(metrics.verticalQuestionMinHeight, hint.pdfMinHeight || 0)
+            : Math.max(metrics.questionMinHeight, hint.pdfMinHeight || 0),
           baseHeight
         )
       };
@@ -658,7 +663,11 @@ function buildAnswerRows(pdf, questions, answerColumns, answerColumnWidth, metri
     const rowQuestions = questions.slice(index, index + answerColumns).map((question, offset) => {
       const absoluteIndex = index + offset + 1;
       const answerLines = pdf.splitTextToSize(String(question.answer), answerColumnWidth - (metrics.answerCardPadding * 2));
-      const boxHeight = Math.max(metrics.answerCardMinHeight, (answerLines.length * metrics.answerCardLineHeight) + 9.5);
+      const hintUnits = question.layoutHints?.answerUnits || 1;
+      const boxHeight = Math.max(
+        metrics.answerCardMinHeight + ((hintUnits - 1) * 4),
+        (answerLines.length * metrics.answerCardLineHeight) + 9.5
+      );
 
       return {
         absoluteIndex,

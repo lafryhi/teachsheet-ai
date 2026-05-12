@@ -62,6 +62,7 @@ const PERSISTED_FIELD_IDS = [
 ];
 
 const state = {
+  currentLayoutBreakdown: null,
   currentQuestions: [],
   currentProject: null,
   currentRequest: null,
@@ -332,19 +333,25 @@ function getResolvedWorksheetIdentity(formValues, request, worksheetTitleFallbac
     };
   }
 
-function getPaginationExtraPages(showAnswerKey) {
-  if (!state.currentRequest) {
-    return 0;
-  }
-
-  const breakdown = getWorksheetPageBreakdown({
+function getCurrentWorksheetBreakdown(showAnswerKey = state.currentWorksheetMeta?.showAnswerKey !== false) {
+  return getWorksheetPageBreakdown({
+    questions: state.currentQuestions,
     totalQuestions: state.currentQuestions.length,
     questionsPerPage: state.template.questionsPerPage,
     template: state.template,
     showAnswerKey
   });
+}
 
-  return breakdown.answerPages;
+function refreshPagination(showAnswerKey = state.currentWorksheetMeta?.showAnswerKey !== false) {
+  state.currentLayoutBreakdown = getCurrentWorksheetBreakdown(showAnswerKey);
+  state.pagination = resetPagination(
+    state.pagination,
+    state.currentQuestions.length,
+    state.template.questionsPerPage,
+    0,
+    state.currentLayoutBreakdown.totalPages
+  );
 }
 
 function buildProjectObject(existingProjectId = null, existingCreatedAt = null) {
@@ -489,6 +496,7 @@ function renderDashboardSection() {
 }
 
 function resetWorksheetState() {
+  state.currentLayoutBreakdown = null;
   state.currentQuestions = [];
   state.currentProject = null;
   state.currentRequest = null;
@@ -589,19 +597,11 @@ function syncPreview() {
 
   const formValues = getFormValues();
   const showAnswerKey = state.currentWorksheetMeta?.showAnswerKey !== false;
-  const breakdown = getWorksheetPageBreakdown({
-    totalQuestions: state.currentQuestions.length,
-    questionsPerPage: state.pagination.pageSize,
-    template: state.template,
-    showAnswerKey
-  });
+  const breakdown = state.currentLayoutBreakdown || getCurrentWorksheetBreakdown(showAnswerKey);
   const isAnswerPage = showAnswerKey && state.pagination.currentPage > breakdown.questionPages;
-  const questionStartIndex = isAnswerPage
-    ? 0
-    : (state.pagination.currentPage - 1) * state.pagination.pageSize;
   const pageQuestions = isAnswerPage
     ? []
-    : state.currentQuestions.slice(questionStartIndex, questionStartIndex + state.pagination.pageSize);
+    : (breakdown.questionPagesMap[state.pagination.currentPage - 1] || []);
   const answerPageIndex = isAnswerPage ? state.pagination.currentPage - breakdown.questionPages - 1 : 0;
   const answerStartIndex = answerPageIndex * breakdown.answerCardsPerPage;
   const answerQuestions = isAnswerPage
@@ -679,12 +679,7 @@ function applyStoredWorksheet(savedWorksheet) {
   });
   state.currentProject = worksheetProject;
   state.lastGeneratedAt = worksheetProject?.generatedAt || worksheetProject?.createdAt || null;
-  state.pagination = resetPagination(
-    state.pagination,
-    state.currentQuestions.length,
-    state.template.questionsPerPage,
-    getPaginationExtraPages(state.currentWorksheetMeta.showAnswerKey)
-  );
+  refreshPagination(state.currentWorksheetMeta.showAnswerKey);
 }
 
 function hydrateScopedWorkspace() {
@@ -711,12 +706,7 @@ function buildWorksheetFromRequest(worksheetRequest) {
   state.currentQuestions = generatorResult.questions;
   state.lastGeneratedAt = new Date().toISOString();
   state.currentWorksheetMeta = getWorksheetMeta(worksheetRequest, generatorResult);
-  state.pagination = resetPagination(
-    state.pagination,
-    state.currentQuestions.length,
-    state.template.questionsPerPage,
-    getPaginationExtraPages(state.currentWorksheetMeta.showAnswerKey)
-  );
+  refreshPagination(state.currentWorksheetMeta.showAnswerKey);
   state.currentProject = buildProjectObject();
 
   syncPreview();
@@ -790,12 +780,7 @@ function loadProject(projectId) {
   state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
     showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
   });
-  state.pagination = resetPagination(
-    state.pagination,
-    state.currentQuestions.length,
-    state.template.questionsPerPage,
-    getPaginationExtraPages(state.currentWorksheetMeta.showAnswerKey)
-  );
+  refreshPagination(state.currentWorksheetMeta.showAnswerKey);
   state.currentProject = {
     ...project,
     answers: Array.isArray(project.answers) ? project.answers : getProjectAnswers(project.questions || [])
@@ -959,12 +944,7 @@ function bindFormPersistence() {
     if (state.currentRequest) {
       state.currentRequest.template = state.template.id;
     }
-    state.pagination = resetPagination(
-      state.pagination,
-      state.currentQuestions.length,
-      state.template.questionsPerPage,
-      getPaginationExtraPages(state.currentWorksheetMeta?.showAnswerKey !== false)
-    );
+    refreshPagination(state.currentWorksheetMeta?.showAnswerKey !== false);
     state.currentWorksheetMeta = state.currentWorksheetMeta
       ? {
         ...state.currentWorksheetMeta,
