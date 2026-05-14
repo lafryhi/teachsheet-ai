@@ -168,6 +168,22 @@ function capitalizeWords(text = "") {
     .join(" ");
 }
 
+function formatGeneratedAtLabel(dateValue) {
+  const date = new Date(dateValue || Date.now());
+
+  if (Number.isNaN(date.getTime())) {
+    return "Generated today";
+  }
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function getWorksheetTitle(type) {
   const titles = {
     math: "Math Worksheet",
@@ -203,6 +219,28 @@ function getFocusLabel(request) {
 
 function getWorksheetModeLabel(request) {
   return buildWorksheetModeLabel(request);
+}
+
+function getWorksheetSubtitle(request) {
+  if (!request) {
+    return "";
+  }
+
+  return `${getSubjectLabel(request)} - ${getFocusLabel(request)}`;
+}
+
+function getWorksheetTrustSignals(request) {
+  const signals = [
+    "Ready for printing",
+    "Optimized for A4",
+    "Smart pagination enabled"
+  ];
+
+  if (request?.type === "math") {
+    signals.push("Teacher mode active");
+  }
+
+  return signals;
 }
 
 function ensureSelectOption(selectElement, value, label) {
@@ -448,12 +486,17 @@ function getWorksheetMeta(request, generatorResult) {
   const formValues = getFormValues();
   const defaultTitle = getWorksheetTitle(request.type);
   const smartInstructions = generatorResult.instructions || buildWorksheetInstruction(request);
+  const worksheetModeLabel = getWorksheetModeLabel(request);
 
   return {
     worksheetTitle: formValues.worksheetTitle || defaultTitle,
     subjectLabel: getSubjectLabel(request),
     focusLabel: getFocusLabel(request),
-    worksheetModeLabel: getWorksheetModeLabel(request),
+    worksheetSubtitle: getWorksheetSubtitle(request),
+    worksheetModeLabel,
+    difficultyLabel: request?.difficulty ? capitalizeWords(request.difficulty) : "",
+    generatedAtLabel: formatGeneratedAtLabel(state.lastGeneratedAt),
+    trustSignals: getWorksheetTrustSignals(request),
     showAnswerKey: generatorResult.showAnswerKey !== false,
     templateDescription: state.template.description,
     sections: generatorResult.sections || listWorksheetSections(state.currentQuestions),
@@ -633,6 +676,7 @@ function syncPreview() {
     grade: state.currentRequest?.grade || formValues.grade,
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
+    worksheetSubtitle: state.currentWorksheetMeta?.worksheetSubtitle || getWorksheetSubtitle(state.currentRequest),
     questions: pageQuestions,
     answerQuestions,
     allQuestions: state.currentQuestions,
@@ -644,6 +688,9 @@ function syncPreview() {
     showAnswerKey,
     pageKind: isAnswerPage ? "answer-key" : "questions",
     worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || "",
+    difficultyLabel: state.currentWorksheetMeta?.difficultyLabel || capitalizeWords(state.currentRequest?.difficulty || ""),
+    generatedAtLabel: state.currentWorksheetMeta?.generatedAtLabel || formatGeneratedAtLabel(state.lastGeneratedAt),
+    trustSignals: state.currentWorksheetMeta?.trustSignals || getWorksheetTrustSignals(state.currentRequest),
     worksheetSections: state.currentWorksheetMeta?.sections || [],
     identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(
       formValues,
@@ -684,6 +731,7 @@ function applyStoredWorksheet(savedWorksheet) {
   }
 
   const worksheetProject = savedWorksheet.project || null;
+  state.lastGeneratedAt = worksheetProject?.generatedAt || worksheetProject?.createdAt || null;
   state.currentRequest = worksheetProject
     ? getRequestFromProject(worksheetProject)
     : (savedWorksheet.prompt && hasRecognizedWorksheetPrompt(savedWorksheet.prompt)
@@ -698,7 +746,6 @@ function applyStoredWorksheet(savedWorksheet) {
     showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
   });
   state.currentProject = worksheetProject;
-  state.lastGeneratedAt = worksheetProject?.generatedAt || worksheetProject?.createdAt || null;
   refreshPagination(state.currentWorksheetMeta.showAnswerKey);
 }
 
@@ -742,10 +789,13 @@ async function generateWorksheet() {
 
   try {
     setGeneratingState(true);
-    setStatusMessage("Generating worksheet...", "loading");
+    setStatusMessage("Analyzing your prompt and worksheet settings...", "loading");
     await waitForPaint();
-    buildWorksheetFromRequest(getWorksheetRequest());
-    setStatusMessage("Worksheet generated successfully.", "success");
+    const worksheetRequest = getWorksheetRequest();
+    setStatusMessage("Building sections, answer key, and printable pages...", "loading");
+    await waitForPaint();
+    buildWorksheetFromRequest(worksheetRequest);
+    setStatusMessage("Worksheet ready for preview and printing.", "success");
   } catch (error) {
     console.error(error);
     setStatusMessage("We couldn't generate the worksheet. Please simplify your prompt or try another example.", "error");
@@ -798,6 +848,7 @@ function loadProject(projectId) {
   state.theme = state.template.theme;
   state.currentQuestions = Array.isArray(project.questions) ? project.questions : [];
   state.currentRequest = getRequestFromProject(project);
+  state.lastGeneratedAt = project.generatedAt || project.createdAt || null;
   state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
     showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
   });
@@ -806,7 +857,6 @@ function loadProject(projectId) {
     ...project,
     answers: Array.isArray(project.answers) ? project.answers : getProjectAnswers(project.questions || [])
   };
-  state.lastGeneratedAt = project.generatedAt || project.createdAt || null;
 
   loadProjectIntoInterface(project);
   syncPreview();
@@ -866,7 +916,11 @@ function downloadPDF() {
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
+    worksheetSubtitle: state.currentWorksheetMeta?.worksheetSubtitle || getWorksheetSubtitle(state.currentRequest),
     worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || "",
+    difficultyLabel: state.currentWorksheetMeta?.difficultyLabel || capitalizeWords(state.currentRequest?.difficulty || ""),
+    generatedAtLabel: state.currentWorksheetMeta?.generatedAtLabel || formatGeneratedAtLabel(state.lastGeneratedAt),
+    trustSignals: state.currentWorksheetMeta?.trustSignals || getWorksheetTrustSignals(state.currentRequest),
     showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false,
     identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(
       getFormValues(),

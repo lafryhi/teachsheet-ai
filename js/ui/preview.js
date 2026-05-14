@@ -140,6 +140,18 @@ function createNotesMarkup(label, value = "") {
     <div class="worksheet-notes-block">
       <strong>${escapeHtml(label)}</strong>
       <p>${formatMultilineText(value)}</p>
+  </div>
+  `;
+}
+
+function createConfidenceStripMarkup(trustSignals = []) {
+  if (!Array.isArray(trustSignals) || trustSignals.length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="worksheet-confidence-strip">
+      ${trustSignals.map((signal) => `<span class="worksheet-confidence-chip">${escapeHtml(signal)}</span>`).join("")}
     </div>
   `;
 }
@@ -149,7 +161,11 @@ function createWorksheetHeaderMarkup({
   grade,
   subjectLabel,
   focusLabel,
+  worksheetSubtitle,
   worksheetModeLabel,
+  difficultyLabel,
+  generatedAtLabel,
+  trustSignals,
   currentPage,
   totalPages,
   pageKind,
@@ -164,9 +180,13 @@ function createWorksheetHeaderMarkup({
       <div class="worksheet-title-row">
         <div class="worksheet-title-block">
           <h2>${escapeHtml(identity.worksheetTitle || "Worksheet")}</h2>
+          ${worksheetSubtitle ? `<div class="worksheet-subtitle">${escapeHtml(worksheetSubtitle)}</div>` : ""}
           ${subtitle ? `<div class="worksheet-page-type">${escapeHtml(subtitle)}</div>` : ""}
         </div>
-        <div class="worksheet-page-badge">Page ${currentPage} of ${totalPages}</div>
+        <div class="worksheet-title-aside">
+          ${difficultyLabel && pageKind !== "answer-key" ? `<div class="worksheet-difficulty-badge">${escapeHtml(difficultyLabel)}</div>` : ""}
+          <div class="worksheet-page-badge">Page ${currentPage} of ${totalPages}</div>
+        </div>
       </div>
       <p class="worksheet-intro">${formatMultilineText(introText)}</p>
       <div class="worksheet-divider" aria-hidden="true"></div>
@@ -175,9 +195,14 @@ function createWorksheetHeaderMarkup({
         ${createHeaderFieldMarkup("Date", identity.worksheetDate, "Add date")}
         ${createHeaderFieldMarkup("Score", identity.scorePoints, "Mark score")}
       </div>
-      <div class="worksheet-meta-strip">
+      <div class="worksheet-meta-strip worksheet-meta-strip-extended">
         ${createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel })}
+        <div class="worksheet-meta-pill">
+          <strong>Generated</strong>
+          <span>${escapeHtml(generatedAtLabel || "--")}</span>
+        </div>
       </div>
+      ${createConfidenceStripMarkup(trustSignals)}
       ${requestType === "math" ? createNotesMarkup("Teacher Notes", identity.teacherNotes) : ""}
     </div>
   `;
@@ -237,6 +262,7 @@ export function renderWorksheetPreview({
   grade,
   subjectLabel,
   focusLabel,
+  worksheetSubtitle,
   questions,
   answerQuestions,
   currentPage,
@@ -246,6 +272,9 @@ export function renderWorksheetPreview({
   showAnswerKey,
   pageKind,
   worksheetModeLabel,
+  difficultyLabel,
+  generatedAtLabel,
+  trustSignals,
   identity,
   requestType
 }) {
@@ -258,7 +287,11 @@ export function renderWorksheetPreview({
       grade,
       subjectLabel,
       focusLabel,
+      worksheetSubtitle,
       worksheetModeLabel,
+      difficultyLabel,
+      generatedAtLabel,
+      trustSignals,
       currentPage,
       totalPages,
       pageKind,

@@ -101,6 +101,7 @@ function getPdfLayoutMetrics(presentation) {
     rowGap: isSingleColumn ? 6.5 : 5.8,
     columnGap: isSingleColumn ? 0 : 7,
     titleFontSize: 20.5,
+    titleSubtitleFontSize: 9.2,
     subtitleFontSize: 10,
     schoolFontSize: 10.2,
     introFontSize: 9.7,
@@ -115,6 +116,7 @@ function getPdfLayoutMetrics(presentation) {
     notesPadding: 3.4,
     notesLineHeight: 4.4,
     notesMinHeight: 12,
+    confidenceStripHeight: 8,
     footerFontSize: 8.7,
     footerLineInset: 1.8
   };
@@ -432,6 +434,10 @@ function getMetaGridHeight(metrics) {
   return metrics.metaHeight;
 }
 
+function getConfidenceStripHeight(trustSignals, metrics) {
+  return Array.isArray(trustSignals) && trustSignals.length > 0 ? metrics.confidenceStripHeight : 0;
+}
+
 function drawIdentityFieldRow(pdf, fields, y, margins, pageWidth, worksheetTheme, metrics) {
   const gap = 4.6;
   const fieldHeight = getIdentityFieldHeight(metrics);
@@ -489,13 +495,46 @@ function drawMetaGrid(pdf, items, y, margins, pageWidth, worksheetTheme, metrics
   return y + getMetaGridHeight(metrics);
 }
 
+function drawConfidenceStrip(pdf, trustSignals, y, margins, pageWidth, worksheetTheme, metrics) {
+  if (!Array.isArray(trustSignals) || trustSignals.length === 0) {
+    return y;
+  }
+
+  const gap = 3;
+  const fontSize = 7.6;
+  let x = margins.left;
+  const stripBottom = y + metrics.confidenceStripHeight;
+
+  trustSignals.forEach((signal) => {
+    const textWidth = pdf.getTextWidth(signal);
+    const chipWidth = textWidth + 8.6;
+
+    if (x + chipWidth > pageWidth - margins.right) {
+      return;
+    }
+
+    pdf.setFillColor(worksheetTheme.metaBackground.r, worksheetTheme.metaBackground.g, worksheetTheme.metaBackground.b);
+    pdf.setDrawColor(worksheetTheme.metaBorder.r, worksheetTheme.metaBorder.g, worksheetTheme.metaBorder.b);
+    pdf.roundedRect(x, y, chipWidth, 5.6, 2.8, 2.8, "FD");
+    pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(fontSize);
+    pdf.text(signal, x + 4.3, y + 3.8);
+    x += chipWidth + gap;
+  });
+
+  return stripBottom;
+}
+
 function measurePageHeaderHeight(pdf, {
   metrics,
   identity,
   grade,
   subjectLabel,
   focusLabel,
+  worksheetSubtitle,
   worksheetModeLabel,
+  trustSignals,
   margins,
   pageWidth,
   pageKind
@@ -510,6 +549,10 @@ function measurePageHeaderHeight(pdf, {
 
   y += metrics.titleGap;
 
+  if (worksheetSubtitle) {
+    y += 4.8;
+  }
+
   if (pageKind === "answer-key" || worksheetModeLabel) {
     y += metrics.subtitleGap;
   }
@@ -519,6 +562,7 @@ function measurePageHeaderHeight(pdf, {
   y += getIdentityFieldHeight(metrics);
   y += 4;
   y += getMetaGridHeight(metrics);
+  y += getConfidenceStripHeight(trustSignals, metrics);
 
   if (identity.teacherNotes) {
     const lines = pdf.splitTextToSize(
@@ -540,7 +584,11 @@ function drawPageHeader(pdf, {
   grade,
   subjectLabel,
   focusLabel,
+  worksheetSubtitle,
   worksheetModeLabel,
+  difficultyLabel,
+  generatedAtLabel,
+  trustSignals,
   margins,
   pageWidth,
   pageKind
@@ -556,7 +604,8 @@ function drawPageHeader(pdf, {
     { label: "Teacher", value: identity.teacherName || "--" },
     { label: "Level", value: grade || "--" },
     { label: "Subject", value: subjectLabel || "--" },
-    { label: "Focus", value: focusLabel || "--" }
+    { label: "Focus", value: focusLabel || "--" },
+    { label: "Generated", value: generatedAtLabel || "--" }
   ];
   let y = margins.top;
 
@@ -573,7 +622,28 @@ function drawPageHeader(pdf, {
   pdf.setFont(fontFamily, "bold");
   pdf.setFontSize(metrics.titleFontSize);
   pdf.text(identity.worksheetTitle || "Worksheet", pageWidth / 2, y, { align: "center" });
+
+  if (difficultyLabel && pageKind !== "answer-key") {
+    const badgeWidth = pdf.getTextWidth(difficultyLabel.toUpperCase()) + 8.8;
+    const badgeX = pageWidth - margins.right - badgeWidth;
+    pdf.setFillColor(255, 248, 230);
+    pdf.setDrawColor(226, 200, 120);
+    pdf.roundedRect(badgeX, y - 4.6, badgeWidth, 5.6, 2.8, 2.8, "FD");
+    pdf.setTextColor(138, 91, 0);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(7.6);
+    pdf.text(String(difficultyLabel).toUpperCase(), badgeX + 4.1, y - 0.8);
+  }
+
   y += metrics.titleGap;
+
+  if (worksheetSubtitle) {
+    pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(metrics.titleSubtitleFontSize);
+    pdf.text(worksheetSubtitle, pageWidth / 2, y, { align: "center" });
+    y += 4.8;
+  }
 
   if (pageKind === "answer-key" || worksheetModeLabel) {
     pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
@@ -597,6 +667,7 @@ function drawPageHeader(pdf, {
   y = drawIdentityFieldRow(pdf, identityFields, y, margins, pageWidth, worksheetTheme, metrics);
   y += 4;
   y = drawMetaGrid(pdf, metaItems, y, margins, pageWidth, worksheetTheme, metrics);
+  y = drawConfidenceStrip(pdf, trustSignals, y + 3.2, margins, pageWidth, worksheetTheme, metrics);
 
   if (identity.teacherNotes) {
     y += 4;
@@ -647,7 +718,11 @@ function drawQuestionPages(pdf, questionPages, options) {
     grade,
     subjectLabel,
     focusLabel,
+    worksheetSubtitle,
     worksheetModeLabel,
+    difficultyLabel,
+    generatedAtLabel,
+    trustSignals,
     margins,
     pageWidth,
     pageHeight,
@@ -671,7 +746,11 @@ function drawQuestionPages(pdf, questionPages, options) {
       grade,
       subjectLabel,
       focusLabel,
+      worksheetSubtitle,
       worksheetModeLabel,
+      difficultyLabel,
+      generatedAtLabel,
+      trustSignals,
       margins,
       pageWidth,
       pageKind: "questions"
@@ -824,7 +903,11 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
     grade,
     subjectLabel,
     focusLabel,
+    worksheetSubtitle,
     worksheetModeLabel,
+    difficultyLabel,
+    generatedAtLabel,
+    trustSignals,
     margins,
     pageWidth,
     pageHeight,
@@ -848,7 +931,11 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
       grade,
       subjectLabel,
       focusLabel,
+      worksheetSubtitle,
       worksheetModeLabel,
+      difficultyLabel,
+      generatedAtLabel,
+      trustSignals,
       margins,
       pageWidth,
       pageKind: "answer-key"
@@ -924,7 +1011,11 @@ export function downloadWorksheetPDF({
   worksheetTitle,
   subjectLabel,
   focusLabel,
+  worksheetSubtitle,
   worksheetModeLabel,
+  difficultyLabel,
+  generatedAtLabel,
+  trustSignals,
   showAnswerKey,
   identity
 }) {
@@ -970,7 +1061,9 @@ export function downloadWorksheetPDF({
     grade,
     subjectLabel,
     focusLabel,
+    worksheetSubtitle,
     worksheetModeLabel,
+    trustSignals,
     margins,
     pageWidth,
     pageKind: "questions"
@@ -981,7 +1074,9 @@ export function downloadWorksheetPDF({
     grade,
     subjectLabel,
     focusLabel,
+    worksheetSubtitle,
     worksheetModeLabel,
+    trustSignals,
     margins,
     pageWidth,
     pageKind: "answer-key"
@@ -1016,7 +1111,11 @@ export function downloadWorksheetPDF({
     grade,
     subjectLabel,
     focusLabel,
+    worksheetSubtitle,
     worksheetModeLabel,
+    difficultyLabel,
+    generatedAtLabel,
+    trustSignals,
     margins,
     pageWidth,
     pageHeight,
@@ -1036,7 +1135,11 @@ export function downloadWorksheetPDF({
       grade,
       subjectLabel,
       focusLabel,
+      worksheetSubtitle,
       worksheetModeLabel,
+      difficultyLabel,
+      generatedAtLabel,
+      trustSignals,
       margins,
       pageWidth,
       pageHeight,
