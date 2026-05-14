@@ -725,6 +725,22 @@ a {
   text-align: center;
 }
 
+.beta-inline-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(15, 76, 129, 0.08);
+  border: 1px solid rgba(15, 76, 129, 0.12);
+  color: #0f4c81;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 #dashboardContainer {
   max-width: 1150px;
   margin: 0 auto 22px;
@@ -854,6 +870,32 @@ a {
   font-weight: bold;
 }
 
+.field-help {
+  display: grid;
+  gap: 6px;
+  margin: -2px 0 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f7fbff;
+  border: 1px solid #dbe7f3;
+  color: #5b6472;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.field-help strong {
+  color: #0f4c81;
+}
+
+.field-help code {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #eef7ff;
+  color: #0f4c81;
+  font-size: 12px;
+}
+
 select,
 input,
 textarea {
@@ -956,6 +998,13 @@ button:disabled {
 .example-prompts h3 {
   margin: 6px 0 10px;
   font-size: 16px;
+}
+
+.example-prompts p {
+  margin: 0 0 12px;
+  color: #5b6472;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .example-prompts-list {
@@ -1067,12 +1116,18 @@ button:disabled {
 }
 
 .saved-projects-empty {
+  display: grid;
+  gap: 6px;
   color: #6b7280;
   font-size: 14px;
   background: #f9fcff;
   border: 2px dashed #d7e7f5;
   border-radius: 16px;
   padding: 16px;
+}
+
+.saved-projects-empty strong {
+  color: #0f4c81;
 }
 
 .worksheet {
@@ -1441,6 +1496,17 @@ button:disabled {
 .empty-state p {
   margin: 0;
   line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .field-help {
+    font-size: 12px;
+  }
+
+  .beta-inline-label {
+    margin-bottom: 10px;
+    font-size: 11px;
+  }
 }
 
 .answer-key {

@@ -78,6 +78,11 @@ function detectType(segments) {
       return segment.normalized;
     }
 
+    const embeddedType = WORKSHEET_TYPES.find((type) => new RegExp(`\\b${type}\\b`).test(segment.normalized));
+    if (embeddedType) {
+      return embeddedType;
+    }
+
     if (OPERATION_TOPICS.includes(segment.normalized)) {
       return "math";
     }
@@ -92,7 +97,7 @@ function detectType(segments) {
 
 function detectGrade(segments) {
   for (const segment of segments) {
-    const match = segment.normalized.match(/^grade\s*([1-5])$/);
+    const match = segment.normalized.match(/\bgrade\s*([1-5])\b/);
     if (match) {
       return `Grade ${match[1]}`;
     }
@@ -113,7 +118,7 @@ function detectDifficulty(segments) {
 
 function detectCount(segments) {
   for (const segment of segments) {
-    const match = segment.normalized.match(/^(\d+)\s+questions?$/);
+    const match = segment.normalized.match(/\b(\d+)\s+questions?\b/);
     if (match) {
       return Number.parseInt(match[1], 10);
     }
@@ -134,27 +139,27 @@ function detectMode(segments) {
 
 function detectTeacherMode(segments) {
   for (const segment of segments) {
-    if (segment.normalized === "homework" || segment.normalized.includes("homework")) {
+    if (segment.normalized.includes("homework")) {
       return "homework";
     }
 
-    if (segment.normalized === "assessment" || segment.normalized.includes("assessment sheet") || segment.normalized.includes("assessment worksheet")) {
+    if (segment.normalized.includes("assessment")) {
       return "assessment";
     }
 
-    if (segment.normalized === "fast review" || segment.normalized.includes("fast review")) {
+    if (segment.normalized.includes("fast review")) {
       return "fast-review";
     }
 
-    if (segment.normalized === "review" || segment.normalized.includes("review worksheet")) {
+    if (segment.normalized.includes("review")) {
       return "fast-review";
     }
 
-    if (segment.normalized === "remediation" || segment.normalized.includes("remediation")) {
+    if (segment.normalized.includes("remediation")) {
       return "remediation";
     }
 
-    if (segment.normalized === "practice") {
+    if (segment.normalized.includes("practice")) {
       return "practice";
     }
   }
@@ -165,7 +170,11 @@ function detectTeacherMode(segments) {
 function detectLayoutMode(segments) {
   for (const segment of segments) {
     for (const layoutMode of MATH_LAYOUT_MODES) {
-      if (segment.normalized === layoutMode || segment.normalized.startsWith(`${layoutMode} `)) {
+      if (
+        segment.normalized === layoutMode ||
+        segment.normalized.startsWith(`${layoutMode} `) ||
+        new RegExp(`\\b${layoutMode}\\b`).test(segment.normalized)
+      ) {
         return layoutMode;
       }
     }
@@ -217,8 +226,8 @@ function isMetadataSegment(segment) {
       new RegExp(`\\b${operation}\\b`).test(segment.normalized)
     )) ||
     ["easy", "medium", "hard"].includes(segment.normalized) ||
-    /^grade\s*[1-5]$/.test(segment.normalized) ||
-    /^\d+\s+questions?$/.test(segment.normalized) ||
+    /\bgrade\s*[1-5]\b/.test(segment.normalized) ||
+    /\b\d+\s+questions?\b/.test(segment.normalized) ||
     templates.some((template) => normalizeTemplateAliases(template).includes(segment.normalized))
   );
 }
@@ -240,8 +249,8 @@ export function hasRecognizedWorksheetPrompt(prompt) {
     detectTeacherMode([segment]) ||
     detectMode([segment]) ||
     detectFocusPattern([segment]) ||
-    /^grade\s*[1-5]$/.test(segment.normalized) ||
-    /^\d+\s+questions?$/.test(segment.normalized)
+    /\bgrade\s*[1-5]\b/.test(segment.normalized) ||
+    /\b\d+\s+questions?\b/.test(segment.normalized)
   ));
 }
 

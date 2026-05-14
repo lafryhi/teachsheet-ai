@@ -307,8 +307,9 @@
 </section>
 
 <section id="app" class="app-section">
+  <div class="beta-inline-label">Beta</div>
   <h2>Try TeachSheet AI</h2>
-  <p class="section-subtitle">Generate your first worksheet now.</p>
+  <p class="section-subtitle">Generate your first worksheet now and test the current beta workflow with real classroom-style prompts.</p>
   <div id="dashboardContainer"></div>
 
   <main class="app-layout">
@@ -393,6 +394,14 @@
           <option value="fast-review">Fast Review Mode</option>
         </select>
       </label>
+      <div class="field-help teacher-mode-help">
+        <strong>Choose the worksheet goal:</strong>
+        <span><strong>Practice:</strong> steady skill building</span>
+        <span><strong>Homework:</strong> independent follow-up work</span>
+        <span><strong>Assessment:</strong> clearer mastery check</span>
+        <span><strong>Remediation:</strong> slower progression with simpler steps</span>
+        <span><strong>Fast Review:</strong> quick recall and short review rounds</span>
+      </div>
 
       <label>Number of Questions
         <select id="questionCount">
@@ -413,18 +422,24 @@
         <input
           id="promptInput"
           type="text"
-          placeholder="Try: grade 2 + addition + 20 questions, grammar + verbs + 15 questions, tracing + letter A"
+          placeholder="Try: grade 2 addition practice 20 questions"
         />
       </label>
+      <div class="field-help prompt-help">
+        <strong>Prompt tip:</strong>
+        <span>Use grade, topic, and goal in one short sentence or with + separators.</span>
+        <span>Example: <code>grade 4 assessment vertical multiplication</code></span>
+      </div>
 
       <div class="example-prompts">
         <h3>Example Prompts</h3>
+        <p>Start from one of these practical classroom prompts, then switch template or teacher mode if needed.</p>
         <div class="example-prompts-list">
-          <button type="button" class="example-prompt-chip" data-example-prompt="grade 2 + addition + 20 questions">grade 2 + addition + 20 questions</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="grammar + verbs + 15 questions">grammar + verbs + 15 questions</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="reading + short passage + 5 questions">reading + short passage + 5 questions</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="tracing + letter A">tracing + letter A</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="coloring + animals">coloring + animals</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="grade 2 addition practice 20 questions">grade 2 addition practice 20 questions</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="grade 3 remediation subtraction worksheet">grade 3 remediation subtraction worksheet</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="grade 4 assessment vertical multiplication">grade 4 assessment vertical multiplication</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="grade 5 mixed review worksheet">grade 5 mixed review worksheet</button>
+          <button type="button" class="example-prompt-chip" data-example-prompt="mental math fast review grade 3">mental math fast review grade 3</button>
         </div>
       </div>
       </div>

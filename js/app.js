@@ -284,6 +284,10 @@ function setStatusMessage(message = "", tone = "") {
   }
 }
 
+function getPromptInputGuidance() {
+  return "Try a prompt like: grade 2 addition practice 20 questions";
+}
+
 function setGeneratingState(isGenerating) {
   state.isGenerating = isGenerating;
   getGenerateButton().disabled = isGenerating;
@@ -744,7 +748,7 @@ async function generateWorksheet() {
     setStatusMessage("Worksheet generated successfully.", "success");
   } catch (error) {
     console.error(error);
-    setStatusMessage("Unable to generate the worksheet.", "error");
+    setStatusMessage("We couldn't generate the worksheet. Please simplify your prompt or try another example.", "error");
   } finally {
     setGeneratingState(false);
   }
@@ -768,7 +772,8 @@ async function applyPrompt() {
   const promptText = getPromptValue();
 
   if (!hasRecognizedWorksheetPrompt(promptText)) {
-    window.alert("Please enter a structured prompt like: grade 2 + addition + 20 questions");
+    setStatusMessage(`We couldn't read that prompt yet. ${getPromptInputGuidance()}`, "error");
+    getElement("promptInput").focus();
     return;
   }
 
@@ -1009,7 +1014,7 @@ function bindFormPersistence() {
     }
 
     getElement("promptInput").value = examplePrompt;
-    setStatusMessage("");
+    setStatusMessage("Example prompt loaded. Generate it as-is or adjust the teacher mode first.", "success");
   });
 
   getSaveProjectButton().addEventListener("click", () => {

@@ -51,7 +51,8 @@ export function renderSavedProjects(projects, activeProjectId = null) {
   if (!projects.length) {
     return `
       <div class="saved-projects-empty">
-        Save a generated worksheet to keep it ready for quick edits, PDF export, or later reuse.
+        <strong>No saved projects yet.</strong>
+        <span>Generate a worksheet first, then use Save Project to keep it ready for quick edits, PDF export, or later reuse.</span>
       </div>
     `;
   }

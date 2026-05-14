@@ -290,12 +290,12 @@ export function renderEmptyWorksheet(worksheetElement, template) {
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
       <h2>Worksheet</h2>
-      <p>Complete the worksheet identity, then generate a printable school-ready sheet.</p>
+      <p>Start with a prompt or choose settings manually, then generate a printable classroom-ready worksheet.</p>
     </div>
     <div id="questions" class="questions empty">
       <div class="empty-state">
         <h3>No worksheet generated yet.</h3>
-        <p>Use the identity fields for school-ready details, then generate a worksheet to preview page numbering, header layout, and printable content.</p>
+        <p>Try an example prompt, pick a teacher mode, and generate a worksheet to preview sections, page numbering, and the printable answer sheet.</p>
       </div>
     </div>
     ${createWorksheetFooterMarkup(1, 1)}
