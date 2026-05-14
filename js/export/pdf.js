@@ -144,10 +144,15 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
   const lineHeight = metrics.questionLineHeight;
   const horizontalPadding = metrics.questionPadding;
   const answerAreaHeight = metrics.answerAreaHeight;
+  let currentRowQuestions = [];
 
-  for (let index = 0; index < questions.length; index += columnsCount) {
-    const rowQuestions = questions.slice(index, index + columnsCount).map((question, offset) => {
-      const absoluteIndex = index + offset + 1;
+  function flushRow() {
+    if (!currentRowQuestions.length) {
+      return;
+    }
+
+    const rowQuestions = currentRowQuestions.map((question) => {
+      const absoluteIndex = question.sequenceIndex || (questions.indexOf(question) + 1);
       const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
       const hint = question.layoutHints || {};
       const textLines = buildQuestionLines(pdf, question.text, columnWidth - (horizontalPadding * 2));
@@ -169,12 +174,38 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
         )
       };
     });
+    const firstQuestion = currentRowQuestions[0];
+    const sectionHeaderHeight = firstQuestion?.sectionStart
+      ? (firstQuestion.layoutHints?.sectionHeaderHeight || 12)
+      : 0;
 
     rows.push({
       items: rowQuestions,
-      rowHeight: Math.max(...rowQuestions.map((item) => item.boxHeight))
+      rowHeight: Math.max(...rowQuestions.map((item) => item.boxHeight)) + sectionHeaderHeight,
+      baseRowHeight: Math.max(...rowQuestions.map((item) => item.boxHeight)) + sectionHeaderHeight,
+      contentHeight: Math.max(...rowQuestions.map((item) => item.boxHeight)),
+      sectionKey: firstQuestion?.sectionKey || null,
+      sectionLabel: firstQuestion?.sectionLabel || "",
+      sectionInstruction: firstQuestion?.sectionInstruction || "",
+      showSectionHeader: Boolean(firstQuestion?.sectionStart),
+      sectionHeaderHeight
     });
+    currentRowQuestions = [];
   }
+
+  questions.forEach((question) => {
+    if (currentRowQuestions.length > 0 && question.sectionStart) {
+      flushRow();
+    }
+
+    if (currentRowQuestions.length >= columnsCount) {
+      flushRow();
+    }
+
+    currentRowQuestions.push(question);
+  });
+
+  flushRow();
 
   return rows;
 }
@@ -280,22 +311,32 @@ function rebalanceQuestionPages(pages, usableHeight, rowGap) {
   return balancedPages.filter((pageRows) => pageRows.length > 0);
 }
 
-function paginateRows(rows, usableHeight, rowGap) {
+function paginateRows(rows, usableHeight, rowGap, continuationHeaderHeight = 0) {
   const pages = [];
   let currentPageRows = [];
   let usedHeight = 0;
 
   rows.forEach((row) => {
-    const totalRowHeight = row.rowHeight + (currentPageRows.length > 0 ? rowGap : 0);
+    let effectiveRow = row;
+    let totalRowHeight = effectiveRow.rowHeight + (currentPageRows.length > 0 ? rowGap : 0);
 
     if (currentPageRows.length > 0 && usedHeight + totalRowHeight > usableHeight) {
       pages.push(currentPageRows);
-      currentPageRows = [row];
-      usedHeight = row.rowHeight;
+      if (!row.showSectionHeader && row.sectionLabel && continuationHeaderHeight > 0) {
+        effectiveRow = {
+          ...row,
+          continuedSectionHeader: true,
+          rowHeight: row.rowHeight + continuationHeaderHeight,
+          sectionHeaderHeight: (row.sectionHeaderHeight || 0) + continuationHeaderHeight
+        };
+      }
+
+      currentPageRows = [effectiveRow];
+      usedHeight = effectiveRow.rowHeight;
       return;
     }
 
-    currentPageRows.push(row);
+    currentPageRows.push(effectiveRow);
     usedHeight += totalRowHeight;
   });
 
@@ -303,7 +344,49 @@ function paginateRows(rows, usableHeight, rowGap) {
     pages.push(currentPageRows);
   }
 
-  return rebalanceQuestionPages(pages, usableHeight, rowGap);
+  const balancedPages = rebalanceQuestionPages(pages, usableHeight, rowGap);
+
+  if (continuationHeaderHeight <= 0) {
+    return balancedPages;
+  }
+
+  return balancedPages.map((pageRows, pageIndex) => pageRows.map((row, rowIndex) => {
+    const shouldRepeatHeader = pageIndex > 0 && rowIndex === 0 && row.sectionLabel && !row.showSectionHeader;
+
+    return {
+      ...row,
+      continuedSectionHeader: shouldRepeatHeader,
+      sectionHeaderHeight: shouldRepeatHeader
+        ? Math.max(row.sectionHeaderHeight || 0, continuationHeaderHeight)
+        : (row.showSectionHeader ? row.sectionHeaderHeight : 0),
+      rowHeight: shouldRepeatHeader
+        ? (row.baseRowHeight || row.rowHeight) + continuationHeaderHeight
+        : (row.baseRowHeight || row.rowHeight)
+    };
+  }));
+}
+
+function drawSectionHeader(pdf, {
+  x,
+  y,
+  width,
+  sectionLabel,
+  sectionInstruction,
+  worksheetTheme
+}) {
+  pdf.setFillColor(worksheetTheme.metaBackground.r, worksheetTheme.metaBackground.g, worksheetTheme.metaBackground.b);
+  pdf.setDrawColor(worksheetTheme.metaBorder.r, worksheetTheme.metaBorder.g, worksheetTheme.metaBorder.b);
+  pdf.roundedRect(x, y, width, 11.2, 2.4, 2.4, "FD");
+  pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10.2);
+  pdf.text(sectionLabel || "Section", x + 3.2, y + 4.3);
+  if (sectionInstruction) {
+    pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8.1);
+    pdf.text(pdf.splitTextToSize(sectionInstruction, width - 7), x + 3.2, y + 8.1);
+  }
 }
 
 function drawNotesBlock(pdf, label, value, y, margins, pageWidth, worksheetTheme, metrics) {
@@ -599,24 +682,38 @@ function drawQuestionPages(pdf, questionPages, options) {
     pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
 
     pageRows.forEach((row) => {
+      const sectionHeaderHeight = row.sectionHeaderHeight || 0;
+      if (row.showSectionHeader || row.continuedSectionHeader) {
+        drawSectionHeader(pdf, {
+          x: margins.left,
+          y,
+          width: pageWidth - margins.left - margins.right,
+          sectionLabel: row.sectionLabel,
+          sectionInstruction: row.sectionInstruction,
+          worksheetTheme
+        });
+      }
+
+      const questionBoxY = y + sectionHeaderHeight;
+
       row.items.forEach((item, itemIndex) => {
         const x = margins.left + (itemIndex * (columnWidth + columnGap));
-        const boxHeight = row.rowHeight;
+        const boxHeight = row.contentHeight || (row.rowHeight - sectionHeaderHeight);
         const boxPadding = metrics.questionPadding;
         const badgeWidth = item.questionNumber >= 10 ? 11.8 : 9.4;
         const badgeHeight = 6.4;
-        const textY = y + boxPadding + 9.8;
+        const textY = questionBoxY + boxPadding + 9.8;
 
         pdf.setDrawColor(worksheetTheme.questionBorder.r, worksheetTheme.questionBorder.g, worksheetTheme.questionBorder.b);
         pdf.setFillColor(255, 255, 255);
-        pdf.roundedRect(x, y, columnWidth, boxHeight, 3, 3, "FD");
+        pdf.roundedRect(x, questionBoxY, columnWidth, boxHeight, 3, 3, "FD");
         pdf.setDrawColor(worksheetTheme.accentBorder.r, worksheetTheme.accentBorder.g, worksheetTheme.accentBorder.b);
         pdf.setFillColor(worksheetTheme.accentPale.r, worksheetTheme.accentPale.g, worksheetTheme.accentPale.b);
-        pdf.roundedRect(x + boxPadding, y + boxPadding, badgeWidth, badgeHeight, 3.2, 3.2, "FD");
+        pdf.roundedRect(x + boxPadding, questionBoxY + boxPadding, badgeWidth, badgeHeight, 3.2, 3.2, "FD");
         pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8.7);
-        pdf.text(String(item.questionNumber), x + boxPadding + (badgeWidth / 2), y + boxPadding + 4.4, { align: "center" });
+        pdf.text(String(item.questionNumber), x + boxPadding + (badgeWidth / 2), questionBoxY + boxPadding + 4.4, { align: "center" });
 
         if (item.question.format === "vertical") {
           pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
@@ -631,7 +728,7 @@ function drawQuestionPages(pdf, questionPages, options) {
         }
 
         if (item.question.answerLine !== false && !item.hasInlineAnswerSpace) {
-          const answerY = y + boxHeight - Math.max(4.8, metrics.answerAreaHeight * 0.52);
+          const answerY = questionBoxY + boxHeight - Math.max(4.8, metrics.answerAreaHeight * 0.52);
           const answerWidth = Math.min(columnWidth - (boxPadding * 2), metrics.answerLineWidth);
 
           pdf.setDrawColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
@@ -658,10 +755,15 @@ function drawQuestionPages(pdf, questionPages, options) {
 
 function buildAnswerRows(pdf, questions, answerColumns, answerColumnWidth, metrics) {
   const rows = [];
+  let currentRowQuestions = [];
 
-  for (let index = 0; index < questions.length; index += answerColumns) {
-    const rowQuestions = questions.slice(index, index + answerColumns).map((question, offset) => {
-      const absoluteIndex = index + offset + 1;
+  function flushRow() {
+    if (!currentRowQuestions.length) {
+      return;
+    }
+
+    const rowQuestions = currentRowQuestions.map((question) => {
+      const absoluteIndex = question.sequenceIndex || (questions.indexOf(question) + 1);
       const answerLines = pdf.splitTextToSize(String(question.answer), answerColumnWidth - (metrics.answerCardPadding * 2));
       const hintUnits = question.layoutHints?.answerUnits || 1;
       const boxHeight = Math.max(
@@ -672,15 +774,39 @@ function buildAnswerRows(pdf, questions, answerColumns, answerColumnWidth, metri
       return {
         absoluteIndex,
         answerLines,
-        boxHeight
-      };
+          boxHeight
+        };
     });
+    const firstQuestion = currentRowQuestions[0];
+    const sectionHeaderHeight = firstQuestion?.sectionStart ? 11 : 0;
 
     rows.push({
       items: rowQuestions,
-      rowHeight: Math.max(...rowQuestions.map((item) => item.boxHeight))
+      rowHeight: Math.max(...rowQuestions.map((item) => item.boxHeight)) + sectionHeaderHeight,
+      baseRowHeight: Math.max(...rowQuestions.map((item) => item.boxHeight)) + sectionHeaderHeight,
+      contentHeight: Math.max(...rowQuestions.map((item) => item.boxHeight)),
+      sectionKey: firstQuestion?.sectionKey || null,
+      sectionLabel: firstQuestion?.sectionLabel || "",
+      sectionInstruction: firstQuestion?.sectionInstruction || "",
+      showSectionHeader: Boolean(firstQuestion?.sectionStart),
+      sectionHeaderHeight
     });
+    currentRowQuestions = [];
   }
+
+  questions.forEach((question) => {
+    if (currentRowQuestions.length > 0 && question.sectionStart) {
+      flushRow();
+    }
+
+    if (currentRowQuestions.length >= answerColumns) {
+      flushRow();
+    }
+
+    currentRowQuestions.push(question);
+  });
+
+  flushRow();
 
   return rows;
 }
@@ -740,23 +866,38 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
     let y = startY;
 
     pageRows.forEach((row) => {
+      const sectionHeaderHeight = row.sectionHeaderHeight || 0;
+      if (row.showSectionHeader || row.continuedSectionHeader) {
+        drawSectionHeader(pdf, {
+          x: margins.left,
+          y,
+          width: pageWidth - margins.left - margins.right,
+          sectionLabel: row.sectionLabel,
+          sectionInstruction: row.sectionInstruction,
+          worksheetTheme
+        });
+      }
+
+      const answerRowY = y + sectionHeaderHeight;
+
       row.items.forEach((item, columnIndex) => {
         const x = margins.left + (columnIndex * (answerColumnWidth + answerGap));
+        const answerBoxHeight = row.contentHeight || (row.rowHeight - sectionHeaderHeight);
 
         pdf.setDrawColor(worksheetTheme.answerBorder.r, worksheetTheme.answerBorder.g, worksheetTheme.answerBorder.b);
         pdf.setFillColor(worksheetTheme.answerBackground.r, worksheetTheme.answerBackground.g, worksheetTheme.answerBackground.b);
-        pdf.roundedRect(x, y, answerColumnWidth, row.rowHeight, 2, 2, "FD");
+        pdf.roundedRect(x, answerRowY, answerColumnWidth, answerBoxHeight, 2, 2, "FD");
         pdf.setFillColor(worksheetTheme.accentPale.r, worksheetTheme.accentPale.g, worksheetTheme.accentPale.b);
         pdf.setDrawColor(worksheetTheme.accentBorder.r, worksheetTheme.accentBorder.g, worksheetTheme.accentBorder.b);
-        pdf.roundedRect(x + 3, y + 3, item.absoluteIndex >= 10 ? 13 : 11, 5.8, 3, 3, "FD");
+        pdf.roundedRect(x + 3, answerRowY + 3, item.absoluteIndex >= 10 ? 13 : 11, 5.8, 3, 3, "FD");
         pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8.5);
-        pdf.text(`${item.absoluteIndex}.`, x + (item.absoluteIndex >= 10 ? 9.5 : 8.5), y + 7.1, { align: "center" });
+        pdf.text(`${item.absoluteIndex}.`, x + (item.absoluteIndex >= 10 ? 9.5 : 8.5), answerRowY + 7.1, { align: "center" });
         pdf.setFont(fontFamily, "normal");
         pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
         pdf.setFontSize(9.2);
-        pdf.text(item.answerLines, x + metrics.answerCardPadding, y + 12.6);
+        pdf.text(item.answerLines, x + metrics.answerCardPadding, answerRowY + 12.6);
       });
 
       y += row.rowHeight + 5;
@@ -856,13 +997,13 @@ export function downloadWorksheetPDF({
     ? pageWidth - margins.left - margins.right
     : ((pageWidth - margins.left - margins.right - columnGap) / 2);
   const questionRows = buildQuestionRows(pdf, safeQuestions, presentation, metrics, columnWidth);
-  const questionPages = paginateRows(questionRows, questionUsableHeight, rowGap);
+  const questionPages = paginateRows(questionRows, questionUsableHeight, rowGap, 11.2);
   const answerColumns = Math.min(4, presentation.columnsCount === 1 ? 3 : 4);
   const answerColumnWidth = (
     pageWidth - margins.left - margins.right - ((answerColumns - 1) * 6)
   ) / answerColumns;
   const answerRows = showAnswerKey ? buildAnswerRows(pdf, safeQuestions, answerColumns, answerColumnWidth, metrics) : [];
-  const answerPages = showAnswerKey ? paginateRows(answerRows, answerUsableHeight, 6) : [];
+  const answerPages = showAnswerKey ? paginateRows(answerRows, answerUsableHeight, 6, 9.8) : [];
   const answerPageCount = answerPages.length;
   const totalPages = questionPages.length + answerPageCount;
 

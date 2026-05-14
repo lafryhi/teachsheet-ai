@@ -5,6 +5,7 @@ import {
   normalizeMode,
   normalizeOperation
 } from "./curriculumRules.js";
+import { getTeacherModeProfile, normalizeTeacherMode } from "./teacherModes.js";
 
 const PATTERN_POOLS = {
   addition: [
@@ -59,8 +60,9 @@ function pickByWeight(items) {
   return items[items.length - 1];
 }
 
-function buildWeightedCandidates({ operation, slot, gradeNumber, layoutMode, history }) {
+function buildWeightedCandidates({ operation, slot, gradeNumber, layoutMode, history, teacherMode, focusPattern }) {
   const normalizedLayout = normalizeLayoutMode(layoutMode);
+  const teacherModeProfile = getTeacherModeProfile(teacherMode);
 
   return getAvailablePatternsForOperation({
     operation,
@@ -72,6 +74,10 @@ function buildWeightedCandidates({ operation, slot, gradeNumber, layoutMode, his
 
       if (pattern.stages.includes(slot.stage)) {
         weight += 2.2;
+      }
+
+      if (focusPattern === "mental-math" && pattern.id === "mental-math") {
+        weight += 8;
       }
 
       if (normalizedLayout === "vertical" && pattern.id === "vertical") {
@@ -94,6 +100,7 @@ function buildWeightedCandidates({ operation, slot, gradeNumber, layoutMode, his
       const familyUsage = history.familyCounts.get(pattern.family) || 0;
       weight *= Math.max(0.28, 1 - (patternUsage * 0.12));
       weight *= Math.max(0.4, 1 - (familyUsage * 0.06));
+      weight *= teacherModeProfile.patternBias[pattern.family] || 1;
 
       return {
         ...pattern,
@@ -144,10 +151,13 @@ export function buildPatternPlan({
   difficultyPlan,
   grade = "Grade 2",
   mode = "practice",
-  layoutMode = "horizontal"
+  layoutMode = "horizontal",
+  teacherMode = "practice",
+  focusPattern = null
 }) {
   const gradeNumber = getGradeNumber(grade);
   const resolvedMode = normalizeMode(mode);
+  const resolvedTeacherMode = normalizeTeacherMode(teacherMode);
   const history = {
     lastPatternId: null,
     lastFamily: null,
@@ -164,7 +174,9 @@ export function buildPatternPlan({
         : slot,
       gradeNumber,
       layoutMode,
-      history
+      history,
+      teacherMode: resolvedTeacherMode,
+      focusPattern
     });
     const selectedPattern = pickByWeight(weightedCandidates.length > 0 ? weightedCandidates : [{
       id: "horizontal",

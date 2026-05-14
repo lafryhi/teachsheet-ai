@@ -1,4 +1,5 @@
 import { buildDifficultyPlan } from "./math/difficultyEngine.js";
+import { buildWorksheetInstruction } from "./math/instructionsEngine.js";
 import { createMathQuestionCandidate } from "./math/questionFactory.js";
 import {
   getAllowedMixedOperations,
@@ -12,6 +13,8 @@ import {
   buildPatternPlan,
   getAvailablePatternsForOperation
 } from "./math/patternSelector.js";
+import { buildSectionPlan, listWorksheetSections } from "./math/sectionPlanner.js";
+import { normalizeTeacherMode, resolvePedagogicalMode } from "./math/teacherModes.js";
 import { createWorksheetBalancer } from "./math/worksheetBalancer.js";
 
 function choose(items) {
@@ -46,12 +49,22 @@ function createFallbackQuestion(operation, difficulty, grade, mode, layoutMode) 
   });
 }
 
-function decorateWithSequence(question, sequenceIndex, slot) {
+function decorateWithSequence(question, sequenceIndex, slot, sectionMeta) {
   return {
     ...question,
     difficulty: slot.difficulty,
     stage: slot.stage,
-    sequenceIndex
+    sequenceIndex,
+    sectionKey: sectionMeta?.sectionKey || "practice",
+    sectionLabel: sectionMeta?.sectionLabel || "Practice",
+    sectionInstruction: sectionMeta?.sectionInstruction || "",
+    sectionStart: Boolean(sectionMeta?.sectionStart),
+    layoutHints: {
+      ...question.layoutHints,
+      sectionHeaderUnits: sectionMeta?.sectionStart ? 0.48 : 0,
+      sectionHeaderHeight: sectionMeta?.sectionStart ? 13 : 0,
+      answerSectionUnits: sectionMeta?.sectionStart ? 0.72 : 0
+    }
   };
 }
 
@@ -87,15 +100,28 @@ export function generateQuestions({
   questionCount,
   grade,
   mode = "practice",
-  layoutMode = "horizontal"
+  layoutMode = "horizontal",
+  teacherMode = "practice",
+  focusPattern = null
 }) {
-  const normalizedMode = normalizeMode(mode);
+  const normalizedTeacherMode = normalizeTeacherMode(teacherMode);
+  const normalizedMode = resolvePedagogicalMode({
+    mode,
+    teacherMode: normalizedTeacherMode
+  });
   const normalizedLayout = normalizeLayoutMode(layoutMode);
   const resolvedOperation = normalizeOperation(operation);
   const difficultyPlan = buildDifficultyPlan({
     difficulty,
     count: questionCount,
     mode: normalizedMode
+  });
+  const sectionPlan = buildSectionPlan({
+    count: questionCount,
+    operation: resolvedOperation,
+    layoutMode: normalizedLayout,
+    teacherMode: normalizedTeacherMode,
+    focusPattern
   });
   const operations = buildOperationPlan({
     operation: resolvedOperation,
@@ -107,7 +133,9 @@ export function generateQuestions({
     difficultyPlan,
     grade,
     mode: normalizedMode,
-    layoutMode: normalizedLayout
+    layoutMode: normalizedLayout,
+    teacherMode: normalizedTeacherMode,
+    focusPattern
   });
   const balancer = createWorksheetBalancer({
     count: questionCount
@@ -120,6 +148,7 @@ export function generateQuestions({
       stage: "core",
       difficulty
     };
+    const sectionMeta = sectionPlan[index] || null;
     const targetOperation = operations[index] || buildMixedOperationFallback(grade, index);
     const basePattern = patternPlan[index] || buildFallbackPattern(targetOperation, normalizedLayout);
     const safePatternPool = getAvailablePatternsForOperation({
@@ -149,7 +178,7 @@ export function generateQuestions({
         continue;
       }
 
-      acceptedQuestion = decorateWithSequence(candidate, index + 1, slot);
+      acceptedQuestion = decorateWithSequence(candidate, index + 1, slot, sectionMeta);
       balancer.record(acceptedQuestion);
       break;
     }
@@ -158,7 +187,8 @@ export function generateQuestions({
       const fallbackQuestion = decorateWithSequence(
         createFallbackQuestion(targetOperation, slot.difficulty, grade, normalizedMode, normalizedLayout),
         index + 1,
-        slot
+        slot,
+        sectionMeta
       );
       acceptedQuestion = fallbackQuestion;
       balancer.record(fallbackQuestion);
@@ -168,6 +198,13 @@ export function generateQuestions({
   }
 
   return questions;
+}
+
+export function buildMathWorksheetIntelligence(request, questions) {
+  return {
+    instructions: buildWorksheetInstruction(request),
+    sections: listWorksheetSections(questions)
+  };
 }
 
 export function formatOperation(operation) {

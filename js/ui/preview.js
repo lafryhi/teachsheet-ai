@@ -44,7 +44,23 @@ function createHeaderFieldMarkup(label, value, placeholder = "Write here") {
   `;
 }
 
-function createQuestionMarkup(question, index, startIndex) {
+function createSectionHeaderMarkup(question, variant = "questions") {
+  if (!question?.sectionLabel) {
+    return "";
+  }
+
+  return `
+    <div class="worksheet-section-header${variant === "answers" ? " is-answer-section" : ""}">
+      <div class="worksheet-section-title-row">
+        <h3>${escapeHtml(question.sectionLabel)}</h3>
+        <span class="worksheet-section-chip">${variant === "answers" ? "Answer Group" : "Section"}</span>
+      </div>
+      ${question.sectionInstruction ? `<p>${escapeHtml(question.sectionInstruction)}</p>` : ""}
+    </div>
+  `;
+}
+
+function createQuestionMarkup(question, questionNumber) {
   const isVertical = question.format === "vertical";
   const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
   const hint = question.layoutHints || {};
@@ -59,7 +75,7 @@ function createQuestionMarkup(question, index, startIndex) {
 
   return `
     <div class="question${isVertical ? " question-vertical" : ""}"${questionStyles ? ` style="${questionStyles}"` : ""}>
-      <span class="question-number">${startIndex + index + 1}</span>
+      <span class="question-number">${questionNumber}</span>
       <div class="question-content">
         ${questionMarkup}
         ${question.answerLine === false || hasInlineAnswerSpace ? "" : '<span class="answer-line"></span>'}
@@ -68,14 +84,34 @@ function createQuestionMarkup(question, index, startIndex) {
   `;
 }
 
+function createQuestionsMarkup(questions, startIndex) {
+  let lastSectionKey = null;
+
+  return questions.map((question, index) => {
+    const questionNumber = question.sequenceIndex || (startIndex + index + 1);
+    const shouldRenderSection = index === 0 || question.sectionStart || question.sectionKey !== lastSectionKey;
+    lastSectionKey = question.sectionKey;
+
+    return `${shouldRenderSection ? createSectionHeaderMarkup(question) : ""}${createQuestionMarkup(question, questionNumber)}`;
+  }).join("");
+}
+
 function createAnswerKeyMarkup(questions) {
+  let lastSectionKey = null;
+
   return questions
-    .map((question) => `
-      <div class="answer-item">
-        <span class="answer-item-number">${escapeHtml(String(question.answerIndex || ""))}</span>
-        <span class="answer-item-value">${escapeHtml(question.answer)}</span>
-      </div>
-    `)
+    .map((question, index) => {
+      const shouldRenderSection = index === 0 || question.sectionKey !== lastSectionKey;
+      lastSectionKey = question.sectionKey;
+
+      return `
+        ${shouldRenderSection ? createSectionHeaderMarkup(question, "answers") : ""}
+        <div class="answer-item">
+          <span class="answer-item-number">${escapeHtml(String(question.answerIndex || ""))}</span>
+          <span class="answer-item-value">${escapeHtml(question.answer)}</span>
+        </div>
+      `;
+    })
     .join("");
 }
 
@@ -237,7 +273,7 @@ export function renderWorksheetPreview({
       </div>
     ` : `
       <div id="questions" class="questions${requestType === "math" ? " questions-math" : ""}">
-        ${questions.map((question, index) => createQuestionMarkup(question, index, questionStartIndex)).join("")}
+        ${createQuestionsMarkup(questions, questionStartIndex)}
       </div>
     `}
     ${createWorksheetFooterMarkup(currentPage, totalPages)}

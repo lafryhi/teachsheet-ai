@@ -1,15 +1,30 @@
-import { generateQuestions } from "../core/generator.js";
+import { buildMathWorksheetIntelligence, generateQuestions } from "../core/generator.js";
 
-export function generateMathWorksheet({ topic, difficulty, count, grade, mode, layoutMode }) {
+export function generateMathWorksheet({ topic, difficulty, count, grade, mode, layoutMode, teacherMode, focusPattern }) {
+  const questions = generateQuestions({
+    operation: topic,
+    difficulty,
+    questionCount: count,
+    grade,
+    mode,
+    layoutMode,
+    teacherMode,
+    focusPattern
+  });
+
   return {
-    questions: generateQuestions({
-      operation: topic,
+    questions,
+    ...buildMathWorksheetIntelligence({
+      type: "math",
+      topic,
       difficulty,
-      questionCount: count,
+      count,
       grade,
       mode,
-      layoutMode
-    }),
+      layoutMode,
+      teacherMode,
+      focusPattern
+    }, questions),
     showAnswerKey: true
   };
 }
