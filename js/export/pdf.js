@@ -196,11 +196,11 @@ function drawNotesBlock(pdf, label, value, y, margins, pageWidth, worksheetTheme
   pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFontSize(7.8);
   pdf.setFont("helvetica", "bold");
-  pdf.text(label.toUpperCase(), margins.left + metrics.notesPadding, y + 3.8);
+  pdf.text(label.toUpperCase(), margins.left + metrics.notesPadding, y + metrics.notesLabelBaseline);
   pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
   pdf.setFontSize(8.6);
   pdf.setFont("helvetica", "normal");
-  pdf.text(lines, margins.left + metrics.notesPadding, y + metrics.notesLabelGap + 3.2);
+  pdf.text(lines, margins.left + metrics.notesPadding, y + metrics.notesTextTopOffset);
   return y + boxHeight + 1.8;
 }
 
@@ -218,17 +218,17 @@ function drawIdentityFieldRow(pdf, fields, y, margins, pageWidth, worksheetTheme
     pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(6.5);
-    pdf.text(field.label.toUpperCase(), x + 2.4, y + 2.9);
+    pdf.text(field.label.toUpperCase(), x + 2.4, y + metrics.fieldLabelBaseline);
 
     if (field.value) {
       pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(8.4);
-      pdf.text(field.value, x + 2.4, y + 6.8);
+      pdf.text(field.value, x + 2.4, y + metrics.fieldValueBaseline);
     } else {
       pdf.setDrawColor(worksheetTheme.accentBorder.r, worksheetTheme.accentBorder.g, worksheetTheme.accentBorder.b);
       pdf.setLineWidth(0.3);
-      pdf.line(x + 2.4, y + 6.8, x + fieldWidth - 2.4, y + 6.8);
+      pdf.line(x + 2.4, y + metrics.fieldValueBaseline, x + fieldWidth - 2.4, y + metrics.fieldValueBaseline);
     }
   });
 
@@ -260,35 +260,37 @@ function measurePageHeaderHeight(pdf, {
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
     : [];
+  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
+  const titleLines = pdf.splitTextToSize(titleText, pageWidth - margins.left - margins.right - 12);
   let y = margins.top;
 
   if (identity.schoolName) {
     y += metrics.schoolGap;
   }
 
-  y += metrics.titleGap;
+  y += Math.max(metrics.titleGap, titleLines * metrics.titleLineUnit);
 
   if (descriptorLines.length > 0) {
-    y += Math.max(3.4, descriptorLines.length * 3.3);
+    y += Math.max(metrics.descriptorMinHeight, descriptorLines.length * metrics.descriptorLineUnit);
   }
 
   y += getIdentityFieldHeight(metrics);
 
   if (introLines.length > 0) {
-    y += 3.2;
+    y += metrics.introTopGap;
     y += Math.max(3.8, introLines.length * metrics.introLineHeight);
   }
 
   if (identity.teacherNotes) {
-    const lines = pdf.splitTextToSize(
+    const notesLines = pdf.splitTextToSize(
       identity.teacherNotes,
       pageWidth - margins.left - margins.right - (metrics.notesPadding * 2)
     );
-    y += 3;
-    y += getNotesBlockHeight(lines.length, metrics) + 1.8;
+    y += metrics.notesTopGap;
+    y += getNotesBlockHeight(notesLines.length, metrics) + 1.4;
   }
 
-  return (y + 4.2) - margins.top;
+  return (y + metrics.headerBottomGap) - margins.top;
 }
 
 function drawPageHeader(pdf, {
@@ -319,6 +321,7 @@ function drawPageHeader(pdf, {
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
     : [];
   const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
+  const titleLines = pdf.splitTextToSize(titleText, pageWidth - margins.left - margins.right - 12);
   const identityFields = [
     { label: "Name", value: identity.studentName || "" },
     { label: "Date", value: identity.worksheetDate || "" },
@@ -330,46 +333,46 @@ function drawPageHeader(pdf, {
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(metrics.schoolFontSize);
-    pdf.text(identity.schoolName, pageWidth / 2, y + 2.7, { align: "center" });
+    pdf.text(identity.schoolName, pageWidth / 2, y + metrics.schoolBaselineOffset, { align: "center" });
     y += metrics.schoolGap;
   }
 
   pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFont(fontFamily, "bold");
   pdf.setFontSize(metrics.titleFontSize);
-  pdf.text(titleText, pageWidth / 2, y + 4.6, { align: "center" });
+  pdf.text(titleText, pageWidth / 2, y + metrics.titleBaselineOffset, { align: "center" });
 
-  y += metrics.titleGap;
+  y += Math.max(metrics.titleGap, Math.max(1, titleLines.length) * metrics.titleLineUnit);
 
   if (descriptorLines.length > 0) {
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(metrics.titleSubtitleFontSize);
-    pdf.text(descriptorLines, pageWidth / 2, y + 2.8, { align: "center" });
-    y += Math.max(3.4, descriptorLines.length * 3.3);
+    pdf.text(descriptorLines, pageWidth / 2, y + metrics.descriptorBaselineOffset, { align: "center" });
+    y += Math.max(metrics.descriptorMinHeight, descriptorLines.length * metrics.descriptorLineUnit);
   }
 
-  y = drawIdentityFieldRow(pdf, identityFields, y + 1.6, margins, pageWidth, worksheetTheme, metrics);
+  y = drawIdentityFieldRow(pdf, identityFields, y + metrics.identityTopGap, margins, pageWidth, worksheetTheme, metrics);
 
   if (introLines.length > 0) {
-    y += 3.2;
+    y += metrics.introTopGap;
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(metrics.introFontSize);
-    pdf.text(introLines, margins.left, y + 3.2);
+    pdf.text(introLines, margins.left, y + metrics.introBaselineOffset);
     y += Math.max(3.8, introLines.length * metrics.introLineHeight);
   }
 
   if (identity.teacherNotes) {
-    y += 3;
+    y += metrics.notesTopGap;
     y = drawNotesBlock(pdf, "Teacher Notes", identity.teacherNotes, y, margins, pageWidth, worksheetTheme, metrics);
   }
 
   pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);
   pdf.setLineWidth(0.35);
-  pdf.line(margins.left, y + 1.6, pageWidth - margins.right, y + 1.6);
+  pdf.line(margins.left, y + metrics.dividerTopGap, pageWidth - margins.right, y + metrics.dividerTopGap);
 
-  return y + 4.2;
+  return y + metrics.headerBottomGap;
 }
 
 function drawPageFooter(pdf, {

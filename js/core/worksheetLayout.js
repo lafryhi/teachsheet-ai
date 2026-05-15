@@ -107,16 +107,16 @@ function measureEstimatedHeaderHeight({
     y += metrics.schoolGap;
   }
 
-  y += Math.max(metrics.titleGap, titleLines * 4.9);
+  y += Math.max(metrics.titleGap, titleLines * metrics.titleLineUnit);
 
   if (descriptorLines > 0) {
-    y += Math.max(3.4, descriptorLines * 3.3);
+    y += Math.max(metrics.descriptorMinHeight, descriptorLines * metrics.descriptorLineUnit);
   }
 
   y += getIdentityFieldHeight(metrics);
 
   if (introLines > 0) {
-    y += 3.2;
+    y += metrics.introTopGap;
     y += Math.max(3.8, introLines * metrics.introLineHeight);
   }
 
@@ -126,11 +126,11 @@ function measureEstimatedHeaderHeight({
       pageWidth - margins.left - margins.right - (metrics.notesPadding * 2),
       metrics.introFontSize
     );
-    y += 3;
-    y += getNotesBlockHeight(notesLines, metrics) + 1.8;
+    y += metrics.notesTopGap;
+    y += getNotesBlockHeight(notesLines, metrics) + 1.4;
   }
 
-  return (y + 4.2) - margins.top;
+  return (y + metrics.headerBottomGap) - margins.top;
 }
 
 function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidth) {

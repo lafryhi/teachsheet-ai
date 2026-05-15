@@ -38,21 +38,37 @@ export function getPdfLayoutMetrics(presentation) {
     answerCardLineHeight: 3.55,
     rowGap: isSingleColumn ? 4.8 : 4.3,
     columnGap: isSingleColumn ? 0 : 6,
-    titleFontSize: 18.4,
-    titleSubtitleFontSize: 8.1,
+    titleFontSize: 18.1,
+    titleSubtitleFontSize: 7.8,
     subtitleFontSize: 8.8,
-    schoolFontSize: 7.9,
-    introFontSize: 8.5,
-    introLineHeight: 3.8,
-    schoolGap: 3.4,
-    titleGap: 5,
-    subtitleGap: 3.8,
-    dividerGap: 3.2,
-    fieldHeight: 9.2,
-    notesLabelGap: 3.8,
-    notesPadding: 2.8,
-    notesLineHeight: 3.8,
-    notesMinHeight: 9.6,
+    schoolFontSize: 7.3,
+    introFontSize: 8.3,
+    introLineHeight: 3.65,
+    schoolGap: 2.7,
+    titleGap: 4.35,
+    subtitleGap: 3.2,
+    dividerGap: 2.6,
+    fieldHeight: 8.5,
+    titleLineUnit: 4.55,
+    descriptorLineUnit: 3,
+    descriptorMinHeight: 3.1,
+    schoolBaselineOffset: 2.45,
+    titleBaselineOffset: 4.2,
+    descriptorBaselineOffset: 2.55,
+    identityTopGap: 1.15,
+    introTopGap: 2.55,
+    introBaselineOffset: 2.95,
+    notesTopGap: 2.35,
+    dividerTopGap: 1.3,
+    headerBottomGap: 3.55,
+    fieldLabelBaseline: 2.75,
+    fieldValueBaseline: 6.2,
+    notesLabelGap: 3.2,
+    notesLabelBaseline: 3.35,
+    notesPadding: 2.45,
+    notesTextTopOffset: 5.75,
+    notesLineHeight: 3.65,
+    notesMinHeight: 8.9,
     footerFontSize: 8.2,
     footerLineInset: 1.8
   };
@@ -383,7 +399,10 @@ export function buildCompactDescriptorLine({
 }
 
 export function getNotesBlockHeight(linesCount, metrics) {
-  return Math.max(metrics.notesMinHeight, (linesCount * metrics.notesLineHeight) + metrics.notesLabelGap + 5.2);
+  return Math.max(
+    metrics.notesMinHeight,
+    (linesCount * metrics.notesLineHeight) + metrics.notesLabelGap + 4.8
+  );
 }
 
 export function resolveAnswerColumnCount(questions = []) {

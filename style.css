@@ -1329,14 +1329,14 @@ button:disabled {
 
 .worksheet-header {
   text-align: left;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .worksheet-school {
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1347,23 +1347,23 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 18px;
+  gap: 14px;
 }
 
 .worksheet-title-block {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .worksheet-title-aside {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   justify-items: end;
 }
 
 .worksheet-header h2 {
   margin: 0;
-  font-size: 34px;
+  font-size: 32px;
   line-height: 1.08;
   letter-spacing: -0.02em;
   color: var(--worksheet-accent, #183153);
@@ -1371,7 +1371,7 @@ button:disabled {
 
 .worksheet-subtitle {
   color: var(--worksheet-muted, #5f6b7a);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -1402,7 +1402,7 @@ button:disabled {
 
 .worksheet-page-type {
   color: var(--worksheet-accent, #183153);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1410,10 +1410,10 @@ button:disabled {
 
 .worksheet-intro {
   margin: 0;
-  max-width: 92%;
+  max-width: 95%;
   color: var(--worksheet-muted, #5f6b7a);
-  font-size: 15px;
-  line-height: 1.68;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .worksheet-divider {
@@ -1428,18 +1428,18 @@ button:disabled {
 .worksheet-identity-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .worksheet-identity-field {
   min-width: 0;
-  padding: 12px 14px 13px;
+  padding: 10px 12px 11px;
   border-radius: 16px;
   border: 1px solid var(--worksheet-field-border, #cfdeeb);
   background: var(--worksheet-field-background, #ffffff);
   display: grid;
-  gap: 8px;
-  min-height: 72px;
+  gap: 6px;
+  min-height: 64px;
 }
 
 .worksheet-identity-label {
@@ -1476,7 +1476,7 @@ button:disabled {
 .worksheet-meta-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .worksheet-meta-strip-extended {
@@ -1494,7 +1494,7 @@ button:disabled {
 
 .worksheet-meta-pill {
   min-width: 0;
-  padding: 10px 11px;
+  padding: 9px 10px;
   border-radius: 12px;
   background: var(--worksheet-meta-background, #f8fbff);
   border: 1px solid var(--worksheet-meta-border, #dbe7f3);
@@ -1539,8 +1539,8 @@ button:disabled {
 }
 
 .worksheet-notes-block {
-  margin-top: 4px;
-  padding: 13px 16px;
+  margin-top: 2px;
+  padding: 11px 14px;
   border-radius: 16px;
   background: var(--worksheet-notes-background, #f8fbff);
   border: 1px solid var(--worksheet-notes-border, #dbe7f3);
