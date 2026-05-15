@@ -113,6 +113,86 @@ function buildQuestionLines(pdf, questionLabel, columnWidth) {
   return lines;
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function scaleMetric(value, factor, minimum) {
+  return Math.max(minimum, Number((value * factor).toFixed(2)));
+}
+
+function getPageFillRatio(pageRows, usableHeight, rowGap) {
+  if (!usableHeight || usableHeight <= 0 || !pageRows.length) {
+    return 0;
+  }
+
+  return getPageRowsHeight(pageRows, rowGap) / usableHeight;
+}
+
+function buildDensityProfile({ questionPages, questionUsableHeight, rowGap, questions }) {
+  if (!questionPages.length) {
+    return {
+      compactness: 0,
+      earlyFill: 1,
+      averageFill: 1
+    };
+  }
+
+  const fills = questionPages.map((pageRows) => getPageFillRatio(pageRows, questionUsableHeight, rowGap));
+  const earlyPages = fills.slice(0, Math.min(2, fills.length));
+  const earlyFill = earlyPages.reduce((total, fill) => total + fill, 0) / earlyPages.length;
+  const averageFill = fills.reduce((total, fill) => total + fill, 0) / fills.length;
+  const verticalShare = questions.length
+    ? questions.filter((question) => question.format === "vertical").length / questions.length
+    : 0;
+  let compactness = 0;
+
+  if (questionPages.length > 1) {
+    compactness = (
+      Math.max(0, 0.86 - earlyFill) * 0.55 +
+      Math.max(0, 0.82 - averageFill) * 0.45
+    );
+  } else {
+    compactness = Math.max(0, 0.76 - averageFill) * 0.35;
+  }
+
+  compactness += verticalShare * 0.03;
+  return {
+    compactness: clamp(compactness, 0, 0.18),
+    earlyFill,
+    averageFill
+  };
+}
+
+function getAdaptivePdfMetrics(baseMetrics, densityProfile) {
+  const compactness = densityProfile?.compactness || 0;
+
+  if (compactness <= 0.015) {
+    return {
+      ...baseMetrics,
+      sectionHeaderHeight: QUESTION_SECTION_HEADER_HEIGHT,
+      answerSectionHeaderHeight: ANSWER_SECTION_HEADER_HEIGHT
+    };
+  }
+
+  const factor = 1 - compactness;
+
+  return {
+    ...baseMetrics,
+    questionPadding: scaleMetric(baseMetrics.questionPadding, 1 - (compactness * 0.7), 3),
+    questionMinHeight: scaleMetric(baseMetrics.questionMinHeight, factor, 18.5),
+    verticalQuestionMinHeight: scaleMetric(baseMetrics.verticalQuestionMinHeight, 1 - (compactness * 0.85), 24.5),
+    answerAreaHeight: scaleMetric(baseMetrics.answerAreaHeight, 1 - (compactness * 0.75), 5.8),
+    answerCardMinHeight: scaleMetric(baseMetrics.answerCardMinHeight, factor, 8.8),
+    rowGap: scaleMetric(baseMetrics.rowGap, 1 - (compactness * 0.9), 2.8),
+    introLineHeight: scaleMetric(baseMetrics.introLineHeight, 1 - (compactness * 0.35), 3.4),
+    notesLineHeight: scaleMetric(baseMetrics.notesLineHeight, 1 - (compactness * 0.35), 3.4),
+    notesMinHeight: scaleMetric(baseMetrics.notesMinHeight, 1 - (compactness * 0.5), 8.2),
+    sectionHeaderHeight: scaleMetric(QUESTION_SECTION_HEADER_HEIGHT, 1 - (compactness * 0.75), 6.4),
+    answerSectionHeaderHeight: scaleMetric(ANSWER_SECTION_HEADER_HEIGHT, 1 - (compactness * 0.75), 6)
+  };
+}
+
 function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
   const rows = [];
   const columnsCount = presentation.columnsCount;
@@ -151,7 +231,7 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
     });
     const firstQuestion = currentRowQuestions[0];
     const sectionHeaderHeight = firstQuestion?.sectionStart
-      ? (firstQuestion.layoutHints?.sectionHeaderHeight || QUESTION_SECTION_HEADER_HEIGHT)
+      ? (firstQuestion.layoutHints?.sectionHeaderHeight || metrics.sectionHeaderHeight || QUESTION_SECTION_HEADER_HEIGHT)
       : 0;
 
     rows.push({
@@ -211,9 +291,16 @@ function getHeightAfterAddingRow(pageHeight, pageLength, rowHeight, rowGap) {
   return pageHeight + rowHeight + (pageLength > 0 ? rowGap : 0);
 }
 
-function isMoveImprovement(currentLeftHeight, currentRightHeight, nextLeftHeight, nextRightHeight, targetHeight) {
-  const currentDistance = Math.abs(currentLeftHeight - targetHeight) + Math.abs(currentRightHeight - targetHeight);
-  const nextDistance = Math.abs(nextLeftHeight - targetHeight) + Math.abs(nextRightHeight - targetHeight);
+function isMoveImprovement(
+  currentLeftHeight,
+  currentRightHeight,
+  nextLeftHeight,
+  nextRightHeight,
+  leftTargetHeight,
+  rightTargetHeight
+) {
+  const currentDistance = Math.abs(currentLeftHeight - leftTargetHeight) + Math.abs(currentRightHeight - rightTargetHeight);
+  const nextDistance = Math.abs(nextLeftHeight - leftTargetHeight) + Math.abs(nextRightHeight - rightTargetHeight);
 
   return nextDistance + 1 < currentDistance;
 }
@@ -231,6 +318,10 @@ function rebalanceQuestionPages(pages, usableHeight, rowGap) {
     total + getPageRowsHeight(pageRows, rowGap)
   ), 0);
   const targetHeight = Math.min(usableHeight, totalContentHeight / balancedPages.length);
+  const earlyTargetHeight = Math.min(
+    usableHeight * 0.88,
+    Math.max(targetHeight, usableHeight * 0.8)
+  );
   let changed = true;
   let iterations = 0;
 
@@ -248,16 +339,25 @@ function rebalanceQuestionPages(pages, usableHeight, rowGap) {
 
       let leftHeight = getPageRowsHeight(leftPage, rowGap);
       let rightHeight = getPageRowsHeight(rightPage, rowGap);
+      const leftTargetHeight = pageIndex < 2 ? earlyTargetHeight : targetHeight;
+      const rightTargetHeight = pageIndex + 1 < 2 ? earlyTargetHeight : targetHeight;
 
-      if (leftHeight + 1 < targetHeight && rightPage.length > 1) {
+      if (leftHeight + 1 < leftTargetHeight && rightPage.length > 1) {
         const movedRow = rightPage[0];
         const nextLeftHeight = getHeightAfterAddingRow(leftHeight, leftPage.length, movedRow.rowHeight, rowGap);
         const nextRightHeight = getHeightAfterRemovingRow(rightHeight, rightPage.length, movedRow.rowHeight, rowGap);
 
         if (
           nextLeftHeight <= usableHeight &&
-          nextRightHeight >= usableHeight * 0.25 &&
-          isMoveImprovement(leftHeight, rightHeight, nextLeftHeight, nextRightHeight, targetHeight)
+          nextRightHeight >= usableHeight * 0.22 &&
+          isMoveImprovement(
+            leftHeight,
+            rightHeight,
+            nextLeftHeight,
+            nextRightHeight,
+            leftTargetHeight,
+            rightTargetHeight
+          )
         ) {
           leftPage.push(rightPage.shift());
           leftHeight = nextLeftHeight;
@@ -266,15 +366,22 @@ function rebalanceQuestionPages(pages, usableHeight, rowGap) {
         }
       }
 
-      if (rightHeight + 1 < targetHeight && leftPage.length > 1) {
+      if (rightHeight + 1 < rightTargetHeight && leftPage.length > 1) {
         const movedRow = leftPage[leftPage.length - 1];
         const nextLeftHeight = getHeightAfterRemovingRow(leftHeight, leftPage.length, movedRow.rowHeight, rowGap);
         const nextRightHeight = getHeightAfterAddingRow(rightHeight, rightPage.length, movedRow.rowHeight, rowGap);
 
         if (
           nextRightHeight <= usableHeight &&
-          nextLeftHeight >= usableHeight * 0.25 &&
-          isMoveImprovement(leftHeight, rightHeight, nextLeftHeight, nextRightHeight, targetHeight)
+          nextLeftHeight >= usableHeight * 0.22 &&
+          isMoveImprovement(
+            leftHeight,
+            rightHeight,
+            nextLeftHeight,
+            nextRightHeight,
+            leftTargetHeight,
+            rightTargetHeight
+          )
         ) {
           rightPage.unshift(leftPage.pop());
           changed = true;
@@ -346,15 +453,16 @@ function drawSectionHeader(pdf, {
   y,
   width,
   sectionLabel,
-  worksheetTheme
+  worksheetTheme,
+  headerHeight = QUESTION_SECTION_HEADER_HEIGHT
 }) {
   pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);
   pdf.setLineWidth(0.35);
-  pdf.line(x, y + 1.2, width + x, y + 1.2);
+  pdf.line(x, y + 1.1, width + x, y + 1.1);
   pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.1);
-  pdf.text(String(sectionLabel || "Section").toUpperCase(), x, y + 6.2);
+  pdf.text(String(sectionLabel || "Section").toUpperCase(), x, y + Math.max(4.9, headerHeight - 1.8));
 }
 
 function drawNotesBlock(pdf, label, value, y, margins, pageWidth, worksheetTheme, metrics) {
@@ -685,8 +793,8 @@ function drawQuestionPages(pdf, questionPages, options) {
           y,
           width: pageWidth - margins.left - margins.right,
           sectionLabel: row.sectionLabel,
-          sectionInstruction: row.sectionInstruction,
-          worksheetTheme
+          worksheetTheme,
+          headerHeight: sectionHeaderHeight || metrics.sectionHeaderHeight || QUESTION_SECTION_HEADER_HEIGHT
         });
       }
 
@@ -770,7 +878,9 @@ function buildAnswerRows(pdf, questions, answerColumns, answerColumnWidth, metri
         };
     });
     const firstQuestion = currentRowQuestions[0];
-    const sectionHeaderHeight = firstQuestion?.sectionStart ? ANSWER_SECTION_HEADER_HEIGHT : 0;
+    const sectionHeaderHeight = firstQuestion?.sectionStart
+      ? (metrics.answerSectionHeaderHeight || ANSWER_SECTION_HEADER_HEIGHT)
+      : 0;
 
     rows.push({
       items: rowQuestions,
@@ -873,8 +983,8 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
           y,
           width: pageWidth - margins.left - margins.right,
           sectionLabel: row.sectionLabel,
-          sectionInstruction: row.sectionInstruction,
-          worksheetTheme
+          worksheetTheme,
+          headerHeight: sectionHeaderHeight || metrics.answerSectionHeaderHeight || ANSWER_SECTION_HEADER_HEIGHT
         });
       }
 
@@ -944,7 +1054,6 @@ export function downloadWorksheetPDF({
   const presentation = getTemplatePresentation(template);
   const fontFamily = getPdfFontFamily(presentation);
   const worksheetTheme = getWorksheetTheme(presentation, theme);
-  const metrics = getPdfLayoutMetrics(presentation);
   const pageWidth = PDF_PAGE_LAYOUT.width;
   const pageHeight = PDF_PAGE_LAYOUT.height;
   const margins = {
@@ -963,6 +1072,41 @@ export function downloadWorksheetPDF({
     scorePoints: identity?.scorePoints || "",
     teacherNotes: identity?.teacherNotes || ""
   };
+  const baseMetrics = getPdfLayoutMetrics(presentation);
+  const baseQuestionHeaderHeight = measurePageHeaderHeight(pdf, {
+    identity: resolvedIdentity,
+    metrics: baseMetrics,
+    grade,
+    subjectLabel,
+    focusLabel,
+    worksheetSubtitle,
+    worksheetModeLabel,
+    trustSignals,
+    margins,
+    pageWidth,
+    pageKind: "questions"
+  });
+  const footer = getFooterMetrics(pageHeight);
+  const questionContentBottom = footer.top - PDF_PAGE_LAYOUT.footerGap;
+  const baseQuestionUsableHeight = Math.max(0, questionContentBottom - (margins.top + baseQuestionHeaderHeight));
+  const initialColumnGap = baseMetrics.columnGap;
+  const initialColumnWidth = presentation.columnsCount === 1
+    ? pageWidth - margins.left - margins.right
+    : ((pageWidth - margins.left - margins.right - initialColumnGap) / 2);
+  const initialQuestionRows = buildQuestionRows(pdf, safeQuestions, presentation, baseMetrics, initialColumnWidth);
+  const initialQuestionPages = paginateRows(
+    initialQuestionRows,
+    baseQuestionUsableHeight,
+    baseMetrics.rowGap,
+    baseMetrics.sectionHeaderHeight || QUESTION_SECTION_HEADER_HEIGHT
+  );
+  const densityProfile = buildDensityProfile({
+    questionPages: initialQuestionPages,
+    questionUsableHeight: baseQuestionUsableHeight,
+    rowGap: baseMetrics.rowGap,
+    questions: safeQuestions
+  });
+  const metrics = getAdaptivePdfMetrics(baseMetrics, densityProfile);
   const questionHeaderHeight = measurePageHeaderHeight(pdf, {
     identity: resolvedIdentity,
     metrics,
@@ -989,8 +1133,6 @@ export function downloadWorksheetPDF({
     pageWidth,
     pageKind: "answer-key"
   });
-  const footer = getFooterMetrics(pageHeight);
-  const questionContentBottom = footer.top - PDF_PAGE_LAYOUT.footerGap;
   const questionUsableHeight = Math.max(0, questionContentBottom - (margins.top + questionHeaderHeight));
   const answerUsableHeight = Math.max(0, questionContentBottom - (margins.top + answerHeaderHeight));
   const rowGap = metrics.rowGap;
