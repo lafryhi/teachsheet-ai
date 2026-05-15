@@ -11,30 +11,11 @@ const PDF_PAGE_LAYOUT = {
   footerGap: 12
 };
 
+const QUESTION_SECTION_HEADER_HEIGHT = 8.4;
+const ANSWER_SECTION_HEADER_HEIGHT = 7.8;
+
 function getPdfFontFamily(template) {
   return template.layout === "single-column" ? "times" : "helvetica";
-}
-
-function hexToRgb(hexColor) {
-  const normalized = String(hexColor || "").replace("#", "");
-
-  if (normalized.length !== 6) {
-    return { r: 0, g: 140, b: 255 };
-  }
-
-  return {
-    r: Number.parseInt(normalized.slice(0, 2), 16),
-    g: Number.parseInt(normalized.slice(2, 4), 16),
-    b: Number.parseInt(normalized.slice(4, 6), 16)
-  };
-}
-
-function mixWithWhite(color, ratio) {
-  return {
-    r: Math.round(color.r + ((255 - color.r) * ratio)),
-    g: Math.round(color.g + ((255 - color.g) * ratio)),
-    b: Math.round(color.b + ((255 - color.b) * ratio))
-  };
 }
 
 function questionHasInlineAnswerSpace(question) {
@@ -43,42 +24,36 @@ function questionHasInlineAnswerSpace(question) {
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel }) {
   if (pageKind === "answer-key") {
-    return "Use this page as the reference key for quick checking and classroom correction.";
+    return "Use this answer sheet for checking and classroom correction.";
   }
 
   if (identity.instructions) {
     return identity.instructions;
   }
 
-  if (worksheetModeLabel && focusLabel) {
-    return `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`;
-  }
-
-  return "Read each question carefully, keep your work neat, and complete every answer in the space provided.";
+  return "Read each question carefully and keep your work neat.";
 }
 
-function getWorksheetTheme(presentation, accentColor) {
-  const visualTheme = presentation.visualTheme || {};
-
+function getWorksheetTheme() {
   return {
-    accent: accentColor,
-    accentPale: mixWithWhite(accentColor, 0.94),
-    accentBorder: mixWithWhite(accentColor, 0.74),
-    titleColor: hexToRgb(visualTheme.titleColor || "#183153"),
-    textColor: hexToRgb(visualTheme.textColor || "#1f2937"),
-    mutedText: hexToRgb(visualTheme.mutedText || "#5f6b7a"),
-    subtleText: hexToRgb(visualTheme.subtleText || "#7a8794"),
-    dividerColor: hexToRgb(visualTheme.dividerColor || "#dbe5ef"),
-    fieldBackground: hexToRgb(visualTheme.fieldBackground || "#ffffff"),
-    fieldBorder: hexToRgb(visualTheme.fieldBorder || "#cfdeeb"),
-    metaBackground: hexToRgb(visualTheme.metaBackground || "#f8fbff"),
-    metaBorder: hexToRgb(visualTheme.metaBorder || "#dbe7f3"),
-    notesBackground: hexToRgb(visualTheme.notesBackground || "#f8fbff"),
-    notesBorder: hexToRgb(visualTheme.notesBorder || "#dbe7f3"),
-    questionBorder: hexToRgb(visualTheme.questionBorder || "#c8d8e8"),
-    answerBackground: hexToRgb(visualTheme.answerBackground || "#f8fbff"),
-    answerBorder: hexToRgb(visualTheme.answerBorder || "#d9e6f2"),
-    footerLine: hexToRgb(visualTheme.footerLine || "#dbe5ef")
+    accent: { r: 0, g: 0, b: 0 },
+    accentPale: { r: 255, g: 255, b: 255 },
+    accentBorder: { r: 112, g: 112, b: 112 },
+    titleColor: { r: 0, g: 0, b: 0 },
+    textColor: { r: 0, g: 0, b: 0 },
+    mutedText: { r: 55, g: 55, b: 55 },
+    subtleText: { r: 95, g: 95, b: 95 },
+    dividerColor: { r: 135, g: 135, b: 135 },
+    fieldBackground: { r: 255, g: 255, b: 255 },
+    fieldBorder: { r: 128, g: 128, b: 128 },
+    metaBackground: { r: 255, g: 255, b: 255 },
+    metaBorder: { r: 145, g: 145, b: 145 },
+    notesBackground: { r: 255, g: 255, b: 255 },
+    notesBorder: { r: 145, g: 145, b: 145 },
+    questionBorder: { r: 92, g: 92, b: 92 },
+    answerBackground: { r: 255, g: 255, b: 255 },
+    answerBorder: { r: 102, g: 102, b: 102 },
+    footerLine: { r: 135, g: 135, b: 135 }
   };
 }
 
@@ -87,37 +62,35 @@ function getPdfLayoutMetrics(presentation) {
   const isKids = presentation.id === "kids-colorful";
 
   return {
-    questionFontSize: isKids ? 13.2 : isSingleColumn ? 12.3 : 12,
-    questionLineHeight: isKids ? 5.2 : isSingleColumn ? 4.9 : 4.6,
-    answerLineHeight: 4.3,
-    questionPadding: isKids ? 5.4 : isSingleColumn ? 5 : 4.6,
-    questionMinHeight: isKids ? 29 : isSingleColumn ? 25 : 23,
-    verticalQuestionMinHeight: isKids ? 40 : 34,
-    answerAreaHeight: isKids ? 10 : 8.2,
-    answerLineWidth: isKids ? 46 : isSingleColumn ? 84 : 30,
-    answerCardMinHeight: isSingleColumn ? 14 : 13,
-    answerCardPadding: 4,
-    answerCardLineHeight: 4.1,
-    rowGap: isSingleColumn ? 6.5 : 5.8,
-    columnGap: isSingleColumn ? 0 : 7,
-    titleFontSize: 20.5,
-    titleSubtitleFontSize: 9.2,
-    subtitleFontSize: 10,
-    schoolFontSize: 10.2,
-    introFontSize: 9.7,
-    introLineHeight: 4.4,
-    schoolGap: 5,
-    titleGap: 7.2,
-    subtitleGap: 5,
-    dividerGap: 4.4,
-    fieldHeight: 11.2,
-    metaHeight: 10.2,
-    notesLabelGap: 4.8,
-    notesPadding: 3.4,
-    notesLineHeight: 4.4,
-    notesMinHeight: 12,
-    confidenceStripHeight: 8,
-    footerFontSize: 8.7,
+    questionFontSize: isKids ? 12.4 : isSingleColumn ? 11.7 : 11.5,
+    questionLineHeight: isKids ? 4.8 : isSingleColumn ? 4.45 : 4.2,
+    answerLineHeight: 3.9,
+    questionPadding: isKids ? 4.2 : isSingleColumn ? 4 : 3.8,
+    questionMinHeight: isKids ? 24 : isSingleColumn ? 21.5 : 20.5,
+    verticalQuestionMinHeight: isKids ? 31 : 28.5,
+    answerAreaHeight: isKids ? 8.2 : 6.8,
+    answerLineWidth: isKids ? 40 : isSingleColumn ? 82 : 28,
+    answerCardMinHeight: isSingleColumn ? 10.8 : 10.2,
+    answerCardPadding: 3,
+    answerCardLineHeight: 3.7,
+    rowGap: isSingleColumn ? 4.8 : 4.3,
+    columnGap: isSingleColumn ? 0 : 6,
+    titleFontSize: 17.8,
+    titleSubtitleFontSize: 8.4,
+    subtitleFontSize: 8.8,
+    schoolFontSize: 9.1,
+    introFontSize: 8.8,
+    introLineHeight: 3.8,
+    schoolGap: 4.2,
+    titleGap: 5.4,
+    subtitleGap: 3.8,
+    dividerGap: 3.2,
+    fieldHeight: 9.2,
+    notesLabelGap: 3.8,
+    notesPadding: 2.8,
+    notesLineHeight: 3.8,
+    notesMinHeight: 9.6,
+    footerFontSize: 8.2,
     footerLineInset: 1.8
   };
 }
@@ -161,7 +134,7 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
       const answerReserve = question.answerLine !== false && !hasInlineAnswerSpace
         ? (hint.answerAreaHeight || answerAreaHeight)
         : 0;
-      const baseHeight = (textLines.length * lineHeight) + answerReserve + 12.5;
+      const baseHeight = (textLines.length * lineHeight) + answerReserve + 9.4;
 
       return {
         question,
@@ -178,7 +151,7 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
     });
     const firstQuestion = currentRowQuestions[0];
     const sectionHeaderHeight = firstQuestion?.sectionStart
-      ? (firstQuestion.layoutHints?.sectionHeaderHeight || 12)
+      ? (firstQuestion.layoutHints?.sectionHeaderHeight || QUESTION_SECTION_HEADER_HEIGHT)
       : 0;
 
     rows.push({
@@ -373,22 +346,15 @@ function drawSectionHeader(pdf, {
   y,
   width,
   sectionLabel,
-  sectionInstruction,
   worksheetTheme
 }) {
-  pdf.setFillColor(worksheetTheme.metaBackground.r, worksheetTheme.metaBackground.g, worksheetTheme.metaBackground.b);
-  pdf.setDrawColor(worksheetTheme.metaBorder.r, worksheetTheme.metaBorder.g, worksheetTheme.metaBorder.b);
-  pdf.roundedRect(x, y, width, 11.2, 2.4, 2.4, "FD");
-  pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
+  pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);
+  pdf.setLineWidth(0.35);
+  pdf.line(x, y + 1.2, width + x, y + 1.2);
+  pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10.2);
-  pdf.text(sectionLabel || "Section", x + 3.2, y + 4.3);
-  if (sectionInstruction) {
-    pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8.1);
-    pdf.text(pdf.splitTextToSize(sectionInstruction, width - 7), x + 3.2, y + 8.1);
-  }
+  pdf.setFontSize(9.1);
+  pdf.text(String(sectionLabel || "Section").toUpperCase(), x, y + 6.2);
 }
 
 function drawNotesBlock(pdf, label, value, y, margins, pageWidth, worksheetTheme, metrics) {
@@ -398,18 +364,17 @@ function drawNotesBlock(pdf, label, value, y, margins, pageWidth, worksheetTheme
 
   const lines = pdf.splitTextToSize(value, pageWidth - margins.left - margins.right - (metrics.notesPadding * 2));
   const boxHeight = getNotesBlockHeight(lines.length, metrics);
-  pdf.setFillColor(worksheetTheme.notesBackground.r, worksheetTheme.notesBackground.g, worksheetTheme.notesBackground.b);
   pdf.setDrawColor(worksheetTheme.notesBorder.r, worksheetTheme.notesBorder.g, worksheetTheme.notesBorder.b);
-  pdf.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, boxHeight, 2, 2, "FD");
-  pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
-  pdf.setFontSize(8.8);
+  pdf.roundedRect(margins.left, y, pageWidth - margins.left - margins.right, boxHeight, 1.6, 1.6, "S");
+  pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
+  pdf.setFontSize(7.8);
   pdf.setFont("helvetica", "bold");
-  pdf.text(label.toUpperCase(), margins.left + metrics.notesPadding, y + 4.6);
+  pdf.text(label.toUpperCase(), margins.left + metrics.notesPadding, y + 3.8);
   pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
-  pdf.setFontSize(9.8);
+  pdf.setFontSize(8.6);
   pdf.setFont("helvetica", "normal");
-  pdf.text(lines, margins.left + metrics.notesPadding, y + metrics.notesLabelGap + 4.2);
-  return y + boxHeight + 2.8;
+  pdf.text(lines, margins.left + metrics.notesPadding, y + metrics.notesLabelGap + 3.2);
+  return y + boxHeight + 1.8;
 }
 
 function getNotesBlockHeight(linesCount, metrics) {
@@ -430,16 +395,44 @@ function getIdentityFieldHeight(metrics) {
   return metrics.fieldHeight;
 }
 
-function getMetaGridHeight(metrics) {
-  return metrics.metaHeight;
+function normalizePrintFocusLabel(subjectLabel, focusLabel) {
+  if (!focusLabel) {
+    return "";
+  }
+
+  if (subjectLabel === "Math") {
+    return String(focusLabel).replace(/^Horizontal\s+/i, "");
+  }
+
+  return String(focusLabel);
 }
 
-function getConfidenceStripHeight(trustSignals, metrics) {
-  return Array.isArray(trustSignals) && trustSignals.length > 0 ? metrics.confidenceStripHeight : 0;
+function buildCompactDescriptorLine({
+  pageKind,
+  grade,
+  subjectLabel,
+  focusLabel,
+  worksheetModeLabel
+}) {
+  const parts = [grade];
+
+  if (subjectLabel && subjectLabel !== "Math") {
+    parts.push(subjectLabel);
+  }
+
+  parts.push(normalizePrintFocusLabel(subjectLabel, focusLabel));
+
+  if (pageKind === "answer-key") {
+    parts.push("Answer Sheet");
+  } else if (worksheetModeLabel) {
+    parts.push(worksheetModeLabel);
+  }
+
+  return parts.filter(Boolean).join(" | ");
 }
 
 function drawIdentityFieldRow(pdf, fields, y, margins, pageWidth, worksheetTheme, metrics) {
-  const gap = 4.6;
+  const gap = 4.2;
   const fieldHeight = getIdentityFieldHeight(metrics);
   const fieldWidth = (pageWidth - margins.left - margins.right - (gap * (fields.length - 1))) / fields.length;
 
@@ -448,82 +441,25 @@ function drawIdentityFieldRow(pdf, fields, y, margins, pageWidth, worksheetTheme
 
     pdf.setFillColor(worksheetTheme.fieldBackground.r, worksheetTheme.fieldBackground.g, worksheetTheme.fieldBackground.b);
     pdf.setDrawColor(worksheetTheme.fieldBorder.r, worksheetTheme.fieldBorder.g, worksheetTheme.fieldBorder.b);
-    pdf.roundedRect(x, y, fieldWidth, fieldHeight, 2.4, 2.4, "FD");
+    pdf.roundedRect(x, y, fieldWidth, fieldHeight, 1.6, 1.6, "S");
     pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(7.8);
-    pdf.text(field.label.toUpperCase(), x + 3.2, y + 3.8);
+    pdf.setFontSize(6.9);
+    pdf.text(field.label.toUpperCase(), x + 2.6, y + 3.2);
 
     if (field.value) {
       pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9.8);
-      pdf.text(field.value, x + 3.2, y + 8.6);
+      pdf.setFontSize(8.8);
+      pdf.text(field.value, x + 2.6, y + 7.2);
     } else {
       pdf.setDrawColor(worksheetTheme.accentBorder.r, worksheetTheme.accentBorder.g, worksheetTheme.accentBorder.b);
       pdf.setLineWidth(0.3);
-      pdf.line(x + 3.2, y + 8.8, x + fieldWidth - 3.2, y + 8.8);
+      pdf.line(x + 2.6, y + 7.2, x + fieldWidth - 2.6, y + 7.2);
     }
   });
 
   return y + fieldHeight;
-}
-
-function drawMetaGrid(pdf, items, y, margins, pageWidth, worksheetTheme, metrics) {
-  const columns = items.length;
-  const gap = 3.6;
-  const cellHeight = metrics.metaHeight;
-  const cellWidth = (pageWidth - margins.left - margins.right - (gap * (columns - 1))) / columns;
-
-  items.forEach((item, index) => {
-    const x = margins.left + (index * (cellWidth + gap));
-    const cellY = y;
-
-    pdf.setFillColor(worksheetTheme.metaBackground.r, worksheetTheme.metaBackground.g, worksheetTheme.metaBackground.b);
-    pdf.setDrawColor(worksheetTheme.metaBorder.r, worksheetTheme.metaBorder.g, worksheetTheme.metaBorder.b);
-    pdf.roundedRect(x, cellY, cellWidth, cellHeight, 2, 2, "FD");
-    pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(7.6);
-    pdf.text(item.label.toUpperCase(), x + 2.6, cellY + 3.4);
-    pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8.4);
-    pdf.text(String(item.value || "--"), x + 2.6, cellY + 7.4);
-  });
-
-  return y + getMetaGridHeight(metrics);
-}
-
-function drawConfidenceStrip(pdf, trustSignals, y, margins, pageWidth, worksheetTheme, metrics) {
-  if (!Array.isArray(trustSignals) || trustSignals.length === 0) {
-    return y;
-  }
-
-  const gap = 3;
-  const fontSize = 7.6;
-  let x = margins.left;
-  const stripBottom = y + metrics.confidenceStripHeight;
-
-  trustSignals.forEach((signal) => {
-    const textWidth = pdf.getTextWidth(signal);
-    const chipWidth = textWidth + 8.6;
-
-    if (x + chipWidth > pageWidth - margins.right) {
-      return;
-    }
-
-    pdf.setFillColor(worksheetTheme.metaBackground.r, worksheetTheme.metaBackground.g, worksheetTheme.metaBackground.b);
-    pdf.setDrawColor(worksheetTheme.metaBorder.r, worksheetTheme.metaBorder.g, worksheetTheme.metaBorder.b);
-    pdf.roundedRect(x, y, chipWidth, 5.6, 2.8, 2.8, "FD");
-    pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(fontSize);
-    pdf.text(signal, x + 4.3, y + 3.8);
-    x += chipWidth + gap;
-  });
-
-  return stripBottom;
 }
 
 function measurePageHeaderHeight(pdf, {
@@ -532,48 +468,54 @@ function measurePageHeaderHeight(pdf, {
   grade,
   subjectLabel,
   focusLabel,
-  worksheetSubtitle,
   worksheetModeLabel,
-  trustSignals,
   margins,
   pageWidth,
   pageKind
 }) {
+  const descriptorLine = buildCompactDescriptorLine({
+    pageKind,
+    grade,
+    subjectLabel,
+    focusLabel,
+    worksheetModeLabel
+  });
+  const descriptorLines = descriptorLine
+    ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
+    : [];
   const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
-  const introLines = pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right);
+  const introLines = identity.instructions || pageKind === "answer-key"
+    ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
+    : [];
   let y = margins.top;
 
   if (identity.schoolName) {
-    y += metrics.schoolGap;
+    y += 3.8;
   }
 
   y += metrics.titleGap;
 
-  if (worksheetSubtitle) {
-    y += 4.8;
+  if (descriptorLines.length > 0) {
+    y += Math.max(3.4, descriptorLines.length * 3.3);
   }
 
-  if (pageKind === "answer-key" || worksheetModeLabel) {
-    y += metrics.subtitleGap;
-  }
-
-  y += Math.max(6.2, introLines.length * metrics.introLineHeight);
-  y += metrics.dividerGap;
   y += getIdentityFieldHeight(metrics);
-  y += 4;
-  y += getMetaGridHeight(metrics);
-  y += getConfidenceStripHeight(trustSignals, metrics);
+
+  if (introLines.length > 0) {
+    y += 3.2;
+    y += Math.max(3.8, introLines.length * metrics.introLineHeight);
+  }
 
   if (identity.teacherNotes) {
     const lines = pdf.splitTextToSize(
       identity.teacherNotes,
       pageWidth - margins.left - margins.right - (metrics.notesPadding * 2)
     );
-    y += 4;
-    y += getNotesBlockHeight(lines.length, metrics) + 2.8;
+    y += 3;
+    y += getNotesBlockHeight(lines.length, metrics) + 1.8;
   }
 
-  return (y + 5.2) - margins.top;
+  return (y + 4.2) - margins.top;
 }
 
 function drawPageHeader(pdf, {
@@ -584,101 +526,76 @@ function drawPageHeader(pdf, {
   grade,
   subjectLabel,
   focusLabel,
-  worksheetSubtitle,
   worksheetModeLabel,
-  difficultyLabel,
-  generatedAtLabel,
-  trustSignals,
   margins,
   pageWidth,
   pageKind
 }) {
+  const descriptorLine = buildCompactDescriptorLine({
+    pageKind,
+    grade,
+    subjectLabel,
+    focusLabel,
+    worksheetModeLabel
+  });
+  const descriptorLines = descriptorLine
+    ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
+    : [];
   const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
-  const introLines = pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right);
+  const introLines = identity.instructions || pageKind === "answer-key"
+    ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
+    : [];
   const identityFields = [
     { label: "Name", value: identity.studentName || "" },
     { label: "Date", value: identity.worksheetDate || "" },
     { label: "Score", value: identity.scorePoints || "" }
   ];
-  const metaItems = [
-    { label: "Teacher", value: identity.teacherName || "--" },
-    { label: "Level", value: grade || "--" },
-    { label: "Subject", value: subjectLabel || "--" },
-    { label: "Focus", value: focusLabel || "--" },
-    { label: "Generated", value: generatedAtLabel || "--" }
-  ];
   let y = margins.top;
 
-  pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
-  pdf.setFont("helvetica", "bold");
-
   if (identity.schoolName) {
+    pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
+    pdf.setFont("helvetica", "bold");
     pdf.setFontSize(metrics.schoolFontSize);
-    pdf.text(identity.schoolName, pageWidth / 2, y, { align: "center" });
-    y += metrics.schoolGap;
+    pdf.text(identity.schoolName, pageWidth / 2, y + 3.2, { align: "center" });
+    y += 3.8;
   }
 
   pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFont(fontFamily, "bold");
   pdf.setFontSize(metrics.titleFontSize);
-  pdf.text(identity.worksheetTitle || "Worksheet", pageWidth / 2, y, { align: "center" });
-
-  if (difficultyLabel && pageKind !== "answer-key") {
-    const badgeWidth = pdf.getTextWidth(difficultyLabel.toUpperCase()) + 8.8;
-    const badgeX = pageWidth - margins.right - badgeWidth;
-    pdf.setFillColor(255, 248, 230);
-    pdf.setDrawColor(226, 200, 120);
-    pdf.roundedRect(badgeX, y - 4.6, badgeWidth, 5.6, 2.8, 2.8, "FD");
-    pdf.setTextColor(138, 91, 0);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(7.6);
-    pdf.text(String(difficultyLabel).toUpperCase(), badgeX + 4.1, y - 0.8);
-  }
+  pdf.text(identity.worksheetTitle || "Worksheet", pageWidth / 2, y + 4.8, { align: "center" });
 
   y += metrics.titleGap;
 
-  if (worksheetSubtitle) {
+  if (descriptorLines.length > 0) {
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
-    pdf.setFont("helvetica", "bold");
+    pdf.setFont("helvetica", "normal");
     pdf.setFontSize(metrics.titleSubtitleFontSize);
-    pdf.text(worksheetSubtitle, pageWidth / 2, y, { align: "center" });
-    y += 4.8;
+    pdf.text(descriptorLines, pageWidth / 2, y + 2.8, { align: "center" });
+    y += Math.max(3.4, descriptorLines.length * 3.3);
   }
 
-  if (pageKind === "answer-key" || worksheetModeLabel) {
-    pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(metrics.subtitleFontSize);
-    pdf.text(pageKind === "answer-key" ? "Answer Sheet" : worksheetModeLabel, pageWidth / 2, y, { align: "center" });
-    y += metrics.subtitleGap;
+  y = drawIdentityFieldRow(pdf, identityFields, y + 1.6, margins, pageWidth, worksheetTheme, metrics);
+
+  if (introLines.length > 0) {
+    y += 3.2;
+    pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(metrics.introFontSize);
+    pdf.text(introLines, margins.left, y + 3.2);
+    y += Math.max(3.8, introLines.length * metrics.introLineHeight);
   }
-
-  pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(metrics.introFontSize);
-  pdf.text(introLines, margins.left, y);
-  y += Math.max(6.2, introLines.length * metrics.introLineHeight);
-
-  pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);
-  pdf.setLineWidth(0.3);
-  pdf.line(margins.left, y, pageWidth - margins.right, y);
-  y += metrics.dividerGap;
-
-  y = drawIdentityFieldRow(pdf, identityFields, y, margins, pageWidth, worksheetTheme, metrics);
-  y += 4;
-  y = drawMetaGrid(pdf, metaItems, y, margins, pageWidth, worksheetTheme, metrics);
-  y = drawConfidenceStrip(pdf, trustSignals, y + 3.2, margins, pageWidth, worksheetTheme, metrics);
 
   if (identity.teacherNotes) {
-    y += 4;
+    y += 3;
     y = drawNotesBlock(pdf, "Teacher Notes", identity.teacherNotes, y, margins, pageWidth, worksheetTheme, metrics);
   }
 
   pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);
-  pdf.setLineWidth(0.45);
-  pdf.line(margins.left, y, pageWidth - margins.right, y);
+  pdf.setLineWidth(0.35);
+  pdf.line(margins.left, y + 1.6, pageWidth - margins.right, y + 1.6);
 
-  return y + 5.2;
+  return y + 4.2;
 }
 
 function drawPageFooter(pdf, {
@@ -779,39 +696,35 @@ function drawQuestionPages(pdf, questionPages, options) {
         const x = margins.left + (itemIndex * (columnWidth + columnGap));
         const boxHeight = row.contentHeight || (row.rowHeight - sectionHeaderHeight);
         const boxPadding = metrics.questionPadding;
-        const badgeWidth = item.questionNumber >= 10 ? 11.8 : 9.4;
-        const badgeHeight = 6.4;
-        const textY = questionBoxY + boxPadding + 9.8;
+        const numberLabel = `${item.questionNumber}.`;
+        const numberWidth = pdf.getTextWidth(numberLabel);
+        const textY = questionBoxY + boxPadding + 7.6;
 
         pdf.setDrawColor(worksheetTheme.questionBorder.r, worksheetTheme.questionBorder.g, worksheetTheme.questionBorder.b);
-        pdf.setFillColor(255, 255, 255);
-        pdf.roundedRect(x, questionBoxY, columnWidth, boxHeight, 3, 3, "FD");
-        pdf.setDrawColor(worksheetTheme.accentBorder.r, worksheetTheme.accentBorder.g, worksheetTheme.accentBorder.b);
-        pdf.setFillColor(worksheetTheme.accentPale.r, worksheetTheme.accentPale.g, worksheetTheme.accentPale.b);
-        pdf.roundedRect(x + boxPadding, questionBoxY + boxPadding, badgeWidth, badgeHeight, 3.2, 3.2, "FD");
-        pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
+        pdf.roundedRect(x, questionBoxY, columnWidth, boxHeight, 1.8, 1.8, "S");
+        pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(8.7);
-        pdf.text(String(item.questionNumber), x + boxPadding + (badgeWidth / 2), questionBoxY + boxPadding + 4.4, { align: "center" });
+        pdf.setFontSize(8.2);
+        pdf.text(numberLabel, x + boxPadding, questionBoxY + boxPadding + 3.8);
 
         if (item.question.format === "vertical") {
           pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
           pdf.setFont("courier", "bold");
-          pdf.setFontSize(Math.max(11.1, questionFontSize - 0.8));
-          pdf.text(item.textLines, x + columnWidth - boxPadding - 1.2, textY, { align: "right" });
+          pdf.setFontSize(Math.max(10.5, questionFontSize - 0.5));
+          pdf.text(item.textLines, x + columnWidth - boxPadding - 0.8, textY, { align: "right" });
         } else {
           pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
           pdf.setFont(fontFamily, "normal");
           pdf.setFontSize(questionFontSize);
-          pdf.text(item.textLines, x + boxPadding, textY);
+          pdf.text(item.textLines, x + boxPadding + numberWidth + 1.8, textY);
         }
 
         if (item.question.answerLine !== false && !item.hasInlineAnswerSpace) {
-          const answerY = questionBoxY + boxHeight - Math.max(4.8, metrics.answerAreaHeight * 0.52);
+          const answerY = questionBoxY + boxHeight - Math.max(4.2, metrics.answerAreaHeight * 0.5);
           const answerWidth = Math.min(columnWidth - (boxPadding * 2), metrics.answerLineWidth);
 
-          pdf.setDrawColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
-          pdf.setLineWidth(0.4);
+          pdf.setDrawColor(worksheetTheme.questionBorder.r, worksheetTheme.questionBorder.g, worksheetTheme.questionBorder.b);
+          pdf.setLineWidth(0.35);
           pdf.line(x + boxPadding, answerY, x + boxPadding + answerWidth, answerY);
         }
       });
@@ -846,8 +759,8 @@ function buildAnswerRows(pdf, questions, answerColumns, answerColumnWidth, metri
       const answerLines = pdf.splitTextToSize(String(question.answer), answerColumnWidth - (metrics.answerCardPadding * 2));
       const hintUnits = question.layoutHints?.answerUnits || 1;
       const boxHeight = Math.max(
-        metrics.answerCardMinHeight + ((hintUnits - 1) * 4),
-        (answerLines.length * metrics.answerCardLineHeight) + 9.5
+        metrics.answerCardMinHeight + ((hintUnits - 1) * 2.8),
+        (answerLines.length * metrics.answerCardLineHeight) + 7.4
       );
 
       return {
@@ -857,7 +770,7 @@ function buildAnswerRows(pdf, questions, answerColumns, answerColumnWidth, metri
         };
     });
     const firstQuestion = currentRowQuestions[0];
-    const sectionHeaderHeight = firstQuestion?.sectionStart ? 11 : 0;
+    const sectionHeaderHeight = firstQuestion?.sectionStart ? ANSWER_SECTION_HEADER_HEIGHT : 0;
 
     rows.push({
       items: rowQuestions,
@@ -916,7 +829,7 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
     startOnCurrentPage = false
   } = options;
 
-  const answerGap = 6;
+  const answerGap = 4.2;
 
   answerPages.forEach((pageRows, pageIndex) => {
     if (!(startOnCurrentPage && pageIndex === 0)) {
@@ -947,8 +860,8 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
     ) / widestRow;
 
     pdf.setFont(fontFamily, "normal");
-    pdf.setFontSize(9.6);
-    pdf.setTextColor(20, 24, 39);
+    pdf.setFontSize(8.8);
+    pdf.setTextColor(0, 0, 0);
 
     let y = startY;
 
@@ -972,22 +885,18 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
         const answerBoxHeight = row.contentHeight || (row.rowHeight - sectionHeaderHeight);
 
         pdf.setDrawColor(worksheetTheme.answerBorder.r, worksheetTheme.answerBorder.g, worksheetTheme.answerBorder.b);
-        pdf.setFillColor(worksheetTheme.answerBackground.r, worksheetTheme.answerBackground.g, worksheetTheme.answerBackground.b);
-        pdf.roundedRect(x, answerRowY, answerColumnWidth, answerBoxHeight, 2, 2, "FD");
-        pdf.setFillColor(worksheetTheme.accentPale.r, worksheetTheme.accentPale.g, worksheetTheme.accentPale.b);
-        pdf.setDrawColor(worksheetTheme.accentBorder.r, worksheetTheme.accentBorder.g, worksheetTheme.accentBorder.b);
-        pdf.roundedRect(x + 3, answerRowY + 3, item.absoluteIndex >= 10 ? 13 : 11, 5.8, 3, 3, "FD");
-        pdf.setTextColor(worksheetTheme.accent.r, worksheetTheme.accent.g, worksheetTheme.accent.b);
+        pdf.roundedRect(x, answerRowY, answerColumnWidth, answerBoxHeight, 1.4, 1.4, "S");
+        pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(8.5);
-        pdf.text(`${item.absoluteIndex}.`, x + (item.absoluteIndex >= 10 ? 9.5 : 8.5), answerRowY + 7.1, { align: "center" });
+        pdf.setFontSize(8);
+        pdf.text(`${item.absoluteIndex}.`, x + metrics.answerCardPadding, answerRowY + 4.8);
         pdf.setFont(fontFamily, "normal");
         pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
-        pdf.setFontSize(9.2);
-        pdf.text(item.answerLines, x + metrics.answerCardPadding, answerRowY + 12.6);
+        pdf.setFontSize(8.6);
+        pdf.text(item.answerLines, x + metrics.answerCardPadding, answerRowY + 9.4);
       });
 
-      y += row.rowHeight + 5;
+      y += row.rowHeight + 3.6;
     });
 
     drawPageFooter(pdf, {
@@ -1034,8 +943,7 @@ export function downloadWorksheetPDF({
   });
   const presentation = getTemplatePresentation(template);
   const fontFamily = getPdfFontFamily(presentation);
-  const accentColor = hexToRgb(theme?.accent);
-  const worksheetTheme = getWorksheetTheme(presentation, accentColor);
+  const worksheetTheme = getWorksheetTheme(presentation, theme);
   const metrics = getPdfLayoutMetrics(presentation);
   const pageWidth = PDF_PAGE_LAYOUT.width;
   const pageHeight = PDF_PAGE_LAYOUT.height;
@@ -1092,13 +1000,16 @@ export function downloadWorksheetPDF({
     ? pageWidth - margins.left - margins.right
     : ((pageWidth - margins.left - margins.right - columnGap) / 2);
   const questionRows = buildQuestionRows(pdf, safeQuestions, presentation, metrics, columnWidth);
-  const questionPages = paginateRows(questionRows, questionUsableHeight, rowGap, 11.2);
-  const answerColumns = Math.min(4, presentation.columnsCount === 1 ? 3 : 4);
+  const questionPages = paginateRows(questionRows, questionUsableHeight, rowGap, QUESTION_SECTION_HEADER_HEIGHT);
+  const hasWideAnswers = safeQuestions.some((question) => (
+    (question.layoutHints?.answerUnits || 1) > 1.2 || String(question.answer || "").length > 24
+  ));
+  const answerColumns = hasWideAnswers ? 2 : (presentation.columnsCount === 1 ? 3 : 3);
   const answerColumnWidth = (
-    pageWidth - margins.left - margins.right - ((answerColumns - 1) * 6)
+    pageWidth - margins.left - margins.right - ((answerColumns - 1) * 4.2)
   ) / answerColumns;
   const answerRows = showAnswerKey ? buildAnswerRows(pdf, safeQuestions, answerColumns, answerColumnWidth, metrics) : [];
-  const answerPages = showAnswerKey ? paginateRows(answerRows, answerUsableHeight, 6, 9.8) : [];
+  const answerPages = showAnswerKey ? paginateRows(answerRows, answerUsableHeight, 3.6, ANSWER_SECTION_HEADER_HEIGHT) : [];
   const answerPageCount = answerPages.length;
   const totalPages = questionPages.length + answerPageCount;
 
