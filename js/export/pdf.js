@@ -70,19 +70,19 @@ function getPdfLayoutMetrics(presentation) {
     verticalQuestionMinHeight: isKids ? 31 : 28.5,
     answerAreaHeight: isKids ? 8.2 : 6.8,
     answerLineWidth: isKids ? 40 : isSingleColumn ? 82 : 28,
-    answerCardMinHeight: isSingleColumn ? 10.8 : 10.2,
-    answerCardPadding: 3,
-    answerCardLineHeight: 3.7,
+    answerCardMinHeight: isSingleColumn ? 10 : 9.6,
+    answerCardPadding: 2.6,
+    answerCardLineHeight: 3.55,
     rowGap: isSingleColumn ? 4.8 : 4.3,
     columnGap: isSingleColumn ? 0 : 6,
-    titleFontSize: 17.8,
-    titleSubtitleFontSize: 8.4,
+    titleFontSize: 18.4,
+    titleSubtitleFontSize: 8.1,
     subtitleFontSize: 8.8,
-    schoolFontSize: 9.1,
-    introFontSize: 8.8,
+    schoolFontSize: 7.9,
+    introFontSize: 8.5,
     introLineHeight: 3.8,
-    schoolGap: 4.2,
-    titleGap: 5.4,
+    schoolGap: 3.4,
+    titleGap: 5,
     subtitleGap: 3.8,
     dividerGap: 3.2,
     fieldHeight: 9.2,
@@ -515,6 +515,24 @@ function normalizePrintFocusLabel(subjectLabel, focusLabel) {
   return String(focusLabel);
 }
 
+function normalizePrintWorksheetTitle(title, subjectLabel, focusLabel) {
+  const rawTitle = String(title || "").trim();
+
+  if (!rawTitle) {
+    return "Worksheet";
+  }
+
+  const normalized = rawTitle.toLowerCase();
+  const genericTitles = new Set(["exercices", "exercises", "exercise", "worksheet"]);
+
+  if (genericTitles.has(normalized)) {
+    const focusPart = normalizePrintFocusLabel(subjectLabel, focusLabel);
+    return focusPart ? `${focusPart} Worksheet` : "Worksheet";
+  }
+
+  return rawTitle;
+}
+
 function buildCompactDescriptorLine({
   pageKind,
   grade,
@@ -540,7 +558,7 @@ function buildCompactDescriptorLine({
 }
 
 function drawIdentityFieldRow(pdf, fields, y, margins, pageWidth, worksheetTheme, metrics) {
-  const gap = 4.2;
+  const gap = 3.8;
   const fieldHeight = getIdentityFieldHeight(metrics);
   const fieldWidth = (pageWidth - margins.left - margins.right - (gap * (fields.length - 1))) / fields.length;
 
@@ -552,18 +570,18 @@ function drawIdentityFieldRow(pdf, fields, y, margins, pageWidth, worksheetTheme
     pdf.roundedRect(x, y, fieldWidth, fieldHeight, 1.6, 1.6, "S");
     pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(6.9);
-    pdf.text(field.label.toUpperCase(), x + 2.6, y + 3.2);
+    pdf.setFontSize(6.5);
+    pdf.text(field.label.toUpperCase(), x + 2.4, y + 2.9);
 
     if (field.value) {
       pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(8.8);
-      pdf.text(field.value, x + 2.6, y + 7.2);
+      pdf.setFontSize(8.4);
+      pdf.text(field.value, x + 2.4, y + 6.8);
     } else {
       pdf.setDrawColor(worksheetTheme.accentBorder.r, worksheetTheme.accentBorder.g, worksheetTheme.accentBorder.b);
       pdf.setLineWidth(0.3);
-      pdf.line(x + 2.6, y + 7.2, x + fieldWidth - 2.6, y + 7.2);
+      pdf.line(x + 2.4, y + 6.8, x + fieldWidth - 2.4, y + 6.8);
     }
   });
 
@@ -598,7 +616,7 @@ function measurePageHeaderHeight(pdf, {
   let y = margins.top;
 
   if (identity.schoolName) {
-    y += 3.8;
+    y += metrics.schoolGap;
   }
 
   y += metrics.titleGap;
@@ -653,6 +671,7 @@ function drawPageHeader(pdf, {
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
     : [];
+  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
   const identityFields = [
     { label: "Name", value: identity.studentName || "" },
     { label: "Date", value: identity.worksheetDate || "" },
@@ -662,16 +681,16 @@ function drawPageHeader(pdf, {
 
   if (identity.schoolName) {
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
-    pdf.setFont("helvetica", "bold");
+    pdf.setFont("helvetica", "normal");
     pdf.setFontSize(metrics.schoolFontSize);
-    pdf.text(identity.schoolName, pageWidth / 2, y + 3.2, { align: "center" });
-    y += 3.8;
+    pdf.text(identity.schoolName, pageWidth / 2, y + 2.7, { align: "center" });
+    y += metrics.schoolGap;
   }
 
   pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFont(fontFamily, "bold");
   pdf.setFontSize(metrics.titleFontSize);
-  pdf.text(identity.worksheetTitle || "Worksheet", pageWidth / 2, y + 4.8, { align: "center" });
+  pdf.text(titleText, pageWidth / 2, y + 4.6, { align: "center" });
 
   y += metrics.titleGap;
 
@@ -867,8 +886,8 @@ function buildAnswerRows(pdf, questions, answerColumns, answerColumnWidth, metri
       const answerLines = pdf.splitTextToSize(String(question.answer), answerColumnWidth - (metrics.answerCardPadding * 2));
       const hintUnits = question.layoutHints?.answerUnits || 1;
       const boxHeight = Math.max(
-        metrics.answerCardMinHeight + ((hintUnits - 1) * 2.8),
-        (answerLines.length * metrics.answerCardLineHeight) + 7.4
+        metrics.answerCardMinHeight + ((hintUnits - 1) * 2.35),
+        (answerLines.length * metrics.answerCardLineHeight) + 6.6
       );
 
       return {
@@ -939,7 +958,7 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
     startOnCurrentPage = false
   } = options;
 
-  const answerGap = 4.2;
+  const answerGap = 3.4;
 
   answerPages.forEach((pageRows, pageIndex) => {
     if (!(startOnCurrentPage && pageIndex === 0)) {
@@ -970,7 +989,7 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
     ) / widestRow;
 
     pdf.setFont(fontFamily, "normal");
-    pdf.setFontSize(8.8);
+    pdf.setFontSize(8.5);
     pdf.setTextColor(0, 0, 0);
 
     let y = startY;
@@ -998,15 +1017,15 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
         pdf.roundedRect(x, answerRowY, answerColumnWidth, answerBoxHeight, 1.4, 1.4, "S");
         pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(8);
-        pdf.text(`${item.absoluteIndex}.`, x + metrics.answerCardPadding, answerRowY + 4.8);
+        pdf.setFontSize(7.6);
+        pdf.text(`${item.absoluteIndex}.`, x + metrics.answerCardPadding, answerRowY + 4.4);
         pdf.setFont(fontFamily, "normal");
         pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
-        pdf.setFontSize(8.6);
-        pdf.text(item.answerLines, x + metrics.answerCardPadding, answerRowY + 9.4);
+        pdf.setFontSize(8.2);
+        pdf.text(item.answerLines, x + metrics.answerCardPadding, answerRowY + 8.4);
       });
 
-      y += row.rowHeight + 3.6;
+      y += row.rowHeight + 2.8;
     });
 
     drawPageFooter(pdf, {
@@ -1146,9 +1165,14 @@ export function downloadWorksheetPDF({
   const hasWideAnswers = safeQuestions.some((question) => (
     (question.layoutHints?.answerUnits || 1) > 1.2 || String(question.answer || "").length > 24
   ));
-  const answerColumns = hasWideAnswers ? 2 : (presentation.columnsCount === 1 ? 3 : 3);
+  const allAnswersCompact = safeQuestions.every((question) => (
+    (question.layoutHints?.answerUnits || 1) <= 1.05 && String(question.answer || "").length <= 16
+  ));
+  const answerColumns = hasWideAnswers
+    ? 2
+    : (allAnswersCompact ? 4 : 3);
   const answerColumnWidth = (
-    pageWidth - margins.left - margins.right - ((answerColumns - 1) * 4.2)
+    pageWidth - margins.left - margins.right - ((answerColumns - 1) * 3.4)
   ) / answerColumns;
   const answerRows = showAnswerKey ? buildAnswerRows(pdf, safeQuestions, answerColumns, answerColumnWidth, metrics) : [];
   const answerPages = showAnswerKey ? paginateRows(answerRows, answerUsableHeight, 3.6, ANSWER_SECTION_HEADER_HEIGHT) : [];
