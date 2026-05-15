@@ -422,12 +422,30 @@ function getResolvedWorksheetIdentity(formValues, request, worksheetTitleFallbac
 }
 
 function getCurrentWorksheetBreakdown(showAnswerKey = state.currentWorksheetMeta?.showAnswerKey !== false) {
+  const formValues = getFormValues();
+  const fallbackRequest = state.currentRequest || buildMathRequestFromFormValues(formValues);
+  const identity = state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(
+    formValues,
+    fallbackRequest,
+    state.currentWorksheetMeta?.worksheetTitle || null,
+    buildWorksheetInstruction(fallbackRequest)
+  );
+
   return getWorksheetPageBreakdown({
     questions: state.currentQuestions,
     totalQuestions: state.currentQuestions.length,
     questionsPerPage: state.template.questionsPerPage,
     template: state.template,
-    showAnswerKey
+    showAnswerKey,
+    layoutContext: {
+      grade: fallbackRequest.grade || formValues.grade,
+      subjectLabel: state.currentWorksheetMeta?.subjectLabel || getSubjectLabel(fallbackRequest),
+      focusLabel: state.currentWorksheetMeta?.focusLabel || getFocusLabel(fallbackRequest),
+      worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || getWorksheetModeLabel(fallbackRequest),
+      worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || identity.worksheetTitle,
+      identity,
+      requestType: fallbackRequest.type || "math"
+    }
   });
 }
 
