@@ -1022,6 +1022,13 @@ a {
   margin-top: 0;
 }
 
+.panel-intro {
+  margin: -6px 0 20px;
+  color: #5b6472;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .settings-group {
   margin-bottom: 22px;
   padding-bottom: 18px;
@@ -1035,6 +1042,13 @@ a {
 .settings-group h3 {
   margin: 0 0 14px;
   font-size: 18px;
+}
+
+.settings-intro {
+  margin: 0 0 14px;
+  color: #5b6472;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .panel label {
@@ -1100,6 +1114,159 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 14px;
+}
+
+.workflow-core-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.workflow-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workflow-preset-card {
+  width: 100%;
+  margin-top: 0;
+  padding: 15px 16px;
+  border-radius: 18px;
+  border: 1.5px solid #dbe7f3;
+  background: #f9fcff;
+  color: #111827;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  box-shadow: none;
+}
+
+.workflow-preset-card strong {
+  font-size: 15px;
+}
+
+.workflow-preset-card span {
+  color: #5b6472;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.workflow-preset-card:hover {
+  box-shadow: none;
+  background: #f2f8ff;
+}
+
+.workflow-preset-card.is-active {
+  background: linear-gradient(180deg, #eef7ff 0%, #f8fbff 100%);
+  border-color: #79c0ff;
+}
+
+.workflow-smart-summary {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #f7fbff;
+  border: 1px solid #dbe7f3;
+}
+
+.workflow-smart-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workflow-smart-topline strong {
+  font-size: 15px;
+}
+
+.workflow-smart-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #e6f2ff;
+  color: #0f4c81;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.workflow-smart-summary p,
+.workflow-smart-summary small {
+  margin: 0;
+}
+
+.workflow-smart-summary p {
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.workflow-smart-summary small {
+  color: #5b6472;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workflow-smart-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workflow-smart-chips span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: white;
+  border: 1px solid #dbe7f3;
+  color: #435467;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.compact-help {
+  gap: 5px;
+  padding: 12px 13px;
+}
+
+.settings-disclosure {
+  margin-top: 10px;
+  border-radius: 18px;
+  border: 1px solid #dbe7f3;
+  background: #fbfdff;
+}
+
+.settings-disclosure summary {
+  cursor: pointer;
+  padding: 14px 16px;
+  font-weight: 800;
+  color: #0f4c81;
+  list-style: none;
+}
+
+.settings-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-disclosure[open] summary {
+  border-bottom: 1px solid #e5eef7;
+}
+
+.disclosure-content {
+  padding: 16px 16px 6px;
+}
+
+.identity-disclosure {
+  margin-bottom: 22px;
 }
 
 button {
@@ -1221,6 +1388,31 @@ button:disabled {
 
 .status-message.is-error {
   color: #c53030;
+}
+
+.action-settings-group {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.actions-grid button {
+  margin-top: 0;
+}
+
+.actions-grid #generateButton {
+  grid-column: 1 / -1;
+}
+
+.actions-grid .secondary-action-button {
+  width: 100%;
+  min-width: 0;
 }
 
 .saved-projects {
@@ -2151,9 +2343,21 @@ button:disabled {
     width: 100%;
   }
 
+  .workflow-preset-grid,
   .settings-grid,
-  .meta {
+  .workflow-core-grid,
+  .meta,
+  .actions-grid {
     grid-template-columns: 1fr;
+  }
+
+  .actions-grid #generateButton {
+    grid-column: auto;
+  }
+
+  .workflow-smart-topline {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .worksheet {

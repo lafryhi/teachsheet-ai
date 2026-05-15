@@ -64,15 +64,83 @@ const PERSISTED_FIELD_IDS = [
   "teacherNotes"
 ];
 
+const SMART_DEFAULT_TRIGGER_FIELDS = new Set(["grade", "operation", "teacherMode"]);
+const MANUAL_OVERRIDE_FIELDS = new Set(["difficulty", "questionCount", "teacherMode"]);
+
+const GRADE_DEFAULTS = {
+  "Grade 1": { difficulty: "easy", questionCount: 10, templateId: "kids-colorful" },
+  "Grade 2": { difficulty: "medium", questionCount: 15, templateId: "classic-math" },
+  "Grade 3": { difficulty: "medium", questionCount: 15, templateId: "classic-math" },
+  "Grade 4": { difficulty: "medium", questionCount: 20, templateId: "classic-math" },
+  "Grade 5": { difficulty: "medium", questionCount: 20, templateId: "classic-math" }
+};
+
+const TEACHER_MODE_DEFAULTS = {
+  practice: { templateId: "classic-math", questionCount: null, difficulty: null },
+  homework: { templateId: "homework-sheet", questionCount: 15, difficulty: "medium" },
+  assessment: { templateId: "exam-style", questionCount: 20, difficulty: "medium" },
+  remediation: { templateId: "classic-math", questionCount: 12, difficulty: "easy" },
+  "fast-review": { templateId: "homework-sheet", questionCount: 12, difficulty: "medium" }
+};
+
+const WORKFLOW_PRESETS = {
+  "daily-practice": {
+    label: "Daily Practice",
+    description: "Balanced classwork with steady progression.",
+    teacherMode: "practice",
+    defaultOperation: "addition"
+  },
+  homework: {
+    label: "Homework",
+    description: "Independent follow-up that stays clear on the page.",
+    teacherMode: "homework",
+    defaultOperation: "subtraction"
+  },
+  "quick-review": {
+    label: "Quick Review",
+    description: "Short mixed recall for warm-up or closing review.",
+    teacherMode: "fast-review",
+    forceOperation: "mixed"
+  },
+  assessment: {
+    label: "Assessment",
+    description: "Exam-style setup for clearer mastery checks.",
+    teacherMode: "assessment",
+    defaultOperation: "multiplication",
+    preferVertical: true
+  },
+  remediation: {
+    label: "Remediation",
+    description: "Slower pacing with easier defaults and extra support.",
+    teacherMode: "remediation",
+    defaultOperation: "subtraction"
+  },
+  "mental-math-drill": {
+    label: "Mental Math Drill",
+    description: "Fast horizontal fluency for short review rounds.",
+    teacherMode: "fast-review",
+    defaultOperation: "mixed",
+    focusPattern: "mental-math"
+  }
+};
+
 const state = {
+  activePresetId: null,
   currentLayoutBreakdown: null,
   currentQuestions: [],
   currentProject: null,
   currentRequest: null,
   currentUser: null,
   currentWorksheetMeta: null,
+  isApplyingWorkflowUpdate: false,
   isGenerating: false,
   lastGeneratedAt: null,
+  manualOverrides: {
+    difficulty: false,
+    questionCount: false,
+    teacherMode: false,
+    template: false
+  },
   pagination: createPaginationState(0),
   savedProjects: [],
   storageScope: getGuestScope(),
@@ -154,6 +222,14 @@ function getSmartPromptDefaults() {
     focusPattern: null,
     template: "classic-math"
   };
+}
+
+function getActivePresetElement() {
+  return getElement("workflowPresetGrid");
+}
+
+function getWorkflowSmartSummaryElement() {
+  return getElement("workflowSmartSummary");
 }
 
 function getStorageScopeForUser(user) {
@@ -285,6 +361,169 @@ function getProjectAnswers(questions) {
   return questions.map((question) => question.answer);
 }
 
+function getGradeNumber(gradeValue) {
+  const match = String(gradeValue || "").match(/(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : 2;
+}
+
+function withWorkflowUpdate(callback) {
+  state.isApplyingWorkflowUpdate = true;
+
+  try {
+    return callback();
+  } finally {
+    state.isApplyingWorkflowUpdate = false;
+  }
+}
+
+function resetManualOverrides(fields = ["difficulty", "questionCount", "teacherMode", "template"]) {
+  for (const field of fields) {
+    if (field in state.manualOverrides) {
+      state.manualOverrides[field] = false;
+    }
+  }
+}
+
+function getPromptExplicitness(promptText = "") {
+  const normalizedPrompt = String(promptText).toLowerCase();
+
+  return {
+    grade: /\bgrade\s*[1-5]\b/.test(normalizedPrompt),
+    operation: /\b(addition|subtraction|multiplication|division|mixed)\b/.test(normalizedPrompt),
+    difficulty: /\b(easy|medium|hard)\b/.test(normalizedPrompt),
+    questionCount: /\b\d+\s+questions?\b/.test(normalizedPrompt),
+    teacherMode: /\b(practice|homework|assessment|remediation|fast review|review)\b/.test(normalizedPrompt),
+    layoutMode: /\b(vertical|horizontal)\b/.test(normalizedPrompt),
+    mentalMath: /\bmental math\b/.test(normalizedPrompt)
+  };
+}
+
+function getTeacherModeDescription(teacherMode = "practice") {
+  const descriptions = {
+    practice: "steady skill building with balanced pacing",
+    homework: "independent follow-up with clean printable structure",
+    assessment: "clearer mastery checking with a more formal worksheet style",
+    remediation: "simpler numbers, lighter pacing, and extra support",
+    "fast-review": "short recall rounds and quick fluency practice"
+  };
+
+  return descriptions[teacherMode] || descriptions.practice;
+}
+
+function getSmartDefaultProfile({
+  grade,
+  operation,
+  teacherMode,
+  focusPattern = null,
+  promptText = ""
+}) {
+  const normalizedTeacherMode = teacherMode || "practice";
+  const gradeDefaults = GRADE_DEFAULTS[grade] || GRADE_DEFAULTS["Grade 2"];
+  const teacherModeDefaults = TEACHER_MODE_DEFAULTS[normalizedTeacherMode] || TEACHER_MODE_DEFAULTS.practice;
+  const gradeNumber = getGradeNumber(grade);
+  const isMentalMath = focusPattern === "mental-math" || /\bmental math\b/i.test(promptText);
+  let difficulty = teacherModeDefaults.difficulty || gradeDefaults.difficulty;
+  let questionCount = teacherModeDefaults.questionCount || gradeDefaults.questionCount;
+  let templateId = teacherModeDefaults.templateId || gradeDefaults.templateId;
+  let layoutMode = "horizontal";
+
+  if (gradeNumber === 1 && normalizedTeacherMode === "practice") {
+    templateId = "kids-colorful";
+    difficulty = "easy";
+  }
+
+  if (normalizedTeacherMode === "assessment") {
+    difficulty = gradeNumber >= 5 ? "hard" : "medium";
+    questionCount = gradeNumber >= 4 ? 20 : 15;
+    templateId = "exam-style";
+  }
+
+  if (normalizedTeacherMode === "remediation") {
+    difficulty = "easy";
+    questionCount = gradeNumber <= 2 ? 10 : 12;
+    templateId = gradeNumber === 1 ? "kids-colorful" : "classic-math";
+  }
+
+  if (normalizedTeacherMode === "homework") {
+    questionCount = gradeNumber >= 4 ? 20 : 15;
+    templateId = "homework-sheet";
+  }
+
+  if (normalizedTeacherMode === "fast-review") {
+    difficulty = gradeNumber === 1 ? "easy" : "medium";
+    questionCount = gradeNumber <= 2 ? 10 : 12;
+    templateId = "homework-sheet";
+  }
+
+  if (operation === "mixed" && normalizedTeacherMode === "practice") {
+    questionCount = Math.max(questionCount, gradeNumber >= 4 ? 20 : 15);
+  }
+
+  if (isMentalMath) {
+    difficulty = gradeNumber === 1 ? "easy" : "medium";
+    questionCount = gradeNumber <= 2 ? 10 : 12;
+    templateId = "homework-sheet";
+    layoutMode = "horizontal";
+  }
+
+  return {
+    difficulty,
+    questionCount,
+    templateId,
+    layoutMode,
+    summary: `${capitalizeWords(normalizedTeacherMode.replace("-", " "))} mode with ${questionCount} questions, ${difficulty} difficulty, and the ${getTemplateById(templateId).name} template.`,
+    hint: isMentalMath
+      ? "Mental Math keeps the worksheet short and horizontal for faster fluency practice."
+      : `${grade} defaults keep the setup practical for ${getTeacherModeDescription(normalizedTeacherMode)}.`
+  };
+}
+
+function buildPresetPrompt(presetId, context = {}) {
+  const preset = WORKFLOW_PRESETS[presetId];
+
+  if (!preset) {
+    return "";
+  }
+
+  const grade = context.grade || getElement("grade").value || "Grade 2";
+  const gradeNumber = getGradeNumber(grade);
+  const currentOperation = context.operation || getElement("operation").value || "addition";
+  const operation = preset.forceOperation
+    || (currentOperation === "mixed" && preset.defaultOperation ? preset.defaultOperation : currentOperation)
+    || preset.defaultOperation
+    || "addition";
+  const teacherMode = preset.teacherMode || context.teacherMode || "practice";
+  const smartProfile = getSmartDefaultProfile({
+    grade,
+    operation,
+    teacherMode,
+    focusPattern: preset.focusPattern || null
+  });
+
+  if (preset.focusPattern === "mental-math") {
+    return `mental math fast review grade ${gradeNumber}`;
+  }
+
+  if (presetId === "assessment") {
+    const layoutPrefix = preset.preferVertical ? "vertical " : "";
+    return `grade ${gradeNumber} assessment ${layoutPrefix}${operation} ${smartProfile.questionCount} questions`;
+  }
+
+  if (presetId === "quick-review") {
+    return `grade ${gradeNumber} mixed review worksheet`;
+  }
+
+  if (presetId === "remediation") {
+    return `grade ${gradeNumber} remediation ${operation} worksheet`;
+  }
+
+  if (presetId === "homework") {
+    return `grade ${gradeNumber} ${operation} homework ${smartProfile.questionCount} questions`;
+  }
+
+  return `grade ${gradeNumber} ${operation} practice ${smartProfile.questionCount} questions`;
+}
+
 function waitForPaint() {
   return new Promise((resolve) => {
     window.requestAnimationFrame(() => {
@@ -322,8 +561,228 @@ function setStatusMessage(message = "", tone = "") {
   }
 }
 
+function refreshWorksheetPreviewState() {
+  if (state.currentQuestions.length === 0) {
+    syncPreview();
+    return;
+  }
+
+  state.currentWorksheetMeta = getWorksheetMeta(
+    state.currentRequest,
+    { showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false }
+  );
+
+  if (state.currentProject) {
+    state.currentProject = buildProjectObject(
+      state.currentProject?.id || null,
+      state.currentProject?.createdAt || null
+    );
+  }
+
+  syncPreview();
+  persistCurrentWorksheet();
+}
+
 function getPromptInputGuidance() {
   return "Try a prompt like: grade 2 addition practice 20 questions";
+}
+
+function updateWorkflowPresetUI() {
+  const presetGrid = getActivePresetElement();
+
+  if (!presetGrid) {
+    return;
+  }
+
+  presetGrid.querySelectorAll("[data-workflow-preset]").forEach((buttonElement) => {
+    buttonElement.classList.toggle("is-active", buttonElement.dataset.workflowPreset === state.activePresetId);
+  });
+}
+
+function updateWorkflowSmartSummary() {
+  const summaryElement = getWorkflowSmartSummaryElement();
+
+  if (!summaryElement) {
+    return;
+  }
+
+  const formValues = getFormValues();
+  const promptText = getPromptValue();
+  const hasPrompt = promptText && hasRecognizedWorksheetPrompt(promptText);
+  const parsedPrompt = hasPrompt
+    ? { ...getSmartPromptDefaults(), ...parseWorksheetPrompt(promptText) }
+    : null;
+  const activeTeacherMode = parsedPrompt?.teacherMode || formValues.teacherMode || "practice";
+  const activeOperation = parsedPrompt?.type === "math"
+    ? parsedPrompt.topic
+    : formValues.operation;
+  const smartProfile = getSmartDefaultProfile({
+    grade: parsedPrompt?.grade || formValues.grade,
+    operation: activeOperation,
+    teacherMode: activeTeacherMode,
+    focusPattern: parsedPrompt?.focusPattern || null,
+    promptText
+  });
+  const activePreset = state.activePresetId ? WORKFLOW_PRESETS[state.activePresetId] : null;
+  const teacherModeLabel = capitalizeWords(activeTeacherMode.replace("-", " "));
+
+  summaryElement.innerHTML = `
+    <div class="workflow-smart-topline">
+      <span class="workflow-smart-badge">${activePreset ? "Active Preset" : "Smart Defaults"}</span>
+      <strong>${activePreset ? activePreset.label : `${teacherModeLabel} workflow`}</strong>
+    </div>
+    <p>${activePreset ? activePreset.description : smartProfile.summary}</p>
+    <div class="workflow-smart-chips">
+      <span>${formValues.grade}</span>
+      <span>${teacherModeLabel}</span>
+      <span>${capitalizeWords(formValues.difficulty)}</span>
+      <span>${formValues.questionCount} questions</span>
+      <span>${state.template.name}</span>
+    </div>
+    <small>${smartProfile.hint}</small>
+  `;
+  updateWorkflowPresetUI();
+}
+
+function applyTemplateSelection(templateId, options = {}) {
+  const {
+    manual = false,
+    refreshExisting = true,
+    persist = true
+  } = options;
+
+  state.template = getTemplateById(templateId);
+  getElement("template").value = state.template.id;
+  state.theme = state.template.theme;
+
+  if (manual) {
+    state.templateManuallySelected = true;
+    state.manualOverrides.template = true;
+  }
+
+  if (state.currentRequest) {
+    state.currentRequest.template = state.template.id;
+  }
+
+  if (refreshExisting && state.currentQuestions.length > 0) {
+    refreshPagination(state.currentWorksheetMeta?.showAnswerKey !== false);
+    state.currentWorksheetMeta = state.currentWorksheetMeta
+      ? {
+        ...state.currentWorksheetMeta,
+        templateDescription: state.template.description
+      }
+      : state.currentWorksheetMeta;
+    refreshWorksheetPreviewState();
+  } else {
+    syncPreview();
+  }
+
+  if (persist) {
+    persistSettings();
+  }
+
+  updateActiveTemplateIndicator();
+  updateWorkflowSmartSummary();
+}
+
+function applySmartTeacherDefaults(options = {}) {
+  const {
+    force = false,
+    teacherMode = getElement("teacherMode").value,
+    promptText = getPromptValue(),
+    focusPattern = null
+  } = options;
+  const formValues = getFormValues();
+  const smartProfile = getSmartDefaultProfile({
+    grade: formValues.grade,
+    operation: formValues.operation,
+    teacherMode,
+    focusPattern,
+    promptText
+  });
+  let changed = false;
+
+  withWorkflowUpdate(() => {
+    if (force || !state.manualOverrides.difficulty) {
+      if (getElement("difficulty").value !== smartProfile.difficulty) {
+        getElement("difficulty").value = smartProfile.difficulty;
+        changed = true;
+      }
+    }
+
+    if (force || !state.manualOverrides.questionCount) {
+      ensureSelectOption(
+        getElement("questionCount"),
+        smartProfile.questionCount,
+        `${smartProfile.questionCount} Questions`
+      );
+
+      if (getElement("questionCount").value !== String(smartProfile.questionCount)) {
+        getElement("questionCount").value = String(smartProfile.questionCount);
+        changed = true;
+      }
+    }
+  });
+
+  if ((force || !state.manualOverrides.template) && state.template.id !== smartProfile.templateId) {
+    state.templateManuallySelected = false;
+    applyTemplateSelection(smartProfile.templateId, {
+      manual: false,
+      refreshExisting: true,
+      persist: false
+    });
+    changed = true;
+  } else {
+    updateWorkflowSmartSummary();
+  }
+
+  return changed;
+}
+
+async function applyWorkflowPreset(presetId, options = {}) {
+  if (state.isGenerating) {
+    return;
+  }
+
+  const preset = WORKFLOW_PRESETS[presetId];
+
+  if (!preset) {
+    return;
+  }
+
+  const currentGrade = getElement("grade").value || "Grade 2";
+  const currentOperation = getElement("operation").value || preset.defaultOperation || "addition";
+  const resolvedOperation = preset.forceOperation
+    || (currentOperation === "mixed" && preset.defaultOperation ? preset.defaultOperation : currentOperation)
+    || "addition";
+  const promptText = buildPresetPrompt(presetId, {
+    grade: currentGrade,
+    operation: resolvedOperation,
+    teacherMode: preset.teacherMode
+  });
+
+  withWorkflowUpdate(() => {
+    state.activePresetId = presetId;
+    resetManualOverrides();
+    getElement("teacherMode").value = preset.teacherMode;
+    getElement("operation").value = resolvedOperation;
+    getElement("promptInput").value = promptText;
+  });
+
+  state.templateManuallySelected = false;
+  applySmartTeacherDefaults({
+    force: true,
+    teacherMode: preset.teacherMode,
+    promptText,
+    focusPattern: preset.focusPattern || null
+  });
+  persistSettings({ activePresetId: presetId });
+  updateWorkflowSmartSummary();
+  setStatusMessage(`${preset.label} preset applied. Generate now or adjust the details first.`, "success");
+
+  if (options.generate) {
+    await generateWorksheet();
+  }
 }
 
 function getDemoPresetFromTrigger(triggerElement) {
@@ -345,13 +804,23 @@ function applyDemoPresetToInterface(demoPreset) {
     return;
   }
 
-  getElement("promptInput").value = demoPreset.prompt;
-  getElement("teacherMode").value = demoPreset.teacherMode;
-  state.templateManuallySelected = true;
-  state.template = getTemplateById(demoPreset.templateId);
-  state.theme = state.template.theme;
-  getElement("template").value = state.template.id;
-  updateActiveTemplateIndicator();
+  withWorkflowUpdate(() => {
+    state.activePresetId = null;
+    resetManualOverrides();
+    getElement("promptInput").value = demoPreset.prompt;
+    getElement("teacherMode").value = demoPreset.teacherMode;
+  });
+  state.templateManuallySelected = false;
+  applyTemplateSelection(demoPreset.templateId, {
+    manual: false,
+    refreshExisting: true,
+    persist: false
+  });
+  applySmartTeacherDefaults({
+    force: true,
+    teacherMode: demoPreset.teacherMode,
+    promptText: demoPreset.prompt
+  });
   persistSettings();
 }
 
@@ -498,47 +967,86 @@ function updateActiveTemplateIndicator() {
 function applyParsedPromptSettings(parsedPrompt, options = {}) {
   const { applyTemplate = false } = options;
 
-  if (parsedPrompt.grade) {
-    getElement("grade").value = parsedPrompt.grade;
-  }
+  withWorkflowUpdate(() => {
+    if (parsedPrompt.grade) {
+      getElement("grade").value = parsedPrompt.grade;
+    }
 
-  if (parsedPrompt.type === "math") {
-    getElement("operation").value = parsedPrompt.topic;
-  }
+    if (parsedPrompt.type === "math") {
+      getElement("operation").value = parsedPrompt.topic;
+    }
 
-  getElement("difficulty").value = parsedPrompt.difficulty;
-  ensureSelectOption(getElement("questionCount"), parsedPrompt.count, `${parsedPrompt.count} Questions`);
-  getElement("questionCount").value = String(parsedPrompt.count);
-  getElement("teacherMode").value = parsedPrompt.teacherMode || "practice";
+    getElement("difficulty").value = parsedPrompt.difficulty;
+    ensureSelectOption(getElement("questionCount"), parsedPrompt.count, `${parsedPrompt.count} Questions`);
+    getElement("questionCount").value = String(parsedPrompt.count);
+    getElement("teacherMode").value = parsedPrompt.teacherMode || "practice";
+  });
 
   if (applyTemplate && parsedPrompt.template) {
-    getElement("template").value = parsedPrompt.template;
+    state.templateManuallySelected = false;
+    applyTemplateSelection(parsedPrompt.template, {
+      manual: false,
+      refreshExisting: true,
+      persist: false
+    });
   }
+
+  updateWorkflowSmartSummary();
 }
 
 function getWorksheetRequest() {
   const promptValue = getPromptValue();
   const selectedTemplateId = getSelectedTemplateId();
+  const formValues = getFormValues();
 
   if (promptValue && hasRecognizedWorksheetPrompt(promptValue)) {
+    const promptExplicitness = getPromptExplicitness(promptValue);
     const parsedPrompt = {
       ...getSmartPromptDefaults(),
       ...parseWorksheetPrompt(promptValue)
     };
+    const smartProfile = getSmartDefaultProfile({
+      grade: promptExplicitness.grade ? parsedPrompt.grade : formValues.grade,
+      operation: parsedPrompt.type === "math"
+        ? (promptExplicitness.operation ? parsedPrompt.topic : formValues.operation)
+        : parsedPrompt.topic,
+      teacherMode: promptExplicitness.teacherMode ? parsedPrompt.teacherMode : formValues.teacherMode,
+      focusPattern: parsedPrompt.focusPattern,
+      promptText: promptValue
+    });
     const resolvedRequest = {
       ...parsedPrompt,
+      grade: promptExplicitness.grade ? parsedPrompt.grade : formValues.grade,
+      topic: parsedPrompt.type === "math"
+        ? (promptExplicitness.operation ? parsedPrompt.topic : formValues.operation)
+        : parsedPrompt.topic,
+      difficulty: promptExplicitness.difficulty
+        ? parsedPrompt.difficulty
+        : (state.manualOverrides.difficulty ? formValues.difficulty : smartProfile.difficulty),
+      count: promptExplicitness.questionCount
+        ? parsedPrompt.count
+        : (state.manualOverrides.questionCount ? formValues.questionCount : smartProfile.questionCount),
+      teacherMode: promptExplicitness.teacherMode
+        ? parsedPrompt.teacherMode
+        : formValues.teacherMode,
+      layoutMode: promptExplicitness.layoutMode
+        ? parsedPrompt.layoutMode
+        : smartProfile.layoutMode,
       template: state.templateManuallySelected
         ? selectedTemplateId
-        : (parsedPrompt.templateExplicit ? parsedPrompt.template : selectedTemplateId)
+        : (parsedPrompt.templateExplicit
+          ? parsedPrompt.template
+          : (state.manualOverrides.template ? selectedTemplateId : smartProfile.templateId))
     };
 
-    applyParsedPromptSettings(parsedPrompt, {
-      applyTemplate: parsedPrompt.templateExplicit && !state.templateManuallySelected
+    state.activePresetId = null;
+    applyParsedPromptSettings(resolvedRequest, {
+      applyTemplate: !state.templateManuallySelected
     });
     return resolvedRequest;
   }
 
-  return buildMathRequestFromFormValues(getFormValues());
+  return buildMathRequestFromFormValues(formValues);
 }
 
 function getWorksheetMeta(request, generatorResult) {
@@ -581,6 +1089,7 @@ function persistSettings(partialSettings = {}) {
     instructions: formValues.instructions,
     scorePoints: formValues.scorePoints,
     teacherNotes: formValues.teacherNotes,
+    activePresetId: state.activePresetId,
     theme: state.theme,
     zoom: state.zoom,
     ...partialSettings
@@ -621,26 +1130,30 @@ function resetWorksheetState() {
 }
 
 function loadProjectIntoInterface(project) {
-  getElement("promptInput").value = project.prompt || "";
-  getElement("grade").value = project.settings.grade;
-  getElement("operation").value = project.settings.operation;
-  getElement("difficulty").value = project.settings.difficulty;
-  getElement("teacherMode").value = project.settings.teacherMode || "practice";
-  ensureSelectOption(
-    getElement("questionCount"),
-    project.settings.questionCount,
-    `${project.settings.questionCount} Questions`
-  );
-  getElement("questionCount").value = String(project.settings.questionCount);
-  getElement("template").value = project.template;
-  getElement("worksheetTitle").value = project.settings.worksheetTitle || "";
-  getElement("schoolName").value = project.settings.schoolName || "";
-  getElement("teacherName").value = project.settings.teacherName || "";
-  getElement("studentName").value = project.settings.studentName || "";
-  getElement("worksheetDate").value = project.settings.worksheetDate || "";
-  getElement("instructions").value = project.settings.instructions || "";
-  getElement("scorePoints").value = project.settings.scorePoints || "";
-  getElement("teacherNotes").value = project.settings.teacherNotes || "";
+  withWorkflowUpdate(() => {
+    state.activePresetId = null;
+    resetManualOverrides();
+    getElement("promptInput").value = project.prompt || "";
+    getElement("grade").value = project.settings.grade;
+    getElement("operation").value = project.settings.operation;
+    getElement("difficulty").value = project.settings.difficulty;
+    getElement("teacherMode").value = project.settings.teacherMode || "practice";
+    ensureSelectOption(
+      getElement("questionCount"),
+      project.settings.questionCount,
+      `${project.settings.questionCount} Questions`
+    );
+    getElement("questionCount").value = String(project.settings.questionCount);
+    getElement("template").value = project.template;
+    getElement("worksheetTitle").value = project.settings.worksheetTitle || "";
+    getElement("schoolName").value = project.settings.schoolName || "";
+    getElement("teacherName").value = project.settings.teacherName || "";
+    getElement("studentName").value = project.settings.studentName || "";
+    getElement("worksheetDate").value = project.settings.worksheetDate || "";
+    getElement("instructions").value = project.settings.instructions || "";
+    getElement("scorePoints").value = project.settings.scorePoints || "";
+    getElement("teacherNotes").value = project.settings.teacherNotes || "";
+  });
 }
 
 function getRequestFromProject(project) {
@@ -709,6 +1222,7 @@ function syncPreview() {
     updateActiveTemplateIndicator();
     updatePreviewControls();
     renderDashboardSection();
+    updateWorkflowSmartSummary();
     return;
   }
 
@@ -765,6 +1279,7 @@ function syncPreview() {
   updateActiveTemplateIndicator();
   updatePreviewControls();
   renderDashboardSection();
+  updateWorkflowSmartSummary();
 }
 
 function applyStoredWorksheet(savedWorksheet) {
@@ -773,8 +1288,10 @@ function applyStoredWorksheet(savedWorksheet) {
     return;
   }
 
+  state.activePresetId = null;
   state.template = getTemplateById(savedWorksheet.templateId || state.template.id);
   state.templateManuallySelected = true;
+  state.manualOverrides.template = true;
   state.theme = getTheme(savedWorksheet.theme || state.template.theme).id;
   state.zoom = normalizeZoomValue(savedWorksheet.zoom ?? state.zoom);
   state.currentQuestions = Array.isArray(savedWorksheet.questions) ? savedWorksheet.questions : [];
@@ -866,6 +1383,8 @@ async function generateWorksheet() {
 function clearWorksheet() {
   clearStatusMessageTimer();
   resetWorksheetState();
+  state.activePresetId = null;
+  resetManualOverrides();
   renderSavedProjectsList();
   syncPreview();
   clearWorksheetStorage(state.storageScope);
@@ -879,6 +1398,12 @@ async function applyPrompt() {
   }
 
   const promptText = getPromptValue();
+
+  if (!promptText) {
+    setStatusMessage("Start with a short prompt or choose a preset first.", "error");
+    getElement("promptInput").focus();
+    return;
+  }
 
   if (!hasRecognizedWorksheetPrompt(promptText)) {
     setStatusMessage(`We couldn't read that prompt yet. ${getPromptInputGuidance()}`, "error");
@@ -904,6 +1429,7 @@ function loadProject(projectId) {
 
   state.template = getTemplateById(project.template);
   state.templateManuallySelected = true;
+  state.activePresetId = null;
   state.theme = state.template.theme;
   state.currentQuestions = Array.isArray(project.questions) ? project.questions : [];
   state.currentRequest = getRequestFromProject(project);
@@ -931,7 +1457,7 @@ function saveCurrentProject() {
   }
 
   if (state.currentQuestions.length === 0) {
-    window.alert("Please generate a worksheet first.");
+    setStatusMessage("Generate a worksheet first, then save it as a project.", "error");
     return;
   }
 
@@ -963,7 +1489,7 @@ function removeProject(projectId) {
 
 function downloadPDF() {
   if (state.currentQuestions.length === 0) {
-    window.alert("Please generate a worksheet first.");
+    setStatusMessage("Generate a worksheet first, then download the printable PDF.", "error");
     return;
   }
 
@@ -1037,69 +1563,57 @@ function hydrateSettings() {
 
   if (!savedSettings) {
     getElement("template").value = state.template.id;
+    updateWorkflowSmartSummary();
     return;
   }
 
-  for (const fieldId of PERSISTED_FIELD_IDS) {
-    if (savedSettings[fieldId] !== undefined && savedSettings[fieldId] !== null) {
-      getElement(fieldId).value = String(savedSettings[fieldId]);
+  withWorkflowUpdate(() => {
+    for (const fieldId of PERSISTED_FIELD_IDS) {
+      if (savedSettings[fieldId] !== undefined && savedSettings[fieldId] !== null) {
+        getElement(fieldId).value = String(savedSettings[fieldId]);
+      }
     }
-  }
+  });
 
   state.template = getTemplateById(savedSettings.templateId);
   state.templateManuallySelected = true;
+  state.manualOverrides.template = true;
+  state.activePresetId = savedSettings.activePresetId || null;
   getElement("template").value = state.template.id;
   state.theme = getTheme(savedSettings.theme).id;
   state.zoom = normalizeZoomValue(savedSettings.zoom ?? 100);
   updateActiveTemplateIndicator();
+  updateWorkflowSmartSummary();
 }
 
 function bindFormPersistence() {
   for (const fieldId of PERSISTED_FIELD_IDS) {
     getElement(fieldId).addEventListener("change", () => {
-      persistSettings();
-      if (state.currentQuestions.length > 0) {
-        state.currentWorksheetMeta = getWorksheetMeta(
-          state.currentRequest,
-          { showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false }
-        );
-        if (state.currentProject) {
-          state.currentProject = buildProjectObject(
-            state.currentProject?.id || null,
-            state.currentProject?.createdAt || null
-          );
-        }
-        syncPreview();
-        persistCurrentWorksheet();
+      if (!state.isApplyingWorkflowUpdate && MANUAL_OVERRIDE_FIELDS.has(fieldId)) {
+        state.manualOverrides[fieldId] = true;
+        state.activePresetId = null;
       }
+
+      if (!state.isApplyingWorkflowUpdate && SMART_DEFAULT_TRIGGER_FIELDS.has(fieldId)) {
+        applySmartTeacherDefaults({ teacherMode: getElement("teacherMode").value });
+      }
+
+      persistSettings();
+      refreshWorksheetPreviewState();
+      updateWorkflowSmartSummary();
     });
   }
 
   getElement("template").addEventListener("change", (event) => {
-    state.templateManuallySelected = true;
-    state.template = getTemplateById(event.target.value);
-    state.theme = state.template.theme;
-    if (state.currentRequest) {
-      state.currentRequest.template = state.template.id;
+    if (!state.isApplyingWorkflowUpdate) {
+      state.activePresetId = null;
     }
-    refreshPagination(state.currentWorksheetMeta?.showAnswerKey !== false);
-    state.currentWorksheetMeta = state.currentWorksheetMeta
-      ? {
-        ...state.currentWorksheetMeta,
-        templateDescription: state.template.description
-      }
-      : state.currentWorksheetMeta;
-    updateActiveTemplateIndicator();
-    syncPreview();
-    persistSettings();
 
-    if (state.currentQuestions.length > 0) {
-      state.currentProject = buildProjectObject(
-        state.currentProject?.id || null,
-        state.currentProject?.createdAt || null
-      );
-      persistCurrentWorksheet();
-    }
+    applyTemplateSelection(event.target.value, {
+      manual: !state.isApplyingWorkflowUpdate,
+      refreshExisting: true,
+      persist: true
+    });
   });
 
   getPromptGenerateButton().addEventListener("click", () => {
@@ -1117,6 +1631,11 @@ function bindFormPersistence() {
     if (state.currentProject) {
       state.currentProject.prompt = getPromptValue();
     }
+
+    if (!state.isApplyingWorkflowUpdate) {
+      state.activePresetId = null;
+      updateWorkflowSmartSummary();
+    }
   });
 
   document.querySelector(".example-prompts-list").addEventListener("click", (event) => {
@@ -1127,8 +1646,24 @@ function bindFormPersistence() {
     }
 
     getElement("promptInput").value = examplePrompt;
-    setStatusMessage("Example prompt loaded. Generate it as-is or adjust the teacher mode first.", "success");
+    state.activePresetId = null;
+    updateWorkflowSmartSummary();
+    setStatusMessage("Example prompt loaded. Generate it now or adjust the teacher mode first.", "success");
   });
+
+  const workflowPresetGrid = getActivePresetElement();
+  if (workflowPresetGrid) {
+    workflowPresetGrid.addEventListener("click", async (event) => {
+      const presetId = event.target.closest("[data-workflow-preset]")?.dataset.workflowPreset;
+
+      if (!presetId) {
+        return;
+      }
+
+      await applyWorkflowPreset(presetId);
+      getElement("generateButton").focus();
+    });
+  }
 
   const demoGallery = document.querySelector(".demo-gallery-grid");
   if (demoGallery) {
@@ -1175,6 +1710,8 @@ function populateTemplateOptions() {
   templateSelect.innerHTML = getTemplateOptions()
     .map((templateOption) => `<option value="${templateOption.value}">${templateOption.label}</option>`)
     .join("");
+  updateActiveTemplateIndicator();
+  updateWorkflowSmartSummary();
 }
 
 async function init() {
