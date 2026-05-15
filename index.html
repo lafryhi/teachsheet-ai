@@ -44,7 +44,7 @@
 
     <div class="hero-buttons">
       <a href="#app" class="primary-btn">Start Free</a>
-      <a href="#preview-showcase" class="secondary-btn">Try Demo</a>
+      <a href="#demo-gallery" class="secondary-btn">Try Demo</a>
     </div>
 
     <div class="hero-proof-grid">
@@ -243,6 +243,121 @@
   </div>
 </section>
 
+<section id="demo-gallery" class="section demo-gallery-section">
+  <div class="section-heading">
+    <span class="section-kicker">Demo Gallery</span>
+    <h2>Show teachers the value before they write a single prompt</h2>
+    <p class="section-subtitle">Open a ready-made worksheet example in one click, preview it in A4 format, then export or adapt it for class.</p>
+  </div>
+
+  <div class="demo-gallery-grid">
+    <article class="demo-gallery-card">
+      <div class="demo-gallery-topline">
+        <span class="demo-gallery-tag">Math Practice</span>
+        <span class="demo-gallery-template">Kids Colorful</span>
+      </div>
+      <h3>Grade 2 Addition Practice</h3>
+      <p>Quick fluency worksheet with clear progression, friendly layout, and printable answer support.</p>
+      <div class="demo-gallery-meta">
+        <span>Practice Mode</span>
+        <span>20 Questions</span>
+        <span>A4 Ready</span>
+      </div>
+      <button
+        type="button"
+        class="demo-gallery-button"
+        data-demo-prompt="grade 2 addition practice 20 questions"
+        data-demo-template="kids-colorful"
+        data-demo-mode="practice"
+      >Try This Demo</button>
+    </article>
+
+    <article class="demo-gallery-card">
+      <div class="demo-gallery-topline">
+        <span class="demo-gallery-tag">Assessment</span>
+        <span class="demo-gallery-template">Exam Style</span>
+      </div>
+      <h3>Vertical Multiplication Assessment</h3>
+      <p>Structured mastery check with sharper worksheet pacing, multi-page handling, and clean answer layout.</p>
+      <div class="demo-gallery-meta">
+        <span>Assessment Mode</span>
+        <span>Vertical Layout</span>
+        <span>Multi-page</span>
+      </div>
+      <button
+        type="button"
+        class="demo-gallery-button"
+        data-demo-prompt="grade 4 assessment vertical multiplication"
+        data-demo-template="exam-style"
+        data-demo-mode="assessment"
+      >Try This Demo</button>
+    </article>
+
+    <article class="demo-gallery-card">
+      <div class="demo-gallery-topline">
+        <span class="demo-gallery-tag">Remediation</span>
+        <span class="demo-gallery-template">Homework Sheet</span>
+      </div>
+      <h3>Grade 3 Subtraction Support</h3>
+      <p>Gentler progression, simpler subtraction structure, and slower pacing for targeted classroom support.</p>
+      <div class="demo-gallery-meta">
+        <span>Remediation Mode</span>
+        <span>Focused Review</span>
+        <span>Teacher Friendly</span>
+      </div>
+      <button
+        type="button"
+        class="demo-gallery-button"
+        data-demo-prompt="grade 3 remediation subtraction worksheet"
+        data-demo-template="homework-sheet"
+        data-demo-mode="remediation"
+      >Try This Demo</button>
+    </article>
+
+    <article class="demo-gallery-card">
+      <div class="demo-gallery-topline">
+        <span class="demo-gallery-tag">Mental Math</span>
+        <span class="demo-gallery-template">Classic Math</span>
+      </div>
+      <h3>Grade 3 Fast Review</h3>
+      <p>Compact mental math rounds for quick warm-up practice, fast revision, and classroom starter tasks.</p>
+      <div class="demo-gallery-meta">
+        <span>Fast Review</span>
+        <span>Mental Math</span>
+        <span>Quick Start</span>
+      </div>
+      <button
+        type="button"
+        class="demo-gallery-button"
+        data-demo-prompt="mental math fast review grade 3"
+        data-demo-template="classic-math"
+        data-demo-mode="fast-review"
+      >Try This Demo</button>
+    </article>
+
+    <article class="demo-gallery-card">
+      <div class="demo-gallery-topline">
+        <span class="demo-gallery-tag">Mixed Review</span>
+        <span class="demo-gallery-template">Classic Math</span>
+      </div>
+      <h3>Grade 5 Mixed Worksheet</h3>
+      <p>Balanced mixed operations worksheet that showcases progression, review structure, and printable polish.</p>
+      <div class="demo-gallery-meta">
+        <span>Homework Mode</span>
+        <span>Mixed Skills</span>
+        <span>Reusable</span>
+      </div>
+      <button
+        type="button"
+        class="demo-gallery-button"
+        data-demo-prompt="grade 5 mixed review worksheet"
+        data-demo-template="classic-math"
+        data-demo-mode="homework"
+      >Try This Demo</button>
+    </article>
+  </div>
+</section>
+
 <section id="pricing" class="section">
   <div class="section-heading">
     <span class="section-kicker">Pricing</span>
@@ -310,6 +425,30 @@
   <div class="beta-inline-label">Beta</div>
   <h2>Try TeachSheet AI</h2>
   <p class="section-subtitle">Generate your first worksheet now and test the current beta workflow with real classroom-style prompts.</p>
+  <div class="quick-start-panel">
+    <div class="quick-start-copy">
+      <strong>New here?</strong>
+      <span>Start with a demo worksheet and see the full A4 preview, teacher mode, sections, and answer sheet in seconds.</span>
+    </div>
+    <div class="quick-start-actions">
+      <button
+        id="generateDemoButton"
+        type="button"
+        class="secondary-action-button"
+        data-demo-prompt="grade 4 assessment vertical multiplication"
+        data-demo-template="exam-style"
+        data-demo-mode="assessment"
+      >Generate Demo Worksheet</button>
+      <a href="#demo-gallery" class="quick-start-link">Browse Demo Gallery</a>
+    </div>
+  </div>
+  <div class="teacher-trust-strip" aria-label="Product trust points">
+    <span>Optimized for A4 printing</span>
+    <span>Multi-page worksheet support</span>
+    <span>Smart pedagogical progression</span>
+    <span>Teacher modes</span>
+    <span>PDF export</span>
+  </div>
   <div id="dashboardContainer"></div>
 
   <main class="app-layout">

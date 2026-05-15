@@ -326,6 +326,47 @@ function getPromptInputGuidance() {
   return "Try a prompt like: grade 2 addition practice 20 questions";
 }
 
+function getDemoPresetFromTrigger(triggerElement) {
+  const demoButton = triggerElement?.closest?.("[data-demo-prompt]");
+
+  if (!demoButton) {
+    return null;
+  }
+
+  return {
+    prompt: demoButton.dataset.demoPrompt || "",
+    templateId: demoButton.dataset.demoTemplate || getDefaultTemplate().id,
+    teacherMode: demoButton.dataset.demoMode || "practice"
+  };
+}
+
+function applyDemoPresetToInterface(demoPreset) {
+  if (!demoPreset) {
+    return;
+  }
+
+  getElement("promptInput").value = demoPreset.prompt;
+  getElement("teacherMode").value = demoPreset.teacherMode;
+  state.templateManuallySelected = true;
+  state.template = getTemplateById(demoPreset.templateId);
+  state.theme = state.template.theme;
+  getElement("template").value = state.template.id;
+  updateActiveTemplateIndicator();
+  persistSettings();
+}
+
+async function runDemoPreset(demoPreset) {
+  if (!demoPreset || state.isGenerating) {
+    return;
+  }
+
+  applyDemoPresetToInterface(demoPreset);
+  getElement("app").scrollIntoView({ behavior: "smooth", block: "start" });
+  setStatusMessage("Loading a demo worksheet preset for preview...", "loading");
+  await waitForPaint();
+  await generateWorksheet();
+}
+
 function setGeneratingState(isGenerating) {
   state.isGenerating = isGenerating;
   getGenerateButton().disabled = isGenerating;
@@ -1070,6 +1111,27 @@ function bindFormPersistence() {
     getElement("promptInput").value = examplePrompt;
     setStatusMessage("Example prompt loaded. Generate it as-is or adjust the teacher mode first.", "success");
   });
+
+  const demoGallery = document.querySelector(".demo-gallery-grid");
+  if (demoGallery) {
+    demoGallery.addEventListener("click", async (event) => {
+      const demoPreset = getDemoPresetFromTrigger(event.target);
+
+      if (!demoPreset) {
+        return;
+      }
+
+      await runDemoPreset(demoPreset);
+    });
+  }
+
+  const generateDemoButton = getElement("generateDemoButton");
+  if (generateDemoButton) {
+    generateDemoButton.addEventListener("click", async (event) => {
+      const demoPreset = getDemoPresetFromTrigger(event.target);
+      await runDemoPreset(demoPreset);
+    });
+  }
 
   getSaveProjectButton().addEventListener("click", () => {
     saveCurrentProject();
