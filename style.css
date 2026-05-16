@@ -1656,6 +1656,29 @@ button:disabled {
   color: var(--worksheet-muted, #5f6b7a);
 }
 
+.worksheet-identity-field-score {
+  align-content: start;
+}
+
+.worksheet-identity-score {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  min-height: 24px;
+  color: var(--worksheet-accent, #183153);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.worksheet-identity-score .worksheet-identity-line {
+  flex: 1;
+}
+
+.worksheet-identity-score-target {
+  white-space: nowrap;
+}
+
 .worksheet-identity-line {
   display: inline-flex;
   align-items: flex-end;
@@ -1871,6 +1894,32 @@ button:disabled {
 .question-text {
   display: block;
   color: var(--worksheet-body-text, #1f2937);
+}
+
+.question-text-compare {
+  display: grid;
+  gap: 10px;
+}
+
+.question-compare-heading {
+  font-weight: 700;
+}
+
+.question-compare-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px minmax(0, 1fr);
+  align-items: end;
+  gap: 12px;
+}
+
+.question-compare-expression {
+  font-weight: 600;
+}
+
+.question-compare-blank {
+  display: inline-block;
+  min-height: 18px;
+  border-bottom: 1.8px solid rgba(24, 49, 83, 0.72);
 }
 
 .question-vertical {

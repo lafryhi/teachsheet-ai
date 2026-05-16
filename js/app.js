@@ -20,6 +20,11 @@ import {
   parseWorksheetPrompt
 } from "./core/parser.js";
 import { listWorksheetSections } from "./core/math/sectionPlanner.js";
+import {
+  getScoreTarget,
+  normalizeStudentName,
+  sanitizeTeacherNotes
+} from "./core/worksheetPresentation.js";
 import { getWorksheetPageBreakdown } from "./core/worksheetLayout.js";
 import { buildWorksheetInstruction, buildWorksheetModeLabel } from "./core/math/instructionsEngine.js";
 import { createAuthController } from "./auth/auth.js";
@@ -882,11 +887,11 @@ function getResolvedWorksheetIdentity(formValues, request, worksheetTitleFallbac
     worksheetTitle: formValues.worksheetTitle || worksheetTitleFallback || getWorksheetTitle(request.type),
     schoolName: formValues.schoolName,
     teacherName: formValues.teacherName,
-    studentName: formValues.studentName,
+    studentName: normalizeStudentName(formValues.studentName),
     worksheetDate: formValues.worksheetDate,
     instructions: formValues.instructions || smartInstructions,
-    scorePoints: formValues.scorePoints,
-    teacherNotes: formValues.teacherNotes
+    scorePoints: getScoreTarget(formValues.scorePoints),
+    teacherNotes: sanitizeTeacherNotes(formValues.teacherNotes)
   };
 }
 

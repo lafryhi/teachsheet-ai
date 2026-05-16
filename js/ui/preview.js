@@ -1,4 +1,11 @@
 import { getTemplatePresentation } from "../templates/templates.js";
+import {
+  getScoreTarget,
+  getStudentDisplayValue,
+  isCompareQuestion,
+  parseCompareQuestionText,
+  shouldShowTeacherNotes
+} from "../core/worksheetPresentation.js";
 
 function escapeHtml(value = "") {
   return String(value)
@@ -14,7 +21,7 @@ function formatMultilineText(value = "") {
 }
 
 function questionHasInlineAnswerSpace(question) {
-  return /_{3,}/.test(String(question?.text || ""));
+  return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
 }
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel }) {
@@ -44,6 +51,20 @@ function createHeaderFieldMarkup(label, value, placeholder = "Write here") {
   `;
 }
 
+function createScoreFieldMarkup(value) {
+  const scoreTarget = getScoreTarget(value);
+
+  return `
+    <div class="worksheet-identity-field worksheet-identity-field-score">
+      <span class="worksheet-identity-label">Score</span>
+      <span class="worksheet-identity-score">
+        <span class="worksheet-identity-line" aria-hidden="true">Score line</span>
+        <span class="worksheet-identity-score-target">/ ${escapeHtml(scoreTarget)}</span>
+      </span>
+    </div>
+  `;
+}
+
 function createSectionHeaderMarkup(question, variant = "questions") {
   if (!question?.sectionLabel) {
     return "";
@@ -63,10 +84,22 @@ function createSectionHeaderMarkup(question, variant = "questions") {
 function createQuestionMarkup(question, questionNumber) {
   const isVertical = question.format === "vertical";
   const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
+  const compareParts = !isVertical ? parseCompareQuestionText(question.text) : null;
   const hint = question.layoutHints || {};
   const questionMarkup = isVertical
     ? `<pre class="question-text question-text-vertical">${escapeHtml(question.text)}</pre>`
-    : `<span class="question-text">${escapeHtml(question.text)}</span>`;
+    : compareParts
+      ? `
+        <div class="question-text question-text-compare">
+          <span class="question-compare-heading">${escapeHtml(compareParts.heading)}</span>
+          <div class="question-compare-row">
+            <span class="question-compare-expression">${escapeHtml(compareParts.leftExpression)}</span>
+            <span class="question-compare-blank" aria-hidden="true"></span>
+            <span class="question-compare-expression">${escapeHtml(compareParts.rightExpression)}</span>
+          </div>
+        </div>
+      `
+      : `<span class="question-text">${escapeHtml(question.text)}</span>`;
   const questionStyles = [
     hint.previewUnits > 1.35 ? "--question-card-min-height: 148px" : "",
     hint.answerLineWidth ? `--question-card-answer-width: ${Math.round(hint.answerLineWidth * 3.2)}px` : "",
@@ -173,6 +206,9 @@ function createWorksheetHeaderMarkup({
 }) {
   const subtitle = pageKind === "answer-key" ? "Answer Sheet" : worksheetModeLabel;
   const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
+  const displayStudentName = getStudentDisplayValue(identity.studentName, "");
+  const showTeacherNotes = requestType === "math"
+    && shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind });
 
   return `
     <div class="worksheet-header">
@@ -191,9 +227,9 @@ function createWorksheetHeaderMarkup({
       <p class="worksheet-intro">${formatMultilineText(introText)}</p>
       <div class="worksheet-divider" aria-hidden="true"></div>
       <div class="worksheet-identity-row">
-        ${createHeaderFieldMarkup("Name", identity.studentName, "Write student name")}
+        ${createHeaderFieldMarkup("Name", displayStudentName, "Write student name")}
         ${createHeaderFieldMarkup("Date", identity.worksheetDate, "Add date")}
-        ${createHeaderFieldMarkup("Score", identity.scorePoints, "Mark score")}
+        ${createScoreFieldMarkup(identity.scorePoints)}
       </div>
       <div class="worksheet-meta-strip worksheet-meta-strip-extended">
         ${createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel })}
@@ -203,7 +239,7 @@ function createWorksheetHeaderMarkup({
         </div>
       </div>
       ${createConfidenceStripMarkup(trustSignals)}
-      ${requestType === "math" ? createNotesMarkup("Teacher Notes", identity.teacherNotes) : ""}
+      ${showTeacherNotes ? createNotesMarkup("Teacher Notes", identity.teacherNotes) : ""}
     </div>
   `;
 }

@@ -13,10 +13,15 @@ import {
   paginateRows,
   resolveAnswerColumnCount
 } from "./printLayoutShared.js";
+import {
+  isCompareQuestion,
+  parseCompareQuestionText,
+  shouldShowTeacherNotes
+} from "./worksheetPresentation.js";
 import { getTemplatePresentation } from "../templates/templates.js";
 
 function questionHasInlineAnswerSpace(question) {
-  return /_{3,}/.test(String(question?.text || ""));
+  return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
 }
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel }) {
@@ -70,7 +75,8 @@ function measureEstimatedHeaderHeight({
   worksheetModeLabel,
   margins,
   pageWidth,
-  pageKind
+  pageKind,
+  currentPage = 1
 }) {
   const descriptorLine = buildCompactDescriptorLine({
     pageKind,
@@ -120,7 +126,7 @@ function measureEstimatedHeaderHeight({
     y += Math.max(3.8, introLines * metrics.introLineHeight);
   }
 
-  if (identity.teacherNotes) {
+  if (shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind })) {
     const notesLines = estimateWrappedLineCount(
       identity.teacherNotes,
       pageWidth - margins.left - margins.right - (metrics.notesPadding * 2),
@@ -154,9 +160,18 @@ function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidt
         18,
         columnWidth - (horizontalPadding * 2) - (question.format === "vertical" ? 2 : (index === 0 ? 8 : 0))
       );
+      const compareParts = parseCompareQuestionText(question.text);
       const textLines = question.format === "vertical"
         ? String(question.text || "").split("\n").length
-        : estimateWrappedLineCount(question.text, textWidth, metrics.questionFontSize);
+        : compareParts
+          ? (
+            estimateWrappedLineCount(compareParts.heading, textWidth, metrics.questionFontSize)
+            + Math.max(
+              estimateWrappedLineCount(compareParts.leftExpression, Math.max(18, (textWidth - 26) / 2), metrics.questionFontSize),
+              estimateWrappedLineCount(compareParts.rightExpression, Math.max(18, (textWidth - 26) / 2), metrics.questionFontSize)
+            )
+          )
+          : estimateWrappedLineCount(question.text, textWidth, metrics.questionFontSize);
       const answerReserve = question.answerLine !== false && !hasInlineAnswerSpace
         ? (hint.answerAreaHeight || answerAreaHeight)
         : 0;
@@ -325,7 +340,8 @@ function buildEstimatedBreakdown({
     worksheetModeLabel: layoutContext.worksheetModeLabel || "",
     margins,
     pageWidth,
-    pageKind: "questions"
+    pageKind: "questions",
+    currentPage: 1
   });
   const baseQuestionUsableHeight = Math.max(0, questionContentBottom - (margins.top + baseQuestionHeaderHeight));
   const initialQuestionRows = buildEstimatedQuestionRows(safeQuestions, presentation, baseMetrics, initialColumnWidth);
@@ -351,7 +367,8 @@ function buildEstimatedBreakdown({
     worksheetModeLabel: layoutContext.worksheetModeLabel || "",
     margins,
     pageWidth,
-    pageKind: "questions"
+    pageKind: "questions",
+    currentPage: 1
   });
   const answerHeaderHeight = measureEstimatedHeaderHeight({
     identity: resolvedIdentity,
@@ -362,7 +379,8 @@ function buildEstimatedBreakdown({
     worksheetModeLabel: layoutContext.worksheetModeLabel || "",
     margins,
     pageWidth,
-    pageKind: "answer-key"
+    pageKind: "answer-key",
+    currentPage: 1
   });
   const questionUsableHeight = Math.max(0, questionContentBottom - (margins.top + questionHeaderHeight));
   const answerUsableHeight = Math.max(0, questionContentBottom - (margins.top + answerHeaderHeight));
