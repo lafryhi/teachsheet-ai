@@ -359,12 +359,29 @@ export function renderEmptyWorksheet(worksheetElement, template) {
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
       <h2>Worksheet</h2>
-      <p>Start with a prompt or choose settings manually, then generate a printable classroom-ready worksheet.</p>
+      <p>Choose a preset or type a short prompt, then generate a printable classroom-ready worksheet.</p>
     </div>
     <div id="questions" class="questions empty">
       <div class="empty-state">
         <h3>No worksheet generated yet.</h3>
-        <p>Try an example prompt, pick a teacher mode, and generate a worksheet to preview sections, page numbering, and the printable answer sheet.</p>
+        <p>Start with one preset, or write a short prompt such as <strong>grade 3 subtraction</strong>.</p>
+        <ol class="empty-state-steps">
+          <li>Choose a preset or use a short prompt.</li>
+          <li>Click Generate Worksheet.</li>
+          <li>Review the A4 preview.</li>
+          <li>Download the PDF when it looks ready.</li>
+        </ol>
+        <div class="empty-state-actions">
+          <button
+            type="button"
+            class="empty-state-button"
+            data-empty-action="demo"
+            data-demo-prompt="grade 4 assessment vertical multiplication"
+            data-demo-template="exam-style"
+            data-demo-mode="assessment"
+          >Try a Demo Worksheet</button>
+          <button type="button" class="empty-state-link" data-empty-action="example-prompt">Use This Example</button>
+        </div>
       </div>
     </div>
     ${createWorksheetFooterMarkup(1, 1)}

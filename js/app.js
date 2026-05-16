@@ -129,6 +129,14 @@ const WORKFLOW_PRESETS = {
   }
 };
 
+const ONBOARDING_STORAGE_KEY = "teachsheet-ai-onboarding-v1";
+const ONBOARDING_EXAMPLE_PROMPT = "grade 3 subtraction practice 15 questions";
+const ONBOARDING_DEMO_PRESET = {
+  prompt: "grade 4 assessment vertical multiplication",
+  templateId: "exam-style",
+  teacherMode: "assessment"
+};
+
 const state = {
   activePresetId: null,
   currentLayoutBreakdown: null,
@@ -140,6 +148,10 @@ const state = {
   isApplyingWorkflowUpdate: false,
   isGenerating: false,
   lastGeneratedAt: null,
+  onboarding: {
+    completed: false,
+    dismissed: false
+  },
   manualOverrides: {
     difficulty: false,
     questionCount: false,
@@ -213,6 +225,26 @@ function getActiveTemplateIndicator() {
   return getElement("activeTemplateIndicator");
 }
 
+function getOnboardingCard() {
+  return getElement("teacherOnboardingCard");
+}
+
+function getDismissOnboardingButton() {
+  return getElement("dismissOnboardingButton");
+}
+
+function getShowOnboardingButton() {
+  return getElement("showOnboardingButton");
+}
+
+function getOnboardingDemoButton() {
+  return getElement("onboardingDemoButton");
+}
+
+function getUseExamplePromptButton() {
+  return getElement("useExamplePromptButton");
+}
+
 function getSmartPromptDefaults() {
   return {
     type: "math",
@@ -239,6 +271,32 @@ function getWorkflowSmartSummaryElement() {
 
 function getStorageScopeForUser(user) {
   return user?.uid || getGuestScope();
+}
+
+function readOnboardingState() {
+  try {
+    const rawState = window.localStorage.getItem(ONBOARDING_STORAGE_KEY);
+
+    if (!rawState) {
+      return { completed: false, dismissed: false };
+    }
+
+    const parsedState = JSON.parse(rawState);
+    return {
+      completed: Boolean(parsedState?.completed),
+      dismissed: Boolean(parsedState?.dismissed)
+    };
+  } catch (error) {
+    return { completed: false, dismissed: false };
+  }
+}
+
+function persistOnboardingState() {
+  try {
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(state.onboarding));
+  } catch (error) {
+    return;
+  }
 }
 
 function capitalizeWords(text = "") {
@@ -535,6 +593,54 @@ function waitForPaint() {
       window.setTimeout(resolve, 120);
     });
   });
+}
+
+function shouldShowOnboarding() {
+  return !state.onboarding.dismissed && !state.onboarding.completed;
+}
+
+function refreshOnboardingUI() {
+  const onboardingCard = getOnboardingCard();
+  const showOnboardingButton = getShowOnboardingButton();
+
+  if (onboardingCard) {
+    onboardingCard.hidden = !shouldShowOnboarding();
+  }
+
+  if (showOnboardingButton) {
+    showOnboardingButton.hidden = shouldShowOnboarding();
+  }
+}
+
+function completeOnboarding() {
+  if (state.onboarding.completed) {
+    return;
+  }
+
+  state.onboarding.completed = true;
+  persistOnboardingState();
+  refreshOnboardingUI();
+}
+
+function dismissOnboarding() {
+  state.onboarding.dismissed = true;
+  persistOnboardingState();
+  refreshOnboardingUI();
+}
+
+function reopenOnboarding() {
+  state.onboarding.dismissed = false;
+  state.onboarding.completed = false;
+  persistOnboardingState();
+  refreshOnboardingUI();
+}
+
+function loadOnboardingExamplePrompt() {
+  getElement("promptInput").value = ONBOARDING_EXAMPLE_PROMPT;
+  state.activePresetId = null;
+  updateWorkflowSmartSummary();
+  setStatusMessage("Example prompt loaded. Generate it now or adjust the settings first.", "success");
+  getElement("promptInput").focus();
 }
 
 function clearStatusMessageTimer() {
@@ -1224,12 +1330,15 @@ function syncPreview() {
   if (state.currentQuestions.length === 0) {
     renderEmptyWorksheet(getWorksheetElement(), state.template);
     applyPreviewState();
+    refreshOnboardingUI();
     updateActiveTemplateIndicator();
     updatePreviewControls();
     renderDashboardSection();
     updateWorkflowSmartSummary();
     return;
   }
+
+  completeOnboarding();
 
   const formValues = getFormValues();
   const showAnswerKey = state.currentWorksheetMeta?.showAnswerKey !== false;
@@ -1281,6 +1390,7 @@ function syncPreview() {
   });
 
   applyPreviewState();
+  refreshOnboardingUI();
   updateActiveTemplateIndicator();
   updatePreviewControls();
   renderDashboardSection();
@@ -1691,6 +1801,58 @@ function bindFormPersistence() {
     });
   }
 
+  const onboardingDemoButton = getOnboardingDemoButton();
+  if (onboardingDemoButton) {
+    onboardingDemoButton.addEventListener("click", async (event) => {
+      const demoPreset = getDemoPresetFromTrigger(event.target) || ONBOARDING_DEMO_PRESET;
+      await runDemoPreset(demoPreset);
+    });
+  }
+
+  const useExamplePromptButton = getUseExamplePromptButton();
+  if (useExamplePromptButton) {
+    useExamplePromptButton.addEventListener("click", () => {
+      loadOnboardingExamplePrompt();
+    });
+  }
+
+  const dismissOnboardingButton = getDismissOnboardingButton();
+  if (dismissOnboardingButton) {
+    dismissOnboardingButton.addEventListener("click", () => {
+      dismissOnboarding();
+      setStatusMessage("Quick guide dismissed. You can reopen it anytime from Worksheet Settings.", "success");
+    });
+  }
+
+  const showOnboardingButton = getShowOnboardingButton();
+  if (showOnboardingButton) {
+    showOnboardingButton.addEventListener("click", () => {
+      reopenOnboarding();
+      getOnboardingCard()?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  getWorksheetElement().addEventListener("click", async (event) => {
+    const trigger = event.target.closest("[data-empty-action]");
+
+    if (!trigger) {
+      return;
+    }
+
+    const action = trigger.dataset.emptyAction;
+
+    if (action === "demo") {
+      const demoPreset = getDemoPresetFromTrigger(trigger) || ONBOARDING_DEMO_PRESET;
+      await runDemoPreset(demoPreset);
+      return;
+    }
+
+    if (action === "example-prompt") {
+      loadOnboardingExamplePrompt();
+      getElement("app").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+
   getSaveProjectButton().addEventListener("click", () => {
     saveCurrentProject();
   });
@@ -1720,10 +1882,12 @@ function populateTemplateOptions() {
 }
 
 async function init() {
+  state.onboarding = readOnboardingState();
   populateTemplateOptions();
   hydrateSettings();
   bindFormPersistence();
   await authController.init();
+  refreshOnboardingUI();
   syncPreview();
 }
 

@@ -449,15 +449,61 @@
     <span>Teacher modes</span>
     <span>PDF export</span>
   </div>
+  <section id="teacherOnboardingCard" class="teacher-onboarding-card" aria-live="polite">
+    <div class="teacher-onboarding-topline">
+      <span class="teacher-onboarding-badge">Quick Guide</span>
+      <button id="dismissOnboardingButton" type="button" class="teacher-onboarding-dismiss" aria-label="Dismiss quick guide">&times;</button>
+    </div>
+    <div class="teacher-onboarding-grid">
+      <article>
+        <strong>1. Choose a preset</strong>
+        <p>Start with Daily Practice, Assessment, Remediation, or Mental Math to avoid manual setup.</p>
+      </article>
+      <article>
+        <strong>2. Generate the worksheet</strong>
+        <p>Use the preset as-is, or type a short prompt like grade 3 subtraction and generate immediately.</p>
+      </article>
+      <article>
+        <strong>3. Review the preview</strong>
+        <p>Check the A4 layout, sections, and answer sheet before you export anything.</p>
+      </article>
+      <article>
+        <strong>4. Download the PDF</strong>
+        <p>Export the printable version once the preview looks ready for class.</p>
+      </article>
+    </div>
+    <div class="teacher-onboarding-actions">
+      <button
+        id="onboardingDemoButton"
+        type="button"
+        class="secondary-action-button"
+        data-demo-prompt="grade 4 assessment vertical multiplication"
+        data-demo-template="exam-style"
+        data-demo-mode="assessment"
+      >Try a Demo Worksheet</button>
+      <button id="useExamplePromptButton" type="button" class="teacher-onboarding-link">Use an Example Prompt</button>
+    </div>
+  </section>
   <div id="dashboardContainer"></div>
 
   <main class="app-layout">
     <section class="panel">
-      <h2>Worksheet Settings</h2>
-      <p class="panel-intro">Start with a preset or a short prompt, then fine-tune only if you need to.</p>
+      <div class="panel-heading-row">
+        <div>
+          <h2>Worksheet Settings</h2>
+          <p class="panel-intro">Start with a preset or a short prompt, then fine-tune only if you need to.</p>
+        </div>
+        <button id="showOnboardingButton" type="button" class="subtle-link-button" hidden>Show quick guide</button>
+      </div>
 
       <div class="settings-group">
-        <h3>Quick Start</h3>
+        <div class="settings-title-row">
+          <h3>Quick Start</h3>
+          <button type="button" class="hint-trigger" aria-label="Preset help">
+            <span class="hint-trigger-icon">?</span>
+            <span class="hint-tooltip">Presets set the worksheet goal, teacher mode, template, and sensible defaults in one click.</span>
+          </button>
+        </div>
         <p class="settings-intro">Use one preset to set the worksheet goal, template, and sensible defaults in one step.</p>
         <div id="workflowPresetGrid" class="workflow-preset-grid" aria-label="Quick workflow presets">
           <button type="button" class="workflow-preset-card" data-workflow-preset="daily-practice">
@@ -489,7 +535,13 @@
       </div>
 
       <div class="settings-group">
-        <h3>Generate Fast</h3>
+        <div class="settings-title-row">
+          <h3>Generate Fast</h3>
+          <button type="button" class="hint-trigger" aria-label="Prompt help">
+            <span class="hint-trigger-icon">?</span>
+            <span class="hint-tooltip">Short prompts work well. TeachSheet AI fills in missing defaults when it recognizes the grade, goal, and subject.</span>
+          </button>
+        </div>
         <p class="settings-intro">Type a short teacher-style prompt or use the fields below for a quick worksheet setup.</p>
 
       <label>Prompt
@@ -626,7 +678,13 @@
       </details>
 
       <div class="settings-group action-settings-group">
-        <h3>Generate and Export</h3>
+        <div class="settings-title-row">
+          <h3>Generate and Export</h3>
+          <button type="button" class="hint-trigger" aria-label="Generate and export help">
+            <span class="hint-trigger-icon">?</span>
+            <span class="hint-tooltip">Generate uses the current preset, prompt, and settings. Download PDF exports the same printable A4 worksheet shown in the preview.</span>
+          </button>
+        </div>
         <p class="settings-intro">The fastest path is preset or prompt first, then generate. Save or export once the preview looks right.</p>
         <div class="actions-grid">
           <button id="generateButton" onclick="generateWorksheet()">Generate Worksheet</button>
@@ -634,6 +692,10 @@
           <button id="saveProjectButton" type="button">Save Project</button>
           <button class="green" onclick="downloadPDF()">Download PDF</button>
           <button class="red" onclick="clearWorksheet()">Clear</button>
+        </div>
+        <div class="action-help-row">
+          <span>Generate first, then export the same A4 layout as PDF.</span>
+          <span>Save Project keeps the worksheet ready for later edits.</span>
         </div>
       </div>
       <div id="generationStatus" class="status-message" aria-live="polite"></div>
@@ -645,6 +707,16 @@
     </section>
 
     <section class="preview">
+      <div class="preview-heading">
+        <div>
+          <h2>A4 Preview</h2>
+          <p>Check the printable worksheet before downloading the final PDF.</p>
+        </div>
+        <button type="button" class="hint-trigger" aria-label="Preview help">
+          <span class="hint-trigger-icon">?</span>
+          <span class="hint-tooltip">The preview mirrors the worksheet structure, sections, and answer sheet that will be exported to PDF.</span>
+        </button>
+      </div>
       <div class="worksheet" id="worksheet">
         <div class="worksheet-header">
           <h2>Math Worksheet</h2>
