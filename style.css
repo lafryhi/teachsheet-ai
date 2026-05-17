@@ -1971,6 +1971,74 @@ button:disabled {
   line-height: 1.72;
 }
 
+.worksheet-header-answer-key {
+  margin-bottom: 20px;
+  gap: 9px;
+}
+
+.worksheet-header-answer-key .worksheet-school {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.worksheet-header-answer-key .worksheet-title-block {
+  gap: 4px;
+}
+
+.worksheet-header-answer-key h2 {
+  font-size: 26px;
+}
+
+.worksheet-header-answer-key .worksheet-subtitle {
+  font-size: 12px;
+}
+
+.worksheet-header-answer-key .worksheet-page-type {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.worksheet-header-answer-key .worksheet-page-badge {
+  padding: 6px 12px;
+  font-size: 11px;
+}
+
+.worksheet-header-answer-key .worksheet-intro {
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.worksheet-header-answer-key .worksheet-identity-row {
+  gap: 8px;
+}
+
+.worksheet-header-answer-key .worksheet-identity-field {
+  min-height: 56px;
+  padding: 8px 10px 9px;
+}
+
+.worksheet-header-answer-key .worksheet-identity-label {
+  font-size: 10px;
+}
+
+.worksheet-header-answer-key .worksheet-identity-value,
+.worksheet-header-answer-key .worksheet-identity-score {
+  font-size: 14px;
+}
+
+.worksheet-header-answer-key .worksheet-meta-strip {
+  gap: 7px;
+}
+
+.worksheet-header-answer-key .worksheet-meta-pill {
+  padding: 7px 9px;
+}
+
+.worksheet-header-answer-key .worksheet-notes-block {
+  padding: 9px 12px;
+}
+
 .questions {
   display: grid;
   grid-template-columns: var(--questions-columns, repeat(2, 1fr));

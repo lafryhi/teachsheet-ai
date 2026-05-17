@@ -5,6 +5,7 @@ import {
   buildCompactDescriptorLine,
   buildDensityProfile,
   getAdaptivePdfMetrics,
+  getAnswerSheetHeaderMetrics,
   getFooterMetrics,
   getIdentityFieldHeight,
   getNotesBlockHeight,
@@ -78,6 +79,9 @@ function measureEstimatedHeaderHeight({
   pageKind,
   currentPage = 1
 }) {
+  const headerMetrics = pageKind === "answer-key"
+    ? getAnswerSheetHeaderMetrics(metrics)
+    : metrics;
   const descriptorLine = buildCompactDescriptorLine({
     pageKind,
     grade,
@@ -89,7 +93,7 @@ function measureEstimatedHeaderHeight({
     ? estimateWrappedLineCount(
       descriptorLine,
       pageWidth - margins.left - margins.right,
-      metrics.titleSubtitleFontSize
+      headerMetrics.titleSubtitleFontSize
     )
     : 0;
   const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
@@ -97,46 +101,46 @@ function measureEstimatedHeaderHeight({
     ? estimateWrappedLineCount(
       introText,
       pageWidth - margins.left - margins.right,
-      metrics.introFontSize
+      headerMetrics.introFontSize
     )
     : 0;
   const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
   const titleLines = estimateWrappedLineCount(
     titleText,
     pageWidth - margins.left - margins.right - 12,
-    metrics.titleFontSize,
+    headerMetrics.titleFontSize,
     { title: true }
   );
   let y = margins.top;
 
   if (identity.schoolName) {
-    y += metrics.schoolGap;
+    y += headerMetrics.schoolGap;
   }
 
-  y += Math.max(metrics.titleGap, titleLines * metrics.titleLineUnit);
+  y += Math.max(headerMetrics.titleGap, titleLines * headerMetrics.titleLineUnit);
 
   if (descriptorLines > 0) {
-    y += Math.max(metrics.descriptorMinHeight, descriptorLines * metrics.descriptorLineUnit);
+    y += Math.max(headerMetrics.descriptorMinHeight, descriptorLines * headerMetrics.descriptorLineUnit);
   }
 
-  y += getIdentityFieldHeight(metrics);
+  y += getIdentityFieldHeight(headerMetrics);
 
   if (introLines > 0) {
-    y += metrics.introTopGap;
-    y += Math.max(3.8, introLines * metrics.introLineHeight);
+    y += headerMetrics.introTopGap;
+    y += Math.max(3.4, introLines * headerMetrics.introLineHeight);
   }
 
   if (shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind })) {
     const notesLines = estimateWrappedLineCount(
       identity.teacherNotes,
-      pageWidth - margins.left - margins.right - (metrics.notesPadding * 2),
-      metrics.introFontSize
+      pageWidth - margins.left - margins.right - (headerMetrics.notesPadding * 2),
+      headerMetrics.introFontSize
     );
-    y += metrics.notesTopGap;
-    y += getNotesBlockHeight(notesLines, metrics) + 1.4;
+    y += headerMetrics.notesTopGap;
+    y += getNotesBlockHeight(notesLines, headerMetrics) + 1.2;
   }
 
-  return (y + metrics.headerBottomGap) - margins.top;
+  return (y + headerMetrics.headerBottomGap) - margins.top;
 }
 
 function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidth) {

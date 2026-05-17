@@ -157,6 +157,40 @@ export function getAdaptivePdfMetrics(baseMetrics, densityProfile) {
   };
 }
 
+export function getAnswerSheetHeaderMetrics(baseMetrics) {
+  return {
+    ...baseMetrics,
+    titleFontSize: scaleMetric(baseMetrics.titleFontSize, 0.89, 15.6),
+    titleSubtitleFontSize: scaleMetric(baseMetrics.titleSubtitleFontSize, 0.92, 7),
+    schoolFontSize: scaleMetric(baseMetrics.schoolFontSize, 0.9, 6.5),
+    introFontSize: scaleMetric(baseMetrics.introFontSize, 0.94, 7.7),
+    introLineHeight: scaleMetric(baseMetrics.introLineHeight, 0.92, 3.3),
+    schoolGap: scaleMetric(baseMetrics.schoolGap, 0.78, 1.9),
+    titleGap: scaleMetric(baseMetrics.titleGap, 0.82, 3.35),
+    fieldHeight: scaleMetric(baseMetrics.fieldHeight, 0.88, 7.2),
+    titleLineUnit: scaleMetric(baseMetrics.titleLineUnit, 0.88, 3.95),
+    descriptorLineUnit: scaleMetric(baseMetrics.descriptorLineUnit, 0.9, 2.6),
+    descriptorMinHeight: scaleMetric(baseMetrics.descriptorMinHeight, 0.9, 2.7),
+    schoolBaselineOffset: scaleMetric(baseMetrics.schoolBaselineOffset, 0.88, 2.1),
+    titleBaselineOffset: scaleMetric(baseMetrics.titleBaselineOffset, 0.9, 3.8),
+    descriptorBaselineOffset: scaleMetric(baseMetrics.descriptorBaselineOffset, 0.9, 2.3),
+    identityTopGap: scaleMetric(baseMetrics.identityTopGap, 0.7, 0.6),
+    introTopGap: scaleMetric(baseMetrics.introTopGap, 0.72, 1.5),
+    introBaselineOffset: scaleMetric(baseMetrics.introBaselineOffset, 0.88, 2.55),
+    notesTopGap: scaleMetric(baseMetrics.notesTopGap, 0.75, 1.7),
+    dividerTopGap: scaleMetric(baseMetrics.dividerTopGap, 0.82, 1.05),
+    headerBottomGap: scaleMetric(baseMetrics.headerBottomGap, 0.72, 2.2),
+    fieldLabelBaseline: scaleMetric(baseMetrics.fieldLabelBaseline, 0.9, 2.4),
+    fieldValueBaseline: scaleMetric(baseMetrics.fieldValueBaseline, 0.9, 5.55),
+    notesLabelGap: scaleMetric(baseMetrics.notesLabelGap, 0.82, 2.6),
+    notesLabelBaseline: scaleMetric(baseMetrics.notesLabelBaseline, 0.9, 3),
+    notesPadding: scaleMetric(baseMetrics.notesPadding, 0.9, 2.1),
+    notesTextTopOffset: scaleMetric(baseMetrics.notesTextTopOffset, 0.9, 5.1),
+    notesLineHeight: scaleMetric(baseMetrics.notesLineHeight, 0.92, 3.3),
+    notesMinHeight: scaleMetric(baseMetrics.notesMinHeight, 0.84, 7.4)
+  };
+}
+
 function getHeightAfterRemovingRow(pageHeight, pageLength, rowHeight, rowGap) {
   if (pageLength <= 0) {
     return 0;

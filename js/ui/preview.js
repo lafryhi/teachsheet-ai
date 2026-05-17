@@ -209,9 +209,10 @@ function createWorksheetHeaderMarkup({
   const displayStudentName = getStudentDisplayValue(identity.studentName, "");
   const showTeacherNotes = requestType === "math"
     && shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind });
+  const answerHeaderClass = pageKind === "answer-key" ? " worksheet-header-answer-key" : "";
 
   return `
-    <div class="worksheet-header">
+    <div class="worksheet-header${answerHeaderClass}">
       ${identity.schoolName ? `<div class="worksheet-school">${escapeHtml(identity.schoolName)}</div>` : ""}
       <div class="worksheet-title-row">
         <div class="worksheet-title-block">
