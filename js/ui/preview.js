@@ -1,5 +1,7 @@
 import { getTemplatePresentation } from "../templates/templates.js";
 import {
+  getLocalizedAnswerText,
+  getLocalizedQuestionDisplayText,
   getQuestionDisplayText,
   getScoreTarget,
   getStudentDisplayValue,
@@ -8,6 +10,8 @@ import {
   shouldShowTeacherNotes
 } from "../core/worksheetPresentation.js";
 import {
+  getLocalizedWorksheetIntroCopy,
+  localizeStoredInstructionText,
   localizeSectionInstruction,
   localizeSectionLabel,
   normalizeLanguage,
@@ -33,11 +37,15 @@ function questionHasInlineAnswerSpace(question) {
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language }) {
   if (pageKind === "answer-key") {
-    return t(language, "previewAnswerIntro");
+    return getLocalizedWorksheetIntroCopy(language, "answer-key");
   }
 
   if (identity.instructions) {
-    return identity.instructions;
+    return localizeStoredInstructionText(identity.instructions, language);
+  }
+
+  if (worksheetModeLabel && focusLabel && normalizeLanguage(language) === "fr") {
+    return `${worksheetModeLabel} centré sur ${focusLabel}. Résous les exercices suivants avec soin. Montre ton raisonnement si nécessaire.`;
   }
 
   if (worksheetModeLabel && focusLabel) {
@@ -46,7 +54,7 @@ function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focus
       : `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`;
   }
 
-  return t(language, "previewWorksheetIntro");
+  return getLocalizedWorksheetIntroCopy(language, "questions");
 }
 
 function createHeaderFieldMarkup(label, value, placeholder = "Write here") {
@@ -90,11 +98,11 @@ function createSectionHeaderMarkup(question, variant = "questions", language = "
   `;
 }
 
-function createQuestionMarkup(question, questionNumber) {
+function createQuestionMarkup(question, questionNumber, language = "en") {
   const isVertical = question.format === "vertical";
   const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
-  const questionText = getQuestionDisplayText(question);
-  const compareParts = !isVertical ? parseCompareQuestionText(question) : null;
+  const questionText = getLocalizedQuestionDisplayText(question, language);
+  const compareParts = !isVertical ? parseCompareQuestionText(question, language) : null;
   const hint = question.layoutHints || {};
   const questionMarkup = isVertical
     ? `<pre class="question-text question-text-vertical">${escapeHtml(questionText)}</pre>`
@@ -135,7 +143,7 @@ function createQuestionsMarkup(questions, startIndex, language) {
     const shouldRenderSection = index === 0 || question.sectionStart || question.sectionKey !== lastSectionKey;
     lastSectionKey = question.sectionKey;
 
-    return `${shouldRenderSection ? createSectionHeaderMarkup(question, "questions", language) : ""}${createQuestionMarkup(question, questionNumber)}`;
+    return `${shouldRenderSection ? createSectionHeaderMarkup(question, "questions", language) : ""}${createQuestionMarkup(question, questionNumber, language)}`;
   }).join("");
 }
 
@@ -151,7 +159,7 @@ function createAnswerKeyMarkup(questions, language) {
         ${shouldRenderSection ? createSectionHeaderMarkup(question, "answers", language) : ""}
         <div class="answer-item">
           <span class="answer-item-number">${escapeHtml(String(question.answerIndex || ""))}</span>
-          <span class="answer-item-value">${escapeHtml(question.answer)}</span>
+          <span class="answer-item-value">${escapeHtml(getLocalizedAnswerText(question, language))}</span>
         </div>
       `;
     })

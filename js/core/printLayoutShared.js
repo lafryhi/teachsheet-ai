@@ -191,6 +191,22 @@ export function getAnswerSheetHeaderMetrics(baseMetrics) {
   };
 }
 
+export function getLocalizedHeaderMetrics(baseMetrics, language = "en") {
+  if (String(language || "en").toLowerCase().startsWith("fr") === false) {
+    return baseMetrics;
+  }
+
+  return {
+    ...baseMetrics,
+    schoolGap: scaleMetric(baseMetrics.schoolGap, 1.18, baseMetrics.schoolGap + 0.35),
+    titleGap: scaleMetric(baseMetrics.titleGap, 1.12, baseMetrics.titleGap + 0.4),
+    descriptorMinHeight: scaleMetric(baseMetrics.descriptorMinHeight, 1.12, baseMetrics.descriptorMinHeight + 0.35),
+    identityTopGap: scaleMetric(baseMetrics.identityTopGap, 1.08, baseMetrics.identityTopGap + 0.15),
+    introTopGap: scaleMetric(baseMetrics.introTopGap, 1.06, baseMetrics.introTopGap + 0.15),
+    headerBottomGap: scaleMetric(baseMetrics.headerBottomGap, 1.06, baseMetrics.headerBottomGap + 0.15)
+  };
+}
+
 function getHeightAfterRemovingRow(pageHeight, pageLength, rowHeight, rowGap) {
   if (pageLength <= 0) {
     return 0;

@@ -8,6 +8,7 @@ import {
   getAnswerSheetHeaderMetrics,
   getFooterMetrics,
   getIdentityFieldHeight,
+  getLocalizedHeaderMetrics,
   getNotesBlockHeight,
   getPdfLayoutMetrics,
   normalizePrintWorksheetTitle,
@@ -15,13 +16,15 @@ import {
   resolveAnswerColumnCount
 } from "./printLayoutShared.js";
 import {
+  getLocalizedAnswerText,
+  getLocalizedQuestionDisplayText,
   getQuestionDisplayText,
   isCompareQuestion,
   parseCompareQuestionText,
   shouldShowTeacherNotes
 } from "./worksheetPresentation.js";
 import { getTemplatePresentation } from "../templates/templates.js";
-import { normalizeLanguage, t } from "../ui/language.js";
+import { getLocalizedWorksheetIntroCopy, localizeStoredInstructionText, normalizeLanguage, t } from "../ui/language.js";
 
 function questionHasInlineAnswerSpace(question) {
   return /_{3,}/.test(getQuestionDisplayText(question)) || isCompareQuestion(question);
@@ -29,18 +32,22 @@ function questionHasInlineAnswerSpace(question) {
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language = "en" }) {
   if (pageKind === "answer-key") {
-    return t(language, "answerSheetIntro");
+    return getLocalizedWorksheetIntroCopy(language, "answer-key");
   }
 
   if (identity.instructions) {
-    return identity.instructions;
+    return localizeStoredInstructionText(identity.instructions, language);
+  }
+
+  if (worksheetModeLabel && focusLabel && normalizeLanguage(language) === "fr") {
+    return `${worksheetModeLabel} centré sur ${focusLabel}. Résous les exercices suivants avec soin. Montre ton raisonnement si nécessaire.`;
   }
 
   return worksheetModeLabel && focusLabel
     ? (normalizeLanguage(language) === "fr"
       ? `${worksheetModeLabel} centré sur ${focusLabel}. Lis chaque question avec attention et montre clairement ton travail si besoin.`
       : `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`)
-    : t(language, "worksheetIntroFallback");
+    : getLocalizedWorksheetIntroCopy(language, "questions");
 }
 
 function normalizeWhitespace(value = "") {
@@ -84,9 +91,12 @@ function measureEstimatedHeaderHeight({
   currentPage = 1,
   language = "en"
 }) {
-  const headerMetrics = pageKind === "answer-key"
-    ? getAnswerSheetHeaderMetrics(metrics)
-    : metrics;
+  const headerMetrics = getLocalizedHeaderMetrics(
+    pageKind === "answer-key"
+      ? getAnswerSheetHeaderMetrics(metrics)
+      : metrics,
+    language
+  );
   const descriptorLine = buildCompactDescriptorLine({
     pageKind,
     grade,
@@ -148,7 +158,7 @@ function measureEstimatedHeaderHeight({
   return (y + headerMetrics.headerBottomGap) - margins.top;
 }
 
-function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidth) {
+function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidth, language = "en") {
   const rows = [];
   const columnsCount = presentation.columnsCount;
   const lineHeight = metrics.questionLineHeight;
@@ -165,12 +175,12 @@ function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidt
       const absoluteIndex = question.sequenceIndex || (questions.indexOf(question) + 1);
       const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
       const hint = question.layoutHints || {};
-      const questionText = getQuestionDisplayText(question);
+      const questionText = getLocalizedQuestionDisplayText(question, language);
       const textWidth = Math.max(
         18,
         columnWidth - (horizontalPadding * 2) - (question.format === "vertical" ? 2 : (index === 0 ? 8 : 0))
       );
-      const compareParts = parseCompareQuestionText(question);
+      const compareParts = parseCompareQuestionText(question, language);
       const textLines = question.format === "vertical"
         ? String(questionText || "").split("\n").length
         : compareParts
@@ -234,7 +244,7 @@ function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidt
   return rows;
 }
 
-function buildEstimatedAnswerRows(questions, answerColumns, answerColumnWidth, metrics) {
+function buildEstimatedAnswerRows(questions, answerColumns, answerColumnWidth, metrics, language = "en") {
   const rows = [];
   let currentRowQuestions = [];
 
@@ -245,7 +255,7 @@ function buildEstimatedAnswerRows(questions, answerColumns, answerColumnWidth, m
 
     const rowQuestions = currentRowQuestions.map((question) => {
       const absoluteIndex = question.sequenceIndex || (questions.indexOf(question) + 1);
-      const answerText = String(question.answer || "");
+      const answerText = getLocalizedAnswerText(question, language);
       const answerLines = estimateWrappedLineCount(
         answerText,
         answerColumnWidth - (metrics.answerCardPadding * 2),
@@ -334,6 +344,7 @@ function buildEstimatedBreakdown({
   const pageWidth = PDF_PAGE_LAYOUT.width;
   const pageHeight = PDF_PAGE_LAYOUT.height;
   const margins = getPageMargins();
+  const resolvedLanguage = normalizeLanguage(layoutContext.language || "en");
   const baseMetrics = getPdfLayoutMetrics(presentation);
   const resolvedIdentity = getResolvedIdentity(layoutContext, layoutContext.requestType);
   const footer = getFooterMetrics(pageHeight);
@@ -353,10 +364,10 @@ function buildEstimatedBreakdown({
     pageWidth,
     pageKind: "questions",
     currentPage: 1,
-    language: normalizeLanguage(layoutContext.language || "en")
+    language: resolvedLanguage
   });
   const baseQuestionUsableHeight = Math.max(0, questionContentBottom - (margins.top + baseQuestionHeaderHeight));
-  const initialQuestionRows = buildEstimatedQuestionRows(safeQuestions, presentation, baseMetrics, initialColumnWidth);
+  const initialQuestionRows = buildEstimatedQuestionRows(safeQuestions, presentation, baseMetrics, initialColumnWidth, resolvedLanguage);
   const initialQuestionPages = paginateRows(
     initialQuestionRows,
     baseQuestionUsableHeight,
@@ -381,7 +392,7 @@ function buildEstimatedBreakdown({
     pageWidth,
     pageKind: "questions",
     currentPage: 1,
-    language: normalizeLanguage(layoutContext.language || "en")
+    language: resolvedLanguage
   });
   const answerHeaderHeight = measureEstimatedHeaderHeight({
     identity: resolvedIdentity,
@@ -394,7 +405,7 @@ function buildEstimatedBreakdown({
     pageWidth,
     pageKind: "answer-key",
     currentPage: 1,
-    language: normalizeLanguage(layoutContext.language || "en")
+    language: resolvedLanguage
   });
   const questionUsableHeight = Math.max(0, questionContentBottom - (margins.top + questionHeaderHeight));
   const answerUsableHeight = Math.max(0, questionContentBottom - (margins.top + answerHeaderHeight));
@@ -402,7 +413,7 @@ function buildEstimatedBreakdown({
   const columnWidth = presentation.columnsCount === 1
     ? pageWidth - margins.left - margins.right
     : ((pageWidth - margins.left - margins.right - columnGap) / 2);
-  const questionRows = buildEstimatedQuestionRows(safeQuestions, presentation, metrics, columnWidth);
+  const questionRows = buildEstimatedQuestionRows(safeQuestions, presentation, metrics, columnWidth, resolvedLanguage);
   const questionRowPages = safeQuestions.length > 0
     ? paginateRows(questionRows, questionUsableHeight, metrics.rowGap, QUESTION_SECTION_HEADER_HEIGHT)
     : [[]];
@@ -411,7 +422,7 @@ function buildEstimatedBreakdown({
     pageWidth - margins.left - margins.right - ((answerColumns - 1) * 3.4)
   ) / answerColumns;
   const answerRows = showAnswerKey
-    ? buildEstimatedAnswerRows(safeQuestions, answerColumns, answerColumnWidth, metrics)
+    ? buildEstimatedAnswerRows(safeQuestions, answerColumns, answerColumnWidth, metrics, resolvedLanguage)
     : [];
   const answerRowPages = showAnswerKey && safeQuestions.length > 0
     ? paginateRows(answerRows, answerUsableHeight, 3.6, ANSWER_SECTION_HEADER_HEIGHT)

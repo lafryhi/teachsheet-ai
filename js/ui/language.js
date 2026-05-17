@@ -138,9 +138,9 @@ const UI_TRANSLATIONS = {
     teacherModeActive: "Teacher mode active",
     generatedToday: "Generated today",
     answerSheetIntro: "Use this answer sheet for checking and classroom correction.",
-    worksheetIntroFallback: "Read each question carefully and keep your work neat.",
-    previewAnswerIntro: "Use this page as the reference key for quick checking and classroom correction.",
-    previewWorksheetIntro: "Read each question carefully, keep your work neat, and complete every answer in the space provided.",
+    worksheetIntroFallback: "Solve the following exercises carefully. Show your work when needed.",
+    previewAnswerIntro: "Use this answer sheet for checking and classroom correction.",
+    previewWorksheetIntro: "Solve the following exercises carefully. Show your work when needed.",
     writeHere: "Write here",
     writeStudentName: "Write student name",
     addDate: "Add date",
@@ -558,11 +558,18 @@ export function getLocalizedFocusLabel(language, request) {
     return "";
   }
 
+  const resolvedLanguage = normalizeLanguage(language);
   const topicLabel = request.focusPattern === "mental-math"
     ? t(language, "focusMentalMath")
-    : getLocalizedOperationLabel(language, request.topic);
+    : request.type === "math"
+      ? getLocalizedOperationLabel(language, request.topic)
+      : getLocalizedSubjectLabel(language, { type: request.topic || request.type });
   const layoutPrefix = request.type === "math" && request.layoutMode
-    ? `${request.layoutMode === "vertical" ? "Vertical" : "Horizontal"} `
+    ? (
+      resolvedLanguage === "fr"
+        ? `${request.layoutMode === "vertical" ? "Verticale" : "Horizontale"} `
+        : `${request.layoutMode === "vertical" ? "Vertical" : "Horizontal"} `
+    )
     : "";
   const localizedDifficulty = request.difficulty
     ? getLocalizedDifficultyLabel(language, request.difficulty)
@@ -662,14 +669,78 @@ export function localizeDefaultWorksheetInstruction(language, request) {
     : `Solve the following ${operation} questions carefully and show clear working when needed.`;
 }
 
+export function getLocalizedWorksheetIntroCopy(language, pageKind = "questions") {
+  if (normalizeLanguage(language) === "fr") {
+    return pageKind === "answer-key"
+      ? "Utilisez ce corrigé pour la correction en classe."
+      : "Résous les exercices suivants avec soin. Montre ton raisonnement si nécessaire.";
+  }
+
+  return pageKind === "answer-key"
+    ? "Use this answer sheet for checking and classroom correction."
+    : "Solve the following exercises carefully. Show your work when needed.";
+}
+
+export function localizeStoredInstructionText(value = "", language = "en") {
+  const text = String(value || "").trim();
+
+  if (!text || normalizeLanguage(language) !== "fr") {
+    return text;
+  }
+
+  if (/^Use this answer sheet for checking and classroom correction\.?$/i.test(text)) {
+    return "Utilisez ce corrigé pour la correction en classe.";
+  }
+
+  if (
+    /^Solve the following exercises carefully\. Show your work when needed\.?$/i.test(text)
+    || /^Read each question carefully and keep your work neat\.?$/i.test(text)
+    || /^Read each question carefully, keep your work neat, and complete every answer in the space provided\.?$/i.test(text)
+  ) {
+    return "Résous les exercices suivants avec soin. Montre ton raisonnement si nécessaire.";
+  }
+
+  if (/^Complete each mental math question quickly and accurately\.?$/i.test(text)) {
+    return "Calcule mentalement quand c’est possible et écris des réponses propres.";
+  }
+
+  const verticalMatch = text.match(/^Solve the following vertical (.+)s carefully and line up the digits neatly\.?$/i);
+  if (verticalMatch) {
+    return `Résous les ${verticalMatch[1].toLowerCase()} verticales suivantes avec soin et aligne bien les chiffres.`;
+  }
+
+  const operationMatch = text.match(/^Solve the following (.+) questions carefully and show clear working when needed\.?$/i);
+  if (operationMatch) {
+    return `Résous les exercices de ${operationMatch[1].toLowerCase()} suivants avec soin et montre clairement ta méthode si besoin.`;
+  }
+
+  return text;
+}
+
+function foldAccents(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 export function normalizeLocalizedPrompt(promptText, language) {
   const resolvedLanguage = normalizeLanguage(language);
   if (resolvedLanguage !== "fr") {
     return String(promptText || "").trim();
   }
 
-  let normalized = ` ${String(promptText || "").toLowerCase()} `;
+  let normalized = ` ${foldAccents(String(promptText || "").toLowerCase())} `;
   const replacements = [
+    [/\brevision rapide\b/g, " fast review "],
+    [/\bfiche de revision\b/g, " review worksheet "],
+    [/\brevision\b/g, " review "],
+    [/\bevaluation\b/g, " assessment "],
+    [/\bremediation\b/g, " remediation "],
+    [/\bentrainement\b/g, " practice "],
+    [/\bproblemes?\b/g, " word problems "],
+    [/\bcomparaison\b/g, " compare totals "],
+    [/\bvrai ou faux\b/g, " true or false "],
+    [/\bnombre manquant\b/g, " missing number "],
     [/\bcalcul mental\b/g, " mental math "],
     [/\br[ée]vision rapide\b/g, " fast review "],
     [/\bfiche de r[ée]vision\b/g, " review worksheet "],

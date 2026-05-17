@@ -5,6 +5,13 @@ const OPERATION_TOPICS = ["addition", "subtraction", "multiplication", "division
 const MATH_WORKSHEET_MODES = ["practice", "review", "remediation", "challenge"];
 const TEACHER_MODES = ["practice", "homework", "assessment", "remediation", "fast-review"];
 const MATH_LAYOUT_MODES = ["vertical", "horizontal"];
+const FRENCH_GRADE_MAP = {
+  cp: "Grade 1",
+  ce1: "Grade 2",
+  ce2: "Grade 3",
+  cm1: "Grade 4",
+  cm2: "Grade 5"
+};
 const DEFAULTS_BY_TYPE = {
   math: {
     difficulty: "medium",
@@ -22,9 +29,20 @@ const DEFAULTS_BY_TYPE = {
   coloring: { difficulty: "easy", count: 1, grade: null, template: "kids-colorful" }
 };
 
+function foldText(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function hasMathIntent(text = "") {
+  return /\b(addition|subtraction|multiplication|division|mixed|mental math|calcul mental|word problems?|compare|true or false|missing number|practice|review|assessment|remediation|fast review|revision|evaluation|entrainement|worksheet|exercices?)\b/.test(text);
+}
+
 function detectFocusPattern(segments) {
   for (const segment of segments) {
-    if (segment.normalized.includes("mental math")) {
+    if (segment.normalized.includes("mental math") || segment.normalized.includes("calcul mental")) {
       return "mental-math";
     }
   }
@@ -40,12 +58,12 @@ function normalizePrompt(prompt = "") {
 
 function toSegments(prompt = "") {
   return normalizePrompt(prompt)
-    .split("+")
+    .split(/[+,;|]/)
     .map((segment) => segment.trim())
     .filter(Boolean)
     .map((segment) => ({
       raw: segment,
-      normalized: segment.toLowerCase()
+      normalized: foldText(segment)
     }));
 }
 
@@ -87,7 +105,7 @@ function detectType(segments) {
       return "math";
     }
 
-    if (detectTeacherMode([segment]) || detectMode([segment]) || detectFocusPattern([segment])) {
+    if (detectTeacherMode([segment]) || detectMode([segment]) || detectFocusPattern([segment]) || hasMathIntent(segment.normalized)) {
       return "math";
     }
   }
@@ -100,6 +118,14 @@ function detectGrade(segments) {
     const match = segment.normalized.match(/\bgrade\s*([1-5])\b/);
     if (match) {
       return `Grade ${match[1]}`;
+    }
+
+    const frenchGrade = Object.entries(FRENCH_GRADE_MAP).find(([label]) => (
+      new RegExp(`\\b${label}\\b`).test(segment.normalized)
+    ));
+
+    if (frenchGrade) {
+      return frenchGrade[1];
     }
   }
 
@@ -132,6 +158,18 @@ function detectMode(segments) {
     if (MATH_WORKSHEET_MODES.includes(segment.normalized)) {
       return segment.normalized;
     }
+
+    if (segment.normalized.includes("review") || segment.normalized.includes("revision")) {
+      return "review";
+    }
+
+    if (segment.normalized.includes("remediation")) {
+      return "remediation";
+    }
+
+    if (segment.normalized.includes("challenge")) {
+      return "challenge";
+    }
   }
 
   return null;
@@ -139,19 +177,19 @@ function detectMode(segments) {
 
 function detectTeacherMode(segments) {
   for (const segment of segments) {
-    if (segment.normalized.includes("homework")) {
+    if (segment.normalized.includes("homework") || segment.normalized.includes("devoir")) {
       return "homework";
     }
 
-    if (segment.normalized.includes("assessment")) {
+    if (segment.normalized.includes("assessment") || segment.normalized.includes("evaluation")) {
       return "assessment";
     }
 
-    if (segment.normalized.includes("fast review")) {
+    if (segment.normalized.includes("fast review") || segment.normalized.includes("revision rapide")) {
       return "fast-review";
     }
 
-    if (segment.normalized.includes("review")) {
+    if (segment.normalized.includes("review") || segment.normalized.includes("revision")) {
       return "fast-review";
     }
 
@@ -159,7 +197,7 @@ function detectTeacherMode(segments) {
       return "remediation";
     }
 
-    if (segment.normalized.includes("practice")) {
+    if (segment.normalized.includes("practice") || segment.normalized.includes("entrainement") || segment.normalized.includes("exercices")) {
       return "practice";
     }
   }
@@ -185,6 +223,26 @@ function detectLayoutMode(segments) {
 
 function detectOperation(segments) {
   for (const segment of segments) {
+    if (segment.normalized.includes("soustraction")) {
+      return "subtraction";
+    }
+
+    if (segment.normalized.includes("multiplication")) {
+      return "multiplication";
+    }
+
+    if (segment.normalized.includes("division")) {
+      return "division";
+    }
+
+    if (segment.normalized.includes("addition")) {
+      return "addition";
+    }
+
+    if (segment.normalized.includes("mixed")) {
+      return "mixed";
+    }
+
     const directMatch = OPERATION_TOPICS.find((operation) => segment.normalized === operation);
 
     if (directMatch) {
@@ -217,8 +275,11 @@ function isMetadataSegment(segment) {
     TEACHER_MODES.includes(segment.normalized) ||
     segment.normalized.includes("homework") ||
     segment.normalized.includes("assessment") ||
+    segment.normalized.includes("evaluation") ||
     segment.normalized.includes("review worksheet") ||
+    segment.normalized.includes("revision") ||
     segment.normalized.includes("mental math") ||
+    segment.normalized.includes("calcul mental") ||
     MATH_LAYOUT_MODES.includes(segment.normalized) ||
     MATH_LAYOUT_MODES.some((layoutMode) => segment.normalized.startsWith(`${layoutMode} `)) ||
     OPERATION_TOPICS.some((operation) => (
@@ -227,6 +288,7 @@ function isMetadataSegment(segment) {
     )) ||
     ["easy", "medium", "hard"].includes(segment.normalized) ||
     /\bgrade\s*[1-5]\b/.test(segment.normalized) ||
+    Object.keys(FRENCH_GRADE_MAP).some((label) => new RegExp(`\\b${label}\\b`).test(segment.normalized)) ||
     /\b\d+\s+questions?\b/.test(segment.normalized) ||
     templates.some((template) => normalizeTemplateAliases(template).includes(segment.normalized))
   );
@@ -234,7 +296,17 @@ function isMetadataSegment(segment) {
 
 function detectTopic(segments, type) {
   if (type === "math") {
-    return detectOperation(segments) || (detectFocusPattern(segments) === "mental-math" ? "mixed" : "addition");
+    const explicitOperation = detectOperation(segments);
+
+    if (explicitOperation) {
+      return explicitOperation;
+    }
+
+    if (detectFocusPattern(segments) === "mental-math" || segments.some((segment) => hasMathIntent(segment.normalized))) {
+      return "mixed";
+    }
+
+    return "addition";
   }
 
   const topicSegment = segments.find((segment) => !isMetadataSegment(segment));
@@ -249,7 +321,9 @@ export function hasRecognizedWorksheetPrompt(prompt) {
     detectTeacherMode([segment]) ||
     detectMode([segment]) ||
     detectFocusPattern([segment]) ||
+    hasMathIntent(segment.normalized) ||
     /\bgrade\s*[1-5]\b/.test(segment.normalized) ||
+    Object.keys(FRENCH_GRADE_MAP).some((label) => new RegExp(`\\b${label}\\b`).test(segment.normalized)) ||
     /\b\d+\s+questions?\b/.test(segment.normalized)
   ));
 }
@@ -260,6 +334,18 @@ export function parseWorksheetPrompt(prompt) {
   const defaults = DEFAULTS_BY_TYPE[detectedType];
   const topic = detectTopic(segments, detectedType);
   const explicitTemplateId = detectTemplate(segments);
+  const focusPattern = detectedType === "math" ? (detectFocusPattern(segments) || defaults.focusPattern) : null;
+  const detectedMode = detectedType === "math" ? detectMode(segments) : null;
+  const detectedTeacherMode = detectedType === "math" ? detectTeacherMode(segments) : null;
+  const resolvedTeacherMode = detectedType === "math"
+    ? (
+      detectedTeacherMode
+      || (detectedMode === "review" ? "fast-review" : null)
+      || (detectedMode === "remediation" ? "remediation" : null)
+      || (focusPattern === "mental-math" ? "fast-review" : null)
+      || defaults.teacherMode
+    )
+    : null;
 
   return {
     type: detectedType,
@@ -268,15 +354,10 @@ export function parseWorksheetPrompt(prompt) {
     difficulty: detectDifficulty(segments) || defaults.difficulty,
     count: detectCount(segments) || defaults.count,
     grade: detectGrade(segments) || defaults.grade,
-    mode: detectedType === "math" ? (detectMode(segments) || defaults.mode) : null,
+    mode: detectedType === "math" ? (detectedMode || defaults.mode) : null,
     layoutMode: detectedType === "math" ? (detectLayoutMode(segments) || defaults.layoutMode) : null,
-    teacherMode: detectedType === "math"
-      ? (detectTeacherMode(segments)
-        || (detectMode(segments) === "review" ? "fast-review" : null)
-        || (detectMode(segments) === "remediation" ? "remediation" : null)
-        || defaults.teacherMode)
-      : null,
-    focusPattern: detectedType === "math" ? (detectFocusPattern(segments) || defaults.focusPattern) : null,
+    teacherMode: resolvedTeacherMode,
+    focusPattern,
     template: explicitTemplateId || defaults.template,
     templateExplicit: Boolean(explicitTemplateId)
   };
