@@ -195,6 +195,8 @@ a {
   padding: 15px 26px;
   border-radius: 14px;
   font-weight: 800;
+  border: none;
+  cursor: pointer;
 }
 
 .primary-btn {
@@ -221,6 +223,28 @@ a {
   color: #5b6472;
   font-weight: 700;
   letter-spacing: 0.01em;
+}
+
+.hero-workflow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.hero-workflow-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(191, 223, 251, 0.9);
+  color: #40556b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .hero-proof-grid {
@@ -391,6 +415,67 @@ a {
 .section-heading {
   max-width: 820px;
   margin: 0 auto 42px;
+}
+
+.teacher-product-strip {
+  padding-top: 8px;
+}
+
+.teacher-product-shell {
+  max-width: 1160px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 24px 28px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(191, 223, 251, 0.92);
+  box-shadow: 0 18px 34px rgba(17, 24, 39, 0.06);
+  text-align: left;
+}
+
+.teacher-product-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 760px;
+}
+
+.teacher-product-copy .section-subtitle {
+  margin: 0;
+  max-width: 680px;
+}
+
+.teacher-product-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.teacher-product-points span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: rgba(248, 251, 255, 0.98);
+  border: 1px solid rgba(210, 225, 241, 0.95);
+  color: #506072;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.teacher-product-actions {
+  display: grid;
+  gap: 12px;
+  min-width: 240px;
+}
+
+.teacher-product-actions .secondary-action-button,
+.teacher-product-actions .quick-start-link {
+  width: 100%;
+  text-align: center;
 }
 
 .demo-gallery-section {
@@ -2659,6 +2744,16 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .teacher-product-shell,
+  .teacher-product-actions {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .teacher-product-shell {
+    padding: 22px 20px;
+  }
+
   .quick-start-panel {
     flex-direction: column;
     align-items: flex-start;
@@ -2817,7 +2912,9 @@ button:disabled {
 
   .quick-start-actions,
   .teacher-trust-strip,
-  .demo-gallery-topline {
+  .demo-gallery-topline,
+  .hero-workflow-strip,
+  .teacher-product-points {
     width: 100%;
   }
 

@@ -267,6 +267,14 @@ function getOnboardingDemoButton() {
   return getElement("onboardingDemoButton");
 }
 
+function getHeroDemoButton() {
+  return getElement("heroDemoButton");
+}
+
+function getInstantDemoButton() {
+  return getElement("instantDemoButton");
+}
+
 function getUseExamplePromptButton() {
   return getElement("useExamplePromptButton");
 }
@@ -416,7 +424,7 @@ function renderExamplePromptChips() {
 
 function updateLocalizedDemoTriggers() {
   const demoPreset = getLocalizedDemoPreset(state.language);
-  const demoButtons = document.querySelectorAll("[data-demo-prompt]");
+  const demoButtons = document.querySelectorAll("[data-demo-localized=\"true\"]");
 
   demoButtons.forEach((buttonElement) => {
     buttonElement.dataset.demoPrompt = demoPreset.prompt;
@@ -2006,6 +2014,22 @@ function bindFormPersistence() {
   const onboardingDemoButton = getOnboardingDemoButton();
   if (onboardingDemoButton) {
     onboardingDemoButton.addEventListener("click", async (event) => {
+      const demoPreset = getDemoPresetFromTrigger(event.target) || getLocalizedDemoPreset(state.language);
+      await runDemoPreset(demoPreset);
+    });
+  }
+
+  const heroDemoButton = getHeroDemoButton();
+  if (heroDemoButton) {
+    heroDemoButton.addEventListener("click", async (event) => {
+      const demoPreset = getDemoPresetFromTrigger(event.target) || getLocalizedDemoPreset(state.language);
+      await runDemoPreset(demoPreset);
+    });
+  }
+
+  const instantDemoButton = getInstantDemoButton();
+  if (instantDemoButton) {
+    instantDemoButton.addEventListener("click", async (event) => {
       const demoPreset = getDemoPresetFromTrigger(event.target) || getLocalizedDemoPreset(state.language);
       await runDemoPreset(demoPreset);
     });
