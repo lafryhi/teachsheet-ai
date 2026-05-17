@@ -41,6 +41,32 @@ import {
   getTemplateOptions
 } from "./templates/templates.js";
 import { renderSavedProjects } from "./ui/projects.js";
+import {
+  DEFAULT_LANGUAGE,
+  getLocalizedDemoPreset,
+  getLocalizedDifficultyLabel,
+  getLocalizedFocusLabel,
+  getLocalizedGradeLabel,
+  getLocalizedOnboardingExamplePrompt,
+  getLocalizedOperationLabel,
+  getLocalizedPresetContent,
+  getLocalizedPromptExamples,
+  getLocalizedSubjectLabel,
+  getLocalizedTeacherModeLabel,
+  getLocalizedWorksheetModeLabel,
+  getLocalizedWorksheetTitle,
+  loadLanguagePreference,
+  localizeQuestionCountLabel,
+  localizeDefaultWorksheetInstruction,
+  localizeGeneratedAtLabel,
+  localizeSectionInstruction,
+  localizeSectionLabel,
+  localizeTrustSignals,
+  normalizeLanguage,
+  normalizeLocalizedPrompt,
+  persistLanguagePreference,
+  t
+} from "./ui/language.js";
 import { renderEmptyWorksheet, renderWorksheetPreview } from "./ui/preview.js";
 import { applyTheme, getTheme } from "./ui/themes.js";
 import { applyZoom, normalizeZoomValue } from "./ui/zoom.js";
@@ -130,13 +156,6 @@ const WORKFLOW_PRESETS = {
 };
 
 const ONBOARDING_STORAGE_KEY = "teachsheet-ai-onboarding-v1";
-const ONBOARDING_EXAMPLE_PROMPT = "grade 3 subtraction practice 15 questions";
-const ONBOARDING_DEMO_PRESET = {
-  prompt: "grade 4 assessment vertical multiplication",
-  templateId: "exam-style",
-  teacherMode: "assessment"
-};
-
 const state = {
   activePresetId: null,
   currentLayoutBreakdown: null,
@@ -148,6 +167,7 @@ const state = {
   isApplyingWorkflowUpdate: false,
   isGenerating: false,
   lastGeneratedAt: null,
+  language: DEFAULT_LANGUAGE,
   onboarding: {
     completed: false,
     dismissed: false
@@ -215,6 +235,10 @@ function getPreviewNextButton() {
 
 function getSavedProjectsListElement() {
   return getElement("savedProjectsList");
+}
+
+function getLanguageSelect() {
+  return getElement("languageSelect");
 }
 
 function getDashboardContainer() {
@@ -299,6 +323,156 @@ function persistOnboardingState() {
   }
 }
 
+function applyStaticTranslations() {
+  document.documentElement.lang = state.language === "fr" ? "fr" : "en";
+
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const key = element.dataset.i18n;
+    element.textContent = t(state.language, key);
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    const key = element.dataset.i18nPlaceholder;
+    element.setAttribute("placeholder", t(state.language, key));
+  });
+}
+
+function updateSelectOptionLabels() {
+  const gradeSelect = getElement("grade");
+  [...gradeSelect.options].forEach((option) => {
+    option.textContent = getLocalizedGradeLabel(state.language, option.value);
+  });
+
+  const operationLabels = {
+    addition: "operationAddition",
+    subtraction: "operationSubtraction",
+    multiplication: "operationMultiplication",
+    division: "operationDivision",
+    mixed: "operationMixed"
+  };
+  [...getElement("operation").options].forEach((option) => {
+    option.textContent = t(state.language, operationLabels[option.value] || option.value);
+  });
+
+  const difficultyLabels = {
+    easy: "difficultyEasy",
+    medium: "difficultyMedium",
+    hard: "difficultyHard"
+  };
+  [...getElement("difficulty").options].forEach((option) => {
+    option.textContent = t(state.language, difficultyLabels[option.value] || option.value);
+  });
+
+  [...getElement("teacherMode").options].forEach((option) => {
+    option.textContent = getLocalizedTeacherModeLabel(state.language, option.value);
+  });
+
+  [...getElement("questionCount").options].forEach((option) => {
+    const count = Number.parseInt(option.value, 10);
+    option.textContent = localizeQuestionCountLabel(state.language, count);
+  });
+}
+
+function renderWorkflowPresetCards() {
+  const workflowPresetGrid = getActivePresetElement();
+
+  if (!workflowPresetGrid) {
+    return;
+  }
+
+  workflowPresetGrid.innerHTML = Object.entries(WORKFLOW_PRESETS).map(([presetId, preset]) => {
+    const localizedPreset = getLocalizedPresetContent(state.language, presetId, preset);
+
+    return `
+      <button type="button" class="workflow-preset-card" data-workflow-preset="${presetId}">
+        <strong>${localizedPreset.label}</strong>
+        <span>${localizedPreset.description}</span>
+      </button>
+    `;
+  }).join("");
+
+  updateWorkflowPresetUI();
+}
+
+function renderExamplePromptChips() {
+  const promptList = document.querySelector(".example-prompts-list");
+
+  if (!promptList) {
+    return;
+  }
+
+  const prompts = getLocalizedPromptExamples(state.language);
+  promptList.innerHTML = prompts
+    .map((prompt) => `<button type="button" class="example-prompt-chip" data-example-prompt="${prompt}">${prompt}</button>`)
+    .join("");
+
+  const promptTipExample = getElement("promptTipExampleValue");
+  if (promptTipExample) {
+    promptTipExample.textContent = prompts[2] || prompts[0] || "";
+  }
+}
+
+function updateLocalizedDemoTriggers() {
+  const demoPreset = getLocalizedDemoPreset(state.language);
+  const demoButtons = document.querySelectorAll("[data-demo-prompt]");
+
+  demoButtons.forEach((buttonElement) => {
+    buttonElement.dataset.demoPrompt = demoPreset.prompt;
+    buttonElement.dataset.demoTemplate = demoPreset.templateId;
+    buttonElement.dataset.demoMode = demoPreset.teacherMode;
+  });
+}
+
+function updateLanguageSelector() {
+  const languageSelect = getLanguageSelect();
+
+  if (languageSelect) {
+    languageSelect.value = state.language;
+  }
+}
+
+function getNormalizedPromptText(promptText = getPromptValue()) {
+  return normalizeLocalizedPrompt(promptText, state.language);
+}
+
+function applyLanguageUI() {
+  applyStaticTranslations();
+  updateSelectOptionLabels();
+  updateLanguageSelector();
+  renderWorkflowPresetCards();
+  renderExamplePromptChips();
+  updateLocalizedDemoTriggers();
+}
+
+function setLanguage(language, options = {}) {
+  const {
+    persist = true,
+    refresh = true
+  } = options;
+  const nextLanguage = normalizeLanguage(language);
+
+  if (state.language === nextLanguage && persist) {
+    applyLanguageUI();
+    return;
+  }
+
+  state.language = nextLanguage;
+
+  if (persist) {
+    persistLanguagePreference(nextLanguage);
+  }
+
+  applyLanguageUI();
+
+  if (refresh) {
+    updateActiveTemplateIndicator();
+    updateWorkflowSmartSummary();
+    renderSavedProjectsList();
+    renderDashboardSection();
+    syncPreview();
+  }
+}
+
 function capitalizeWords(text = "") {
   return String(text)
     .split(/[\s-]+/)
@@ -308,56 +482,23 @@ function capitalizeWords(text = "") {
 }
 
 function formatGeneratedAtLabel(dateValue) {
-  const date = new Date(dateValue || Date.now());
-
-  if (Number.isNaN(date.getTime())) {
-    return "Generated today";
-  }
-
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  return localizeGeneratedAtLabel(state.language, dateValue);
 }
 
 function getWorksheetTitle(type) {
-  const titles = {
-    math: "Math Worksheet",
-    grammar: "Grammar Worksheet",
-    reading: "Reading Worksheet",
-    tracing: "Tracing Practice",
-    coloring: "Coloring Activity"
-  };
-
-  return titles[type] || "Worksheet";
+  return getLocalizedWorksheetTitle(state.language, type);
 }
 
 function getSubjectLabel(request) {
-  return request.type === "math" ? "Math" : capitalizeWords(request.subject);
+  return getLocalizedSubjectLabel(state.language, request);
 }
 
 function getFocusLabel(request) {
-  const topicLabel = request.focusPattern === "mental-math"
-    ? "Mental Math"
-    : capitalizeWords(request.topic);
-  const mathLayoutLabel = request.type === "math" && request.layoutMode
-    ? `${capitalizeWords(request.layoutMode)} ${topicLabel}`
-    : topicLabel;
-
-  if (request.type === "tracing" || request.type === "coloring") {
-    return topicLabel;
-  }
-
-  return request.difficulty
-    ? `${mathLayoutLabel} - ${capitalizeWords(request.difficulty)}`
-    : mathLayoutLabel;
+  return getLocalizedFocusLabel(state.language, request);
 }
 
 function getWorksheetModeLabel(request) {
-  return buildWorksheetModeLabel(request);
+  return getLocalizedWorksheetModeLabel(state.language, request, buildWorksheetModeLabel(request));
 }
 
 function getWorksheetSubtitle(request) {
@@ -379,7 +520,7 @@ function getWorksheetTrustSignals(request) {
     signals.push("Teacher mode active");
   }
 
-  return signals;
+  return localizeTrustSignals(state.language, signals);
 }
 
 function ensureSelectOption(selectElement, value, label) {
@@ -564,27 +705,39 @@ function buildPresetPrompt(presetId, context = {}) {
   });
 
   if (preset.focusPattern === "mental-math") {
-    return `mental math fast review grade ${gradeNumber}`;
+    return state.language === "fr"
+      ? `calcul mental CE${Math.max(1, gradeNumber - 1)}`
+      : `mental math fast review grade ${gradeNumber}`;
   }
 
   if (presetId === "assessment") {
     const layoutPrefix = preset.preferVertical ? "vertical " : "";
-    return `grade ${gradeNumber} assessment ${layoutPrefix}${operation} ${smartProfile.questionCount} questions`;
+    return state.language === "fr"
+      ? `évaluation ${operation} ${preset.preferVertical ? "verticale " : ""}${getLocalizedGradeLabel("fr", `Grade ${gradeNumber}`)}`
+      : `grade ${gradeNumber} assessment ${layoutPrefix}${operation} ${smartProfile.questionCount} questions`;
   }
 
   if (presetId === "quick-review") {
-    return `grade ${gradeNumber} mixed review worksheet`;
+    return state.language === "fr"
+      ? `fiche de révision ${getLocalizedGradeLabel("fr", `Grade ${gradeNumber}`)}`
+      : `grade ${gradeNumber} mixed review worksheet`;
   }
 
   if (presetId === "remediation") {
-    return `grade ${gradeNumber} remediation ${operation} worksheet`;
+    return state.language === "fr"
+      ? `remédiation ${operation} ${getLocalizedGradeLabel("fr", `Grade ${gradeNumber}`)}`
+      : `grade ${gradeNumber} remediation ${operation} worksheet`;
   }
 
   if (presetId === "homework") {
-    return `grade ${gradeNumber} ${operation} homework ${smartProfile.questionCount} questions`;
+    return state.language === "fr"
+      ? `${operation} devoir ${getLocalizedGradeLabel("fr", `Grade ${gradeNumber}`)}`
+      : `grade ${gradeNumber} ${operation} homework ${smartProfile.questionCount} questions`;
   }
 
-  return `grade ${gradeNumber} ${operation} practice ${smartProfile.questionCount} questions`;
+  return state.language === "fr"
+    ? `${operation} ${getLocalizedGradeLabel("fr", `Grade ${gradeNumber}`)}`
+    : `grade ${gradeNumber} ${operation} practice ${smartProfile.questionCount} questions`;
 }
 
 function waitForPaint() {
@@ -636,10 +789,10 @@ function reopenOnboarding() {
 }
 
 function loadOnboardingExamplePrompt() {
-  getElement("promptInput").value = ONBOARDING_EXAMPLE_PROMPT;
+  getElement("promptInput").value = getLocalizedOnboardingExamplePrompt(state.language);
   state.activePresetId = null;
   updateWorkflowSmartSummary();
-  setStatusMessage("Example prompt loaded. Generate it now or adjust the settings first.", "success");
+  setStatusMessage(t(state.language, "onboardingExampleLoaded"), "success");
   getElement("promptInput").focus();
 }
 
@@ -695,7 +848,7 @@ function refreshWorksheetPreviewState() {
 }
 
 function getPromptInputGuidance() {
-  return "Try a prompt like: grade 2 addition practice 20 questions";
+  return t(state.language, "promptGuidance");
 }
 
 function updateWorkflowPresetUI() {
@@ -719,9 +872,10 @@ function updateWorkflowSmartSummary() {
 
   const formValues = getFormValues();
   const promptText = getPromptValue();
-  const hasPrompt = promptText && hasRecognizedWorksheetPrompt(promptText);
+  const normalizedPromptText = getNormalizedPromptText(promptText);
+  const hasPrompt = normalizedPromptText && hasRecognizedWorksheetPrompt(normalizedPromptText);
   const parsedPrompt = hasPrompt
-    ? { ...getSmartPromptDefaults(), ...parseWorksheetPrompt(promptText) }
+    ? { ...getSmartPromptDefaults(), ...parseWorksheetPrompt(normalizedPromptText) }
     : null;
   const activeTeacherMode = parsedPrompt?.teacherMode || formValues.teacherMode || "practice";
   const activeOperation = parsedPrompt?.type === "math"
@@ -735,22 +889,31 @@ function updateWorkflowSmartSummary() {
     promptText
   });
   const activePreset = state.activePresetId ? WORKFLOW_PRESETS[state.activePresetId] : null;
-  const teacherModeLabel = capitalizeWords(activeTeacherMode.replace("-", " "));
+  const teacherModeLabel = getLocalizedTeacherModeLabel(state.language, activeTeacherMode);
+  const activePresetContent = activePreset
+    ? getLocalizedPresetContent(state.language, state.activePresetId, activePreset)
+    : null;
+  const summaryBody = activePresetContent
+    ? activePresetContent.description
+    : `${teacherModeLabel} · ${getLocalizedDifficultyLabel(state.language, formValues.difficulty)} · ${localizeQuestionCountLabel(state.language, formValues.questionCount)}`;
+  const summaryHint = state.language === "fr"
+    ? "Les réglages intelligents s’adaptent au niveau, au mode et au type d’activité."
+    : "Smart defaults adapt the worksheet to the selected grade, mode, and activity type.";
 
   summaryElement.innerHTML = `
     <div class="workflow-smart-topline">
-      <span class="workflow-smart-badge">${activePreset ? "Active Preset" : "Smart Defaults"}</span>
-      <strong>${activePreset ? activePreset.label : `${teacherModeLabel} workflow`}</strong>
+      <span class="workflow-smart-badge">${activePreset ? t(state.language, "activePreset") : t(state.language, "smartDefaults")}</span>
+      <strong>${activePresetContent ? activePresetContent.label : t(state.language, "workflow", { label: teacherModeLabel })}</strong>
     </div>
-    <p>${activePreset ? activePreset.description : smartProfile.summary}</p>
+    <p>${summaryBody}</p>
     <div class="workflow-smart-chips">
-      <span>${formValues.grade}</span>
+      <span>${getLocalizedGradeLabel(state.language, formValues.grade)}</span>
       <span>${teacherModeLabel}</span>
-      <span>${capitalizeWords(formValues.difficulty)}</span>
-      <span>${formValues.questionCount} questions</span>
+      <span>${getLocalizedDifficultyLabel(state.language, formValues.difficulty)}</span>
+      <span>${localizeQuestionCountLabel(state.language, formValues.questionCount)}</span>
       <span>${state.template.name}</span>
     </div>
-    <small>${smartProfile.hint}</small>
+    <small>${summaryHint}</small>
   `;
   updateWorkflowPresetUI();
 }
@@ -822,11 +985,11 @@ function applySmartTeacherDefaults(options = {}) {
     }
 
     if (force || !state.manualOverrides.questionCount) {
-      ensureSelectOption(
-        getElement("questionCount"),
-        smartProfile.questionCount,
-        `${smartProfile.questionCount} Questions`
-      );
+    ensureSelectOption(
+      getElement("questionCount"),
+      smartProfile.questionCount,
+      localizeQuestionCountLabel(state.language, smartProfile.questionCount)
+    );
 
       if (getElement("questionCount").value !== String(smartProfile.questionCount)) {
         getElement("questionCount").value = String(smartProfile.questionCount);
@@ -889,7 +1052,8 @@ async function applyWorkflowPreset(presetId, options = {}) {
   });
   persistSettings({ activePresetId: presetId });
   updateWorkflowSmartSummary();
-  setStatusMessage(`${preset.label} preset applied. Generate now or adjust the details first.`, "success");
+  const localizedPreset = getLocalizedPresetContent(state.language, presetId, preset);
+  setStatusMessage(t(state.language, "presetApplied", { label: localizedPreset.label }), "success");
 
   if (options.generate) {
     await generateWorksheet();
@@ -942,7 +1106,7 @@ async function runDemoPreset(demoPreset) {
 
   applyDemoPresetToInterface(demoPreset);
   getElement("app").scrollIntoView({ behavior: "smooth", block: "start" });
-  setStatusMessage("Loading a demo worksheet preset for preview...", "loading");
+  setStatusMessage(t(state.language, "loadingDemo"), "loading");
   await waitForPaint();
   await generateWorksheet();
 }
@@ -952,14 +1116,14 @@ function setGeneratingState(isGenerating) {
   getGenerateButton().disabled = isGenerating;
   getPromptGenerateButton().disabled = isGenerating;
   getSaveProjectButton().disabled = isGenerating;
-  getGenerateButton().textContent = isGenerating ? "Generating..." : "Generate Worksheet";
+  getGenerateButton().textContent = isGenerating ? t(state.language, "generating") : t(state.language, "generateWorksheet");
 }
 
 function updatePreviewControls() {
   const totalPages = Math.max(1, state.pagination.totalPages || 1);
   const currentPage = Math.min(Math.max(1, state.pagination.currentPage || 1), totalPages);
 
-  getPreviewPageIndicator().textContent = `Page ${currentPage} of ${totalPages}`;
+  getPreviewPageIndicator().textContent = t(state.language, "pageLabel", { current: currentPage, total: totalPages });
   getPreviewPreviousButton().disabled = state.currentQuestions.length === 0 || currentPage <= 1;
   getPreviewNextButton().disabled = state.currentQuestions.length === 0 || currentPage >= totalPages;
 }
@@ -1008,7 +1172,7 @@ function getCurrentWorksheetBreakdown(showAnswerKey = state.currentWorksheetMeta
     formValues,
     fallbackRequest,
     state.currentWorksheetMeta?.worksheetTitle || null,
-    buildWorksheetInstruction(fallbackRequest)
+    localizeDefaultWorksheetInstruction(state.language, fallbackRequest) || buildWorksheetInstruction(fallbackRequest)
   );
 
   return getWorksheetPageBreakdown({
@@ -1024,7 +1188,8 @@ function getCurrentWorksheetBreakdown(showAnswerKey = state.currentWorksheetMeta
       worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || getWorksheetModeLabel(fallbackRequest),
       worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || identity.worksheetTitle,
       identity,
-      requestType: fallbackRequest.type || "math"
+      requestType: fallbackRequest.type || "math",
+      language: state.language
     }
   });
 }
@@ -1068,7 +1233,7 @@ function updateActiveTemplateIndicator() {
   const indicator = getActiveTemplateIndicator();
 
   indicator.innerHTML = `
-    <span class="active-template-badge">Active Template</span>
+    <span class="active-template-badge">${t(state.language, "activeTemplate")}</span>
     <strong>${state.template.name}</strong>
     <span>${state.template.description}</span>
   `;
@@ -1088,7 +1253,7 @@ function applyParsedPromptSettings(parsedPrompt, options = {}) {
     }
 
     getElement("difficulty").value = parsedPrompt.difficulty;
-    ensureSelectOption(getElement("questionCount"), parsedPrompt.count, `${parsedPrompt.count} Questions`);
+    ensureSelectOption(getElement("questionCount"), parsedPrompt.count, localizeQuestionCountLabel(state.language, parsedPrompt.count));
     getElement("questionCount").value = String(parsedPrompt.count);
     getElement("teacherMode").value = parsedPrompt.teacherMode || "practice";
   });
@@ -1107,14 +1272,15 @@ function applyParsedPromptSettings(parsedPrompt, options = {}) {
 
 function getWorksheetRequest() {
   const promptValue = getPromptValue();
+  const normalizedPromptValue = getNormalizedPromptText(promptValue);
   const selectedTemplateId = getSelectedTemplateId();
   const formValues = getFormValues();
 
-  if (promptValue && hasRecognizedWorksheetPrompt(promptValue)) {
-    const promptExplicitness = getPromptExplicitness(promptValue);
+  if (normalizedPromptValue && hasRecognizedWorksheetPrompt(normalizedPromptValue)) {
+    const promptExplicitness = getPromptExplicitness(normalizedPromptValue);
     const parsedPrompt = {
       ...getSmartPromptDefaults(),
-      ...parseWorksheetPrompt(promptValue)
+      ...parseWorksheetPrompt(normalizedPromptValue)
     };
     const smartProfile = getSmartDefaultProfile({
       grade: promptExplicitness.grade ? parsedPrompt.grade : formValues.grade,
@@ -1123,7 +1289,7 @@ function getWorksheetRequest() {
         : parsedPrompt.topic,
       teacherMode: promptExplicitness.teacherMode ? parsedPrompt.teacherMode : formValues.teacherMode,
       focusPattern: parsedPrompt.focusPattern,
-      promptText: promptValue
+      promptText: normalizedPromptValue
     });
     const resolvedRequest = {
       ...parsedPrompt,
@@ -1163,7 +1329,10 @@ function getWorksheetRequest() {
 function getWorksheetMeta(request, generatorResult) {
   const formValues = getFormValues();
   const defaultTitle = getWorksheetTitle(request.type);
-  const smartInstructions = generatorResult.instructions || buildWorksheetInstruction(request);
+  const smartInstructions = formValues.instructions
+    || localizeDefaultWorksheetInstruction(state.language, request)
+    || generatorResult.instructions
+    || buildWorksheetInstruction(request);
   const worksheetModeLabel = getWorksheetModeLabel(request);
 
   return {
@@ -1172,7 +1341,7 @@ function getWorksheetMeta(request, generatorResult) {
     focusLabel: getFocusLabel(request),
     worksheetSubtitle: getWorksheetSubtitle(request),
     worksheetModeLabel,
-    difficultyLabel: request?.difficulty ? capitalizeWords(request.difficulty) : "",
+    difficultyLabel: request?.difficulty ? getLocalizedDifficultyLabel(state.language, request.difficulty) : "",
     generatedAtLabel: formatGeneratedAtLabel(state.lastGeneratedAt),
     trustSignals: getWorksheetTrustSignals(request),
     showAnswerKey: generatorResult.showAnswerKey !== false,
@@ -1212,6 +1381,7 @@ function renderDashboardSection() {
   dashboardContainer.innerHTML = renderDashboard({
     user: state.currentUser,
     projects: state.savedProjects,
+    language: state.language,
     currentWorksheetSummary: state.currentQuestions.length > 0
       ? {
         title: state.currentProject?.prompt || state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
@@ -1252,7 +1422,7 @@ function loadProjectIntoInterface(project) {
     ensureSelectOption(
       getElement("questionCount"),
       project.settings.questionCount,
-      `${project.settings.questionCount} Questions`
+      localizeQuestionCountLabel(state.language, project.settings.questionCount)
     );
     getElement("questionCount").value = String(project.settings.questionCount);
     getElement("template").value = project.template;
@@ -1276,10 +1446,10 @@ function getRequestFromProject(project) {
     };
   }
 
-  if (project.prompt && hasRecognizedWorksheetPrompt(project.prompt)) {
+  if (project.prompt && hasRecognizedWorksheetPrompt(getNormalizedPromptText(project.prompt))) {
     return {
       ...getSmartPromptDefaults(),
-      ...parseWorksheetPrompt(project.prompt),
+      ...parseWorksheetPrompt(getNormalizedPromptText(project.prompt)),
       template: project.template || getDefaultTemplate().id
     };
   }
@@ -1322,13 +1492,14 @@ function persistCurrentWorksheet() {
 function renderSavedProjectsList() {
   getSavedProjectsListElement().innerHTML = renderSavedProjects(
     state.savedProjects,
-    state.currentProject?.id || null
+    state.currentProject?.id || null,
+    state.language
   );
 }
 
 function syncPreview() {
   if (state.currentQuestions.length === 0) {
-    renderEmptyWorksheet(getWorksheetElement(), state.template);
+    renderEmptyWorksheet(getWorksheetElement(), state.template, state.language);
     applyPreviewState();
     refreshOnboardingUI();
     updateActiveTemplateIndicator();
@@ -1375,7 +1546,7 @@ function syncPreview() {
     showAnswerKey,
     pageKind: isAnswerPage ? "answer-key" : "questions",
     worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || "",
-    difficultyLabel: state.currentWorksheetMeta?.difficultyLabel || capitalizeWords(state.currentRequest?.difficulty || ""),
+    difficultyLabel: state.currentWorksheetMeta?.difficultyLabel || getLocalizedDifficultyLabel(state.language, state.currentRequest?.difficulty || "medium"),
     generatedAtLabel: state.currentWorksheetMeta?.generatedAtLabel || formatGeneratedAtLabel(state.lastGeneratedAt),
     trustSignals: state.currentWorksheetMeta?.trustSignals || getWorksheetTrustSignals(state.currentRequest),
     worksheetSections: state.currentWorksheetMeta?.sections || [],
@@ -1383,10 +1554,11 @@ function syncPreview() {
       formValues,
       state.currentRequest,
       null,
-      buildWorksheetInstruction(state.currentRequest || {})
+      localizeDefaultWorksheetInstruction(state.language, state.currentRequest || {}) || buildWorksheetInstruction(state.currentRequest || {})
     ),
     requestType: state.currentRequest?.type || "math",
-    templateDescription: state.currentWorksheetMeta?.templateDescription || state.template.description
+    templateDescription: state.currentWorksheetMeta?.templateDescription || state.template.description,
+    language: state.language
   });
 
   applyPreviewState();
@@ -1425,10 +1597,10 @@ function applyStoredWorksheet(savedWorksheet) {
   state.lastGeneratedAt = worksheetProject?.generatedAt || worksheetProject?.createdAt || null;
   state.currentRequest = worksheetProject
     ? getRequestFromProject(worksheetProject)
-    : (savedWorksheet.prompt && hasRecognizedWorksheetPrompt(savedWorksheet.prompt)
+    : (savedWorksheet.prompt && hasRecognizedWorksheetPrompt(getNormalizedPromptText(savedWorksheet.prompt))
       ? {
         ...getSmartPromptDefaults(),
-        ...parseWorksheetPrompt(savedWorksheet.prompt),
+        ...parseWorksheetPrompt(getNormalizedPromptText(savedWorksheet.prompt)),
         template: savedWorksheet.templateId || state.template.id
       }
       : buildMathRequestFromFormValues(getFormValues()));
@@ -1480,16 +1652,16 @@ async function generateWorksheet() {
 
   try {
     setGeneratingState(true);
-    setStatusMessage("Analyzing your prompt and worksheet settings...", "loading");
+    setStatusMessage(t(state.language, "loadingAnalyze"), "loading");
     await waitForPaint();
     const worksheetRequest = getWorksheetRequest();
-    setStatusMessage("Building sections, answer key, and printable pages...", "loading");
+    setStatusMessage(t(state.language, "loadingBuild"), "loading");
     await waitForPaint();
     buildWorksheetFromRequest(worksheetRequest);
-    setStatusMessage("Worksheet ready for preview and printing.", "success");
+    setStatusMessage(t(state.language, "worksheetReady"), "success");
   } catch (error) {
     console.error(error);
-    setStatusMessage("We couldn't generate the worksheet. Please simplify your prompt or try another example.", "error");
+    setStatusMessage(t(state.language, "generateFailed"), "error");
   } finally {
     setGeneratingState(false);
   }
@@ -1513,22 +1685,23 @@ async function applyPrompt() {
   }
 
   const promptText = getPromptValue();
+  const normalizedPromptText = getNormalizedPromptText(promptText);
 
   if (!promptText) {
-    setStatusMessage("Start with a short prompt or choose a preset first.", "error");
+    setStatusMessage(t(state.language, "promptRequired"), "error");
     getElement("promptInput").focus();
     return;
   }
 
-  if (!hasRecognizedWorksheetPrompt(promptText)) {
-    setStatusMessage(`We couldn't read that prompt yet. ${getPromptInputGuidance()}`, "error");
+  if (!hasRecognizedWorksheetPrompt(normalizedPromptText)) {
+    setStatusMessage(t(state.language, "promptUnreadable", { guidance: getPromptInputGuidance() }), "error");
     getElement("promptInput").focus();
     return;
   }
 
   const parsedPrompt = {
     ...getSmartPromptDefaults(),
-    ...parseWorksheetPrompt(promptText)
+    ...parseWorksheetPrompt(normalizedPromptText)
   };
 
   applyParsedPromptSettings(parsedPrompt);
@@ -1563,7 +1736,7 @@ function loadProject(projectId) {
   renderSavedProjectsList();
   persistSettings();
   persistCurrentWorksheet();
-  setStatusMessage("Saved project loaded.", "success");
+  setStatusMessage(t(state.language, "savedProjectLoaded"), "success");
 }
 
 function saveCurrentProject() {
@@ -1572,7 +1745,7 @@ function saveCurrentProject() {
   }
 
   if (state.currentQuestions.length === 0) {
-    setStatusMessage("Generate a worksheet first, then save it as a project.", "error");
+    setStatusMessage(t(state.language, "generateBeforeSave"), "error");
     return;
   }
 
@@ -1583,7 +1756,7 @@ function saveCurrentProject() {
   renderSavedProjectsList();
   renderDashboardSection();
   persistCurrentWorksheet();
-  setStatusMessage("Project saved locally.", "success");
+  setStatusMessage(t(state.language, "projectSaved"), "success");
 }
 
 function removeProject(projectId) {
@@ -1599,12 +1772,12 @@ function removeProject(projectId) {
 
   renderSavedProjectsList();
   renderDashboardSection();
-  setStatusMessage("Project deleted.", "success");
+  setStatusMessage(t(state.language, "projectDeleted"), "success");
 }
 
 function downloadPDF() {
   if (state.currentQuestions.length === 0) {
-    setStatusMessage("Generate a worksheet first, then download the printable PDF.", "error");
+    setStatusMessage(t(state.language, "generateBeforePdf"), "error");
     return;
   }
 
@@ -1618,15 +1791,16 @@ function downloadPDF() {
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
     worksheetSubtitle: state.currentWorksheetMeta?.worksheetSubtitle || getWorksheetSubtitle(state.currentRequest),
     worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || "",
-    difficultyLabel: state.currentWorksheetMeta?.difficultyLabel || capitalizeWords(state.currentRequest?.difficulty || ""),
+    difficultyLabel: state.currentWorksheetMeta?.difficultyLabel || getLocalizedDifficultyLabel(state.language, state.currentRequest?.difficulty || "medium"),
     generatedAtLabel: state.currentWorksheetMeta?.generatedAtLabel || formatGeneratedAtLabel(state.lastGeneratedAt),
     trustSignals: state.currentWorksheetMeta?.trustSignals || getWorksheetTrustSignals(state.currentRequest),
     showAnswerKey: state.currentWorksheetMeta?.showAnswerKey !== false,
+    language: state.language,
     identity: state.currentWorksheetMeta?.identity || getResolvedWorksheetIdentity(
       getFormValues(),
       state.currentRequest,
       null,
-      buildWorksheetInstruction(state.currentRequest || {})
+      localizeDefaultWorksheetInstruction(state.language, state.currentRequest || {}) || buildWorksheetInstruction(state.currentRequest || {})
     )
   });
 }
@@ -1763,7 +1937,7 @@ function bindFormPersistence() {
     getElement("promptInput").value = examplePrompt;
     state.activePresetId = null;
     updateWorkflowSmartSummary();
-    setStatusMessage("Example prompt loaded. Generate it now or adjust the teacher mode first.", "success");
+    setStatusMessage(t(state.language, "promptLoadedAdjustMode"), "success");
   });
 
   const workflowPresetGrid = getActivePresetElement();
@@ -1804,7 +1978,7 @@ function bindFormPersistence() {
   const onboardingDemoButton = getOnboardingDemoButton();
   if (onboardingDemoButton) {
     onboardingDemoButton.addEventListener("click", async (event) => {
-      const demoPreset = getDemoPresetFromTrigger(event.target) || ONBOARDING_DEMO_PRESET;
+      const demoPreset = getDemoPresetFromTrigger(event.target) || getLocalizedDemoPreset(state.language);
       await runDemoPreset(demoPreset);
     });
   }
@@ -1820,7 +1994,7 @@ function bindFormPersistence() {
   if (dismissOnboardingButton) {
     dismissOnboardingButton.addEventListener("click", () => {
       dismissOnboarding();
-      setStatusMessage("Quick guide dismissed. You can reopen it anytime from Worksheet Settings.", "success");
+      setStatusMessage(t(state.language, "quickGuideDismissed"), "success");
     });
   }
 
@@ -1842,7 +2016,7 @@ function bindFormPersistence() {
     const action = trigger.dataset.emptyAction;
 
     if (action === "demo") {
-      const demoPreset = getDemoPresetFromTrigger(trigger) || ONBOARDING_DEMO_PRESET;
+      const demoPreset = getDemoPresetFromTrigger(trigger) || getLocalizedDemoPreset(state.language);
       await runDemoPreset(demoPreset);
       return;
     }
@@ -1870,6 +2044,13 @@ function bindFormPersistence() {
       removeProject(deleteProjectId);
     }
   });
+
+  const languageSelect = getLanguageSelect();
+  if (languageSelect) {
+    languageSelect.addEventListener("change", (event) => {
+      setLanguage(event.target.value);
+    });
+  }
 }
 
 function populateTemplateOptions() {
@@ -1882,8 +2063,10 @@ function populateTemplateOptions() {
 }
 
 async function init() {
+  state.language = loadLanguagePreference();
   state.onboarding = readOnboardingState();
   populateTemplateOptions();
+  applyLanguageUI();
   hydrateSettings();
   bindFormPersistence();
   await authController.init();
@@ -1903,5 +2086,5 @@ window.saveCurrentProject = saveCurrentProject;
 
 init().catch((error) => {
   console.error(error);
-  setStatusMessage("App initialization failed.", "error");
+  setStatusMessage(t(state.language, "initFailed"), "error");
 });

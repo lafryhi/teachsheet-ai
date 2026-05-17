@@ -20,14 +20,15 @@ import {
   shouldShowTeacherNotes
 } from "./worksheetPresentation.js";
 import { getTemplatePresentation } from "../templates/templates.js";
+import { normalizeLanguage, t } from "../ui/language.js";
 
 function questionHasInlineAnswerSpace(question) {
   return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
 }
 
-function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel }) {
+function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language = "en" }) {
   if (pageKind === "answer-key") {
-    return "Use this answer sheet for checking and classroom correction.";
+    return t(language, "answerSheetIntro");
   }
 
   if (identity.instructions) {
@@ -35,8 +36,10 @@ function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focus
   }
 
   return worksheetModeLabel && focusLabel
-    ? `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`
-    : "Read each question carefully and keep your work neat.";
+    ? (normalizeLanguage(language) === "fr"
+      ? `${worksheetModeLabel} centré sur ${focusLabel}. Lis chaque question avec attention et montre clairement ton travail si besoin.`
+      : `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`)
+    : t(language, "worksheetIntroFallback");
 }
 
 function normalizeWhitespace(value = "") {
@@ -77,7 +80,8 @@ function measureEstimatedHeaderHeight({
   margins,
   pageWidth,
   pageKind,
-  currentPage = 1
+  currentPage = 1,
+  language = "en"
 }) {
   const headerMetrics = pageKind === "answer-key"
     ? getAnswerSheetHeaderMetrics(metrics)
@@ -96,7 +100,7 @@ function measureEstimatedHeaderHeight({
       headerMetrics.titleSubtitleFontSize
     )
     : 0;
-  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
+  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language });
   const introLines = identity.instructions || pageKind === "answer-key"
     ? estimateWrappedLineCount(
       introText,
@@ -345,7 +349,8 @@ function buildEstimatedBreakdown({
     margins,
     pageWidth,
     pageKind: "questions",
-    currentPage: 1
+    currentPage: 1,
+    language: normalizeLanguage(layoutContext.language || "en")
   });
   const baseQuestionUsableHeight = Math.max(0, questionContentBottom - (margins.top + baseQuestionHeaderHeight));
   const initialQuestionRows = buildEstimatedQuestionRows(safeQuestions, presentation, baseMetrics, initialColumnWidth);
@@ -372,7 +377,8 @@ function buildEstimatedBreakdown({
     margins,
     pageWidth,
     pageKind: "questions",
-    currentPage: 1
+    currentPage: 1,
+    language: normalizeLanguage(layoutContext.language || "en")
   });
   const answerHeaderHeight = measureEstimatedHeaderHeight({
     identity: resolvedIdentity,
@@ -384,7 +390,8 @@ function buildEstimatedBreakdown({
     margins,
     pageWidth,
     pageKind: "answer-key",
-    currentPage: 1
+    currentPage: 1,
+    language: normalizeLanguage(layoutContext.language || "en")
   });
   const questionUsableHeight = Math.max(0, questionContentBottom - (margins.top + questionHeaderHeight));
   const answerUsableHeight = Math.max(0, questionContentBottom - (margins.top + answerHeaderHeight));

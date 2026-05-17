@@ -1,0 +1,705 @@
+const LANGUAGE_STORAGE_KEY = "teachsheet-ai-language";
+
+export const DEFAULT_LANGUAGE = "en";
+
+export const SUPPORTED_LANGUAGES = ["en", "fr"];
+
+const UI_TRANSLATIONS = {
+  en: {
+    languageLabel: "Language",
+    worksheetSettings: "Worksheet Settings",
+    worksheetSettingsIntro: "Start with a preset or a short prompt, then fine-tune only if you need to.",
+    showQuickGuide: "Show quick guide",
+    quickGuide: "Quick Guide",
+    quickGuideDismissed: "Quick guide dismissed. You can reopen it anytime from Worksheet Settings.",
+    onboardingStep1Title: "1. Choose a preset",
+    onboardingStep1Body: "Start with Daily Practice, Assessment, Remediation, or Mental Math to avoid manual setup.",
+    onboardingStep2Title: "2. Generate the worksheet",
+    onboardingStep2Body: "Use the preset as-is, or type a short prompt like grade 3 subtraction and generate immediately.",
+    onboardingStep3Title: "3. Review the preview",
+    onboardingStep3Body: "Check the A4 layout, sections, and answer sheet before you export anything.",
+    onboardingStep4Title: "4. Download the PDF",
+    onboardingStep4Body: "Export the printable version once the preview looks ready for class.",
+    tryDemoWorksheet: "Try a Demo Worksheet",
+    useExamplePrompt: "Use an Example Prompt",
+    quickStart: "Quick Start",
+    presetHelp: "Presets set the worksheet goal, teacher mode, template, and sensible defaults in one click.",
+    quickStartIntro: "Use one preset to set the worksheet goal, template, and sensible defaults in one step.",
+    generateFast: "Generate Fast",
+    promptHelp: "Short prompts work well. TeachSheet AI fills in missing defaults when it recognizes the grade, goal, and subject.",
+    generateFastIntro: "Type a short teacher-style prompt or use the fields below for a quick worksheet setup.",
+    promptLabel: "Prompt",
+    promptPlaceholder: "Try: grade 3 subtraction or mental math grade 2",
+    promptTipTitle: "Prompt tip:",
+    promptTipBody: "Short prompts work well. TeachSheet AI will fill missing defaults for grade, mode, and layout when possible.",
+    promptTipExample: "Example:",
+    examplePrompts: "Example Prompts",
+    examplePromptsIntro: "Use one of these classroom-ready prompts when you want a solid worksheet fast.",
+    grade: "Grade",
+    operation: "Operation",
+    teacherMode: "Teacher Mode",
+    teacherModeGoal: "Choose the worksheet goal:",
+    practiceHelp: "Practice builds fluency steadily.",
+    homeworkHelp: "Homework stays clean and independent.",
+    assessmentHelp: "Assessment checks mastery more formally.",
+    remediationHelp: "Remediation slows down and simplifies the work.",
+    fastReviewHelp: "Fast Review favors short recall and mental fluency.",
+    fineTune: "Fine tune difficulty, question count, and template",
+    difficulty: "Difficulty",
+    questionCount: "Number of Questions",
+    template: "Template",
+    optionalIdentity: "Optional worksheet identity and print details",
+    worksheetTitle: "Worksheet Title",
+    worksheetTitlePlaceholder: "e.g. Addition Practice Worksheet",
+    schoolName: "School Name",
+    schoolNamePlaceholder: "School name",
+    teacherName: "Teacher Name",
+    teacherNamePlaceholder: "Teacher name",
+    studentName: "Student Name",
+    studentNamePlaceholder: "Student name",
+    date: "Date",
+    scorePoints: "Score / Points",
+    scorePointsPlaceholder: "e.g. /20",
+    instructions: "Instructions",
+    instructionsPlaceholder: "e.g. Solve each question carefully and show your work.",
+    teacherNotes: "Teacher Notes",
+    teacherNotesPlaceholder: "Optional notes for teacher use or printing.",
+    generateAndExport: "Generate and Export",
+    exportHelp: "Generate uses the current preset, prompt, and settings. Download PDF exports the same printable A4 worksheet shown in the preview.",
+    exportIntro: "The fastest path is preset or prompt first, then generate. Save or export once the preview looks right.",
+    generateWorksheet: "Generate Worksheet",
+    generating: "Generating...",
+    generateFromPrompt: "Generate From Prompt",
+    saveProject: "Save Project",
+    downloadPdf: "Download PDF",
+    clear: "Clear",
+    actionHelpGenerate: "Generate first, then export the same A4 layout as PDF.",
+    actionHelpSave: "Save Project keeps the worksheet ready for later edits.",
+    savedProjects: "Saved Projects",
+    preview: "A4 Preview",
+    previewIntro: "Check the printable worksheet before downloading the final PDF.",
+    previewHelp: "The preview mirrors the worksheet structure, sections, and answer sheet that will be exported to PDF.",
+    previewDefaultTitle: "Math Worksheet",
+    previewDefaultBody: "Choose settings and click Generate Worksheet.",
+    previousPage: "Previous Page",
+    nextPage: "Next Page",
+    pageLabel: "Page {current} of {total}",
+    questionCountLabel: "{count} Questions",
+    promptGuidance: "Try a prompt like: grade 2 addition practice 20 questions",
+    onboardingExampleLoaded: "Example prompt loaded. Generate it now or adjust the settings first.",
+    promptLoadedAdjustMode: "Example prompt loaded. Generate it now or adjust the teacher mode first.",
+    presetApplied: "{label} preset applied. Generate now or adjust the details first.",
+    loadingDemo: "Loading a demo worksheet preset for preview...",
+    loadingAnalyze: "Analyzing your prompt and worksheet settings...",
+    loadingBuild: "Building sections, answer key, and printable pages...",
+    worksheetReady: "Worksheet ready for preview and printing.",
+    generateFailed: "We couldn't generate the worksheet. Please simplify your prompt or try another example.",
+    promptRequired: "Start with a short prompt or choose a preset first.",
+    promptUnreadable: "We couldn't read that prompt yet. {guidance}",
+    savedProjectLoaded: "Saved project loaded.",
+    generateBeforeSave: "Generate a worksheet first, then save it as a project.",
+    projectSaved: "Project saved locally.",
+    projectDeleted: "Project deleted.",
+    generateBeforePdf: "Generate a worksheet first, then download the printable PDF.",
+    initFailed: "App initialization failed.",
+    activeTemplate: "Active Template",
+    activePreset: "Active Preset",
+    smartDefaults: "Smart Defaults",
+    workflow: "{label} workflow",
+    noSavedProjects: "No saved projects yet.",
+    noSavedProjectsBody: "Generate a worksheet first, then use Save Project to keep it ready for quick edits, PDF export, or later reuse.",
+    savedAt: "Saved:",
+    savedDay: "Day:",
+    templateLabel: "Template:",
+    load: "Load",
+    delete: "Delete",
+    answerSheet: "Answer Sheet",
+    answerGroup: "Answer Group",
+    section: "Section",
+    generated: "Generated",
+    generatedBy: "Generated by TeachSheet AI",
+    name: "Name",
+    score: "Score",
+    teacher: "Teacher",
+    level: "Level",
+    subject: "Subject",
+    focus: "Focus",
+    worksheet: "Worksheet",
+    noWorksheetYet: "No worksheet generated yet.",
+    emptyWorksheetBody: "Choose a preset or type a short prompt, then generate a printable classroom-ready worksheet.",
+    emptyWorksheetHint: "Start with one preset, or write a short prompt such as grade 3 subtraction.",
+    emptyStep1: "Choose a preset or use a short prompt.",
+    emptyStep2: "Click Generate Worksheet.",
+    emptyStep3: "Review the A4 preview.",
+    emptyStep4: "Download the PDF when it looks ready.",
+    readyForPrinting: "Ready for printing",
+    optimizedA4: "Optimized for A4",
+    smartPagination: "Smart pagination enabled",
+    teacherModeActive: "Teacher mode active",
+    generatedToday: "Generated today",
+    answerSheetIntro: "Use this answer sheet for checking and classroom correction.",
+    worksheetIntroFallback: "Read each question carefully and keep your work neat.",
+    previewAnswerIntro: "Use this page as the reference key for quick checking and classroom correction.",
+    previewWorksheetIntro: "Read each question carefully, keep your work neat, and complete every answer in the space provided.",
+    writeHere: "Write here",
+    writeStudentName: "Write student name",
+    addDate: "Add date",
+    operationAddition: "Addition",
+    operationSubtraction: "Subtraction",
+    operationMultiplication: "Multiplication",
+    operationDivision: "Division",
+    operationMixed: "Mixed Operations",
+    difficultyEasy: "Easy",
+    difficultyMedium: "Medium",
+    difficultyHard: "Hard",
+    modePractice: "Practice Mode",
+    modeHomework: "Homework Mode",
+    modeAssessment: "Assessment Mode",
+    modeRemediation: "Remediation Mode",
+    modeFastReview: "Fast Review Mode",
+    subjectMath: "Math",
+    subjectGrammar: "Grammar",
+    subjectReading: "Reading",
+    subjectTracing: "Tracing",
+    subjectColoring: "Coloring",
+    worksheetTitleMath: "Math Worksheet",
+    worksheetTitleGrammar: "Grammar Worksheet",
+    worksheetTitleReading: "Reading Worksheet",
+    worksheetTitleTracing: "Tracing Practice",
+    worksheetTitleColoring: "Coloring Activity",
+    focusMentalMath: "Mental Math",
+    sectionWarmUp: "Warm Up",
+    sectionPractice: "Practice",
+    sectionChallenge: "Challenge",
+    sectionMentalMath: "Mental Math",
+    sectionReview: "Review",
+    sectionMastery: "Mastery Check",
+    sectionInstructionWarmUp: "Begin with these short questions to build confidence.",
+    sectionInstructionPractice: "Work through these questions and keep your method clear.",
+    sectionInstructionChallenge: "Finish with the most demanding questions and check your accuracy.",
+    sectionInstructionMentalMath: "Solve mentally when possible and write only the final answer.",
+    sectionInstructionReview: "Review each item carefully and use the strategy that fits best.",
+    sectionInstructionMastery: "Show full understanding here and explain tricky steps neatly if needed."
+  },
+  fr: {
+    languageLabel: "Langue",
+    worksheetSettings: "Paramètres de la fiche",
+    worksheetSettingsIntro: "Commencez avec un preset ou un prompt court, puis ajustez seulement si nécessaire.",
+    showQuickGuide: "Afficher le guide rapide",
+    quickGuide: "Guide rapide",
+    quickGuideDismissed: "Le guide rapide a été masqué. Vous pouvez le rouvrir à tout moment depuis les paramètres.",
+    onboardingStep1Title: "1. Choisir un preset",
+    onboardingStep1Body: "Commencez par Pratique quotidienne, Évaluation, Remédiation ou Calcul mental pour éviter le réglage manuel.",
+    onboardingStep2Title: "2. Générer la fiche",
+    onboardingStep2Body: "Utilisez le preset tel quel, ou saisissez un prompt court comme addition CE2 et générez immédiatement.",
+    onboardingStep3Title: "3. Vérifier l’aperçu",
+    onboardingStep3Body: "Vérifiez la mise en page A4, les sections et le corrigé avant l’export.",
+    onboardingStep4Title: "4. Télécharger le PDF",
+    onboardingStep4Body: "Exportez la version imprimable quand l’aperçu est prêt pour la classe.",
+    tryDemoWorksheet: "Essayer une fiche démo",
+    useExamplePrompt: "Utiliser un exemple",
+    quickStart: "Démarrage rapide",
+    presetHelp: "Les presets règlent l’objectif, le mode enseignant, le template et des valeurs par défaut utiles en un clic.",
+    quickStartIntro: "Utilisez un preset pour définir l’objectif, le template et des réglages utiles en une seule étape.",
+    generateFast: "Génération rapide",
+    promptHelp: "Les prompts courts fonctionnent bien. TeachSheet AI complète les valeurs manquantes quand il reconnaît le niveau, l’objectif et la matière.",
+    generateFastIntro: "Saisissez un prompt court de style enseignant ou utilisez les champs ci-dessous pour créer vite une fiche.",
+    promptLabel: "Prompt",
+    promptPlaceholder: "Exemple : calcul mental CE1 ou addition CE2",
+    promptTipTitle: "Astuce prompt :",
+    promptTipBody: "Les prompts courts fonctionnent bien. TeachSheet AI complète si possible le niveau, le mode et la mise en page.",
+    promptTipExample: "Exemple :",
+    examplePrompts: "Exemples de prompts",
+    examplePromptsIntro: "Utilisez l’un de ces prompts prêts pour la classe si vous voulez une bonne fiche rapidement.",
+    grade: "Niveau",
+    operation: "Opération",
+    teacherMode: "Mode enseignant",
+    teacherModeGoal: "Choisissez l’objectif de la fiche :",
+    practiceHelp: "Pratique développe la fluidité progressivement.",
+    homeworkHelp: "Devoir reste clair et autonome.",
+    assessmentHelp: "Évaluation vérifie la maîtrise plus formellement.",
+    remediationHelp: "Remédiation ralentit et simplifie le travail.",
+    fastReviewHelp: "Révision rapide favorise le rappel court et le calcul mental.",
+    fineTune: "Ajuster difficulté, nombre de questions et template",
+    difficulty: "Difficulté",
+    questionCount: "Nombre de questions",
+    template: "Template",
+    optionalIdentity: "Identité de la fiche et détails d’impression",
+    worksheetTitle: "Titre de la fiche",
+    worksheetTitlePlaceholder: "ex. Fiche d’addition",
+    schoolName: "École",
+    schoolNamePlaceholder: "Nom de l’école",
+    teacherName: "Enseignant",
+    teacherNamePlaceholder: "Nom de l’enseignant",
+    studentName: "Nom de l’élève",
+    studentNamePlaceholder: "Nom de l’élève",
+    date: "Date",
+    scorePoints: "Note / Points",
+    scorePointsPlaceholder: "ex. /20",
+    instructions: "Consignes",
+    instructionsPlaceholder: "ex. Résous chaque question avec soin et montre ton travail.",
+    teacherNotes: "Notes de l’enseignant",
+    teacherNotesPlaceholder: "Notes facultatives pour l’impression ou l’usage enseignant.",
+    generateAndExport: "Générer et exporter",
+    exportHelp: "Générer utilise le preset, le prompt et les paramètres actuels. Télécharger le PDF exporte la même fiche A4 que l’aperçu.",
+    exportIntro: "Le plus rapide est preset ou prompt d’abord, puis générer. Enregistrez ou exportez quand l’aperçu est correct.",
+    generateWorksheet: "Générer la fiche",
+    generating: "Génération...",
+    generateFromPrompt: "Générer depuis le prompt",
+    saveProject: "Enregistrer",
+    downloadPdf: "Télécharger le PDF",
+    clear: "Effacer",
+    actionHelpGenerate: "Générez d’abord, puis exportez la même mise en page A4 en PDF.",
+    actionHelpSave: "Enregistrer garde la fiche prête pour des modifications ultérieures.",
+    savedProjects: "Projets enregistrés",
+    preview: "Aperçu A4",
+    previewIntro: "Vérifiez la fiche imprimable avant de télécharger le PDF final.",
+    previewHelp: "L’aperçu reflète la structure, les sections et le corrigé qui seront exportés en PDF.",
+    previewDefaultTitle: "Fiche de mathématiques",
+    previewDefaultBody: "Choisissez les paramètres puis cliquez sur Générer la fiche.",
+    previousPage: "Page précédente",
+    nextPage: "Page suivante",
+    pageLabel: "Page {current} sur {total}",
+    questionCountLabel: "{count} questions",
+    promptGuidance: "Essayez un prompt comme : addition CE2",
+    onboardingExampleLoaded: "Exemple chargé. Générez maintenant ou ajustez d’abord les paramètres.",
+    promptLoadedAdjustMode: "Exemple chargé. Générez maintenant ou ajustez d’abord le mode enseignant.",
+    presetApplied: "Preset {label} appliqué. Générez maintenant ou ajustez les détails.",
+    loadingDemo: "Chargement d’une fiche démo pour l’aperçu...",
+    loadingAnalyze: "Analyse du prompt et des paramètres de la fiche...",
+    loadingBuild: "Création des sections, du corrigé et des pages imprimables...",
+    worksheetReady: "La fiche est prête pour l’aperçu et l’impression.",
+    generateFailed: "Impossible de générer la fiche. Simplifiez le prompt ou essayez un autre exemple.",
+    promptRequired: "Commencez par un prompt court ou choisissez d’abord un preset.",
+    promptUnreadable: "Ce prompt n’est pas encore compris. {guidance}",
+    savedProjectLoaded: "Projet chargé.",
+    generateBeforeSave: "Générez d’abord une fiche, puis enregistrez-la.",
+    projectSaved: "Projet enregistré localement.",
+    projectDeleted: "Projet supprimé.",
+    generateBeforePdf: "Générez d’abord une fiche, puis téléchargez le PDF imprimable.",
+    initFailed: "Échec de l’initialisation de l’application.",
+    activeTemplate: "Template actif",
+    activePreset: "Preset actif",
+    smartDefaults: "Valeurs intelligentes",
+    workflow: "Flux {label}",
+    noSavedProjects: "Aucun projet enregistré pour le moment.",
+    noSavedProjectsBody: "Générez d’abord une fiche, puis utilisez Enregistrer pour la garder prête pour des retouches, l’export PDF ou une réutilisation.",
+    savedAt: "Enregistré :",
+    savedDay: "Jour :",
+    templateLabel: "Template :",
+    load: "Charger",
+    delete: "Supprimer",
+    answerSheet: "Corrigé",
+    answerGroup: "Groupe de réponses",
+    section: "Section",
+    generated: "Créé le",
+    generatedBy: "Généré par TeachSheet AI",
+    name: "Nom",
+    score: "Note",
+    teacher: "Enseignant",
+    level: "Niveau",
+    subject: "Matière",
+    focus: "Compétence",
+    worksheet: "Fiche",
+    noWorksheetYet: "Aucune fiche générée pour le moment.",
+    emptyWorksheetBody: "Choisissez un preset ou saisissez un prompt court, puis générez une fiche prête pour la classe.",
+    emptyWorksheetHint: "Commencez par un preset, ou écrivez un prompt court comme addition CE2.",
+    emptyStep1: "Choisissez un preset ou utilisez un prompt court.",
+    emptyStep2: "Cliquez sur Générer la fiche.",
+    emptyStep3: "Vérifiez l’aperçu A4.",
+    emptyStep4: "Téléchargez le PDF quand tout est prêt.",
+    readyForPrinting: "Prêt pour l’impression",
+    optimizedA4: "Optimisé pour l’A4",
+    smartPagination: "Pagination intelligente activée",
+    teacherModeActive: "Mode enseignant actif",
+    generatedToday: "Créé aujourd’hui",
+    answerSheetIntro: "Utilisez ce corrigé pour la correction rapide en classe.",
+    worksheetIntroFallback: "Lisez chaque question avec attention et gardez un travail soigné.",
+    previewAnswerIntro: "Utilisez cette page comme corrigé de référence pour une correction rapide.",
+    previewWorksheetIntro: "Lisez chaque question avec attention, gardez un travail soigné et écrivez chaque réponse dans l’espace prévu.",
+    writeHere: "Écrire ici",
+    writeStudentName: "Nom de l’élève",
+    addDate: "Ajouter la date",
+    operationAddition: "Addition",
+    operationSubtraction: "Soustraction",
+    operationMultiplication: "Multiplication",
+    operationDivision: "Division",
+    operationMixed: "Opérations mixtes",
+    difficultyEasy: "Facile",
+    difficultyMedium: "Moyenne",
+    difficultyHard: "Difficile",
+    modePractice: "Mode pratique",
+    modeHomework: "Mode devoir",
+    modeAssessment: "Mode évaluation",
+    modeRemediation: "Mode remédiation",
+    modeFastReview: "Mode révision rapide",
+    subjectMath: "Mathématiques",
+    subjectGrammar: "Grammaire",
+    subjectReading: "Lecture",
+    subjectTracing: "Graphisme",
+    subjectColoring: "Coloriage",
+    worksheetTitleMath: "Fiche de mathématiques",
+    worksheetTitleGrammar: "Fiche de grammaire",
+    worksheetTitleReading: "Fiche de lecture",
+    worksheetTitleTracing: "Fiche de graphisme",
+    worksheetTitleColoring: "Activité de coloriage",
+    focusMentalMath: "Calcul mental",
+    sectionWarmUp: "Mise en route",
+    sectionPractice: "Exercices",
+    sectionChallenge: "Défi",
+    sectionMentalMath: "Calcul mental",
+    sectionReview: "Révision",
+    sectionMastery: "Maîtrise",
+    sectionInstructionWarmUp: "Commence par ces exercices courts pour prendre confiance.",
+    sectionInstructionPractice: "Fais ces exercices avec soin et montre clairement ta méthode.",
+    sectionInstructionChallenge: "Termine avec les questions les plus difficiles et vérifie ton exactitude.",
+    sectionInstructionMentalMath: "Calcule mentalement si possible et écris seulement la réponse.",
+    sectionInstructionReview: "Relis chaque question et utilise la bonne stratégie.",
+    sectionInstructionMastery: "Montre ici que tu maîtrises bien la compétence."
+  }
+};
+
+const GRADE_LABELS = {
+  en: {
+    "Grade 1": "Grade 1",
+    "Grade 2": "Grade 2",
+    "Grade 3": "Grade 3",
+    "Grade 4": "Grade 4",
+    "Grade 5": "Grade 5"
+  },
+  fr: {
+    "Grade 1": "CP",
+    "Grade 2": "CE1",
+    "Grade 3": "CE2",
+    "Grade 4": "CM1",
+    "Grade 5": "CM2"
+  }
+};
+
+const FRENCH_EXAMPLES = [
+  "calcul mental CE1",
+  "addition CE2",
+  "fiche de révision CM1",
+  "évaluation multiplication",
+  "exercices de grammaire CE2"
+];
+
+const ENGLISH_EXAMPLES = [
+  "grade 2 addition practice 20 questions",
+  "grade 3 remediation subtraction worksheet",
+  "grade 4 assessment vertical multiplication",
+  "grade 5 mixed review worksheet",
+  "mental math fast review grade 3"
+];
+
+const PRESET_LOCALIZATION = {
+  en: {
+    "daily-practice": { label: "Daily Practice", description: "Balanced classwork with steady progression." },
+    homework: { label: "Homework", description: "Independent follow-up that stays clear on the page." },
+    "quick-review": { label: "Quick Review", description: "Short mixed recall for warm-up or closing review." },
+    assessment: { label: "Assessment", description: "Exam-style setup for clearer mastery checks." },
+    remediation: { label: "Remediation", description: "Slower pacing with easier defaults and extra support." },
+    "mental-math-drill": { label: "Mental Math Drill", description: "Fast horizontal fluency for short review rounds." }
+  },
+  fr: {
+    "daily-practice": { label: "Pratique quotidienne", description: "Travail équilibré avec une progression régulière." },
+    homework: { label: "Devoir", description: "Suivi autonome avec une mise en page claire à imprimer." },
+    "quick-review": { label: "Révision rapide", description: "Rappel court et varié pour démarrer ou réviser vite." },
+    assessment: { label: "Évaluation", description: "Mise en page type examen pour vérifier la maîtrise." },
+    remediation: { label: "Remédiation", description: "Rythme plus simple avec des nombres plus faciles et plus d’aide." },
+    "mental-math-drill": { label: "Calcul mental", description: "Fluidité rapide en ligne pour de courtes révisions." }
+  }
+};
+
+const TRUST_SIGNAL_TRANSLATIONS = {
+  "Ready for printing": "readyForPrinting",
+  "Optimized for A4": "optimizedA4",
+  "Smart pagination enabled": "smartPagination",
+  "Teacher mode active": "teacherModeActive"
+};
+
+const SECTION_KEY_MAP = {
+  "warm-up": "sectionWarmUp",
+  practice: "sectionPractice",
+  challenge: "sectionChallenge",
+  "mental-math": "sectionMentalMath",
+  review: "sectionReview",
+  mastery: "sectionMastery"
+};
+
+export function normalizeLanguage(value = DEFAULT_LANGUAGE) {
+  return SUPPORTED_LANGUAGES.includes(value) ? value : DEFAULT_LANGUAGE;
+}
+
+export function loadLanguagePreference() {
+  try {
+    return normalizeLanguage(window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || DEFAULT_LANGUAGE);
+  } catch (error) {
+    return DEFAULT_LANGUAGE;
+  }
+}
+
+export function persistLanguagePreference(language) {
+  try {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, normalizeLanguage(language));
+  } catch (error) {
+    return;
+  }
+}
+
+export function t(language, key, replacements = {}) {
+  const resolvedLanguage = normalizeLanguage(language);
+  const template = UI_TRANSLATIONS[resolvedLanguage]?.[key]
+    || UI_TRANSLATIONS.en[key]
+    || key;
+
+  return Object.entries(replacements).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    template
+  );
+}
+
+export function getLocalizedPromptExamples(language) {
+  return normalizeLanguage(language) === "fr" ? [...FRENCH_EXAMPLES] : [...ENGLISH_EXAMPLES];
+}
+
+export function getLocalizedOnboardingExamplePrompt(language) {
+  return normalizeLanguage(language) === "fr"
+    ? "addition CE2"
+    : "grade 3 subtraction practice 15 questions";
+}
+
+export function getLocalizedDemoPreset(language) {
+  if (normalizeLanguage(language) === "fr") {
+    return {
+      prompt: "évaluation multiplication verticale CM1",
+      templateId: "exam-style",
+      teacherMode: "assessment"
+    };
+  }
+
+  return {
+    prompt: "grade 4 assessment vertical multiplication",
+    templateId: "exam-style",
+    teacherMode: "assessment"
+  };
+}
+
+export function getLocalizedPresetContent(language, presetId, fallback) {
+  const resolvedLanguage = normalizeLanguage(language);
+  const localized = PRESET_LOCALIZATION[resolvedLanguage]?.[presetId];
+  return localized || fallback;
+}
+
+export function localizeQuestionCountLabel(language, count) {
+  return t(language, "questionCountLabel", { count });
+}
+
+export function getLocalizedGradeLabel(language, grade) {
+  return GRADE_LABELS[normalizeLanguage(language)]?.[grade] || grade;
+}
+
+export function getLocalizedOperationLabel(language, operation) {
+  const mapping = {
+    addition: "operationAddition",
+    subtraction: "operationSubtraction",
+    multiplication: "operationMultiplication",
+    division: "operationDivision",
+    mixed: "operationMixed"
+  };
+  return t(language, mapping[operation] || operation);
+}
+
+export function getLocalizedDifficultyLabel(language, difficulty) {
+  const mapping = {
+    easy: "difficultyEasy",
+    medium: "difficultyMedium",
+    hard: "difficultyHard"
+  };
+  return t(language, mapping[difficulty] || difficulty);
+}
+
+export function getLocalizedTeacherModeLabel(language, mode) {
+  const mapping = {
+    practice: "modePractice",
+    homework: "modeHomework",
+    assessment: "modeAssessment",
+    remediation: "modeRemediation",
+    "fast-review": "modeFastReview"
+  };
+  return t(language, mapping[mode] || mode);
+}
+
+export function getLocalizedSubjectLabel(language, request) {
+  const type = request?.type || request?.subject || "math";
+  const mapping = {
+    math: "subjectMath",
+    grammar: "subjectGrammar",
+    reading: "subjectReading",
+    tracing: "subjectTracing",
+    coloring: "subjectColoring"
+  };
+  return t(language, mapping[type] || type);
+}
+
+export function getLocalizedWorksheetTitle(language, type = "math") {
+  const mapping = {
+    math: "worksheetTitleMath",
+    grammar: "worksheetTitleGrammar",
+    reading: "worksheetTitleReading",
+    tracing: "worksheetTitleTracing",
+    coloring: "worksheetTitleColoring"
+  };
+  return t(language, mapping[type] || "worksheet");
+}
+
+export function getLocalizedFocusLabel(language, request) {
+  if (!request) {
+    return "";
+  }
+
+  const topicLabel = request.focusPattern === "mental-math"
+    ? t(language, "focusMentalMath")
+    : getLocalizedOperationLabel(language, request.topic);
+  const layoutPrefix = request.type === "math" && request.layoutMode
+    ? `${request.layoutMode === "vertical" ? "Vertical" : "Horizontal"} `
+    : "";
+  const localizedDifficulty = request.difficulty
+    ? getLocalizedDifficultyLabel(language, request.difficulty)
+    : "";
+  const baseLabel = request.type === "tracing" || request.type === "coloring"
+    ? topicLabel
+    : `${layoutPrefix}${topicLabel}`.trim();
+
+  return localizedDifficulty ? `${baseLabel} - ${localizedDifficulty}` : baseLabel;
+}
+
+export function getLocalizedWorksheetModeLabel(language, request, fallback = "") {
+  if (!request?.type || request.type !== "math") {
+    return fallback || "";
+  }
+  return getLocalizedTeacherModeLabel(language, request.teacherMode || "practice");
+}
+
+export function localizeTrustSignals(language, trustSignals = []) {
+  return trustSignals.map((signal) => {
+    const key = TRUST_SIGNAL_TRANSLATIONS[signal];
+    return key ? t(language, key) : signal;
+  });
+}
+
+export function localizeSectionLabel(language, sectionLabel = "", sectionKey = "") {
+  const key = SECTION_KEY_MAP[sectionKey];
+  if (key) {
+    return t(language, key);
+  }
+
+  const normalizedLabel = String(sectionLabel).toLowerCase();
+  if (normalizedLabel.includes("warm")) return t(language, "sectionWarmUp");
+  if (normalizedLabel.includes("practice")) return t(language, "sectionPractice");
+  if (normalizedLabel.includes("challenge")) return t(language, "sectionChallenge");
+  if (normalizedLabel.includes("mental")) return t(language, "sectionMentalMath");
+  if (normalizedLabel.includes("review")) return t(language, "sectionReview");
+  if (normalizedLabel.includes("mastery")) return t(language, "sectionMastery");
+  return sectionLabel;
+}
+
+export function localizeSectionInstruction(language, sectionKey = "", fallback = "") {
+  const keyMap = {
+    "warm-up": "sectionInstructionWarmUp",
+    practice: "sectionInstructionPractice",
+    challenge: "sectionInstructionChallenge",
+    "mental-math": "sectionInstructionMentalMath",
+    review: "sectionInstructionReview",
+    mastery: "sectionInstructionMastery"
+  };
+  const translationKey = keyMap[sectionKey];
+  return translationKey ? t(language, translationKey) : fallback;
+}
+
+export function localizeGeneratedAtLabel(language, dateValue) {
+  const date = new Date(dateValue || Date.now());
+  if (Number.isNaN(date.getTime())) {
+    return t(language, "generatedToday");
+  }
+
+  const locale = normalizeLanguage(language) === "fr" ? "fr-FR" : undefined;
+  return date.toLocaleString(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+export function localizeDefaultWorksheetInstruction(language, request) {
+  if (request?.type !== "math") {
+    return normalizeLanguage(language) === "fr"
+      ? "Lisez chaque question avec attention et complétez chaque réponse dans l’espace prévu."
+      : "Read each question carefully and complete every answer in the space provided.";
+  }
+
+  if (request.focusPattern === "mental-math") {
+    return normalizeLanguage(language) === "fr"
+      ? "Calcule mentalement quand c’est possible et écris des réponses propres."
+      : "Complete each mental math question quickly and accurately.";
+  }
+
+  const operation = getLocalizedOperationLabel(language, request.topic).toLowerCase();
+  const layout = request.layoutMode === "vertical"
+    ? (normalizeLanguage(language) === "fr" ? "verticales" : `vertical ${operation}s`)
+    : operation;
+
+  if (normalizeLanguage(language) === "fr") {
+    return request.layoutMode === "vertical"
+      ? `Résous les ${layout} suivantes avec soin et aligne bien les chiffres.`
+      : `Résous les exercices de ${operation} suivants avec soin et montre clairement ta méthode si besoin.`;
+  }
+
+  return request.layoutMode === "vertical"
+    ? `Solve the following vertical ${operation}s carefully and line up the digits neatly.`
+    : `Solve the following ${operation} questions carefully and show clear working when needed.`;
+}
+
+export function normalizeLocalizedPrompt(promptText, language) {
+  const resolvedLanguage = normalizeLanguage(language);
+  if (resolvedLanguage !== "fr") {
+    return String(promptText || "").trim();
+  }
+
+  let normalized = ` ${String(promptText || "").toLowerCase()} `;
+  const replacements = [
+    [/\bcalcul mental\b/g, " mental math "],
+    [/\br[ée]vision rapide\b/g, " fast review "],
+    [/\bfiche de r[ée]vision\b/g, " review worksheet "],
+    [/\br[ée]vision\b/g, " review "],
+    [/\b[ée]valuation\b/g, " assessment "],
+    [/\brem[ée]diation\b/g, " remediation "],
+    [/\bexercices? de grammaire\b/g, " grammar worksheet "],
+    [/\bgrammaire\b/g, " grammar "],
+    [/\blecture\b/g, " reading "],
+    [/\bcoloriage\b/g, " coloring "],
+    [/\bgraphisme\b/g, " tracing "],
+    [/\bverticale?s?\b/g, " vertical "],
+    [/\bhorizontale?s?\b/g, " horizontal "],
+    [/\baddition\b/g, " addition "],
+    [/\bsoustraction\b/g, " subtraction "],
+    [/\bmultiplication\b/g, " multiplication "],
+    [/\bdivision\b/g, " division "],
+    [/\bdevoir\b/g, " homework "],
+    [/\bexercices?\b/g, " worksheet "],
+    [/\bfiche\b/g, " worksheet "],
+    [/\bcp\b/g, " grade 1 "],
+    [/\bce1\b/g, " grade 2 "],
+    [/\bce2\b/g, " grade 3 "],
+    [/\bcm1\b/g, " grade 4 "],
+    [/\bcm2\b/g, " grade 5 "]
+  ];
+
+  replacements.forEach(([pattern, value]) => {
+    normalized = normalized.replace(pattern, value);
+  });
+
+  return normalized.replace(/\s+/g, " ").trim();
+}

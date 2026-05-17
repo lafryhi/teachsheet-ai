@@ -26,6 +26,12 @@ import {
   shouldShowTeacherNotes
 } from "../core/worksheetPresentation.js";
 import { getTemplatePresentation } from "../templates/templates.js";
+import {
+  localizeSectionInstruction,
+  localizeSectionLabel,
+  normalizeLanguage,
+  t
+} from "../ui/language.js";
 
 const PDF_PAGE_LAYOUT = SHARED_PDF_PAGE_LAYOUT;
 const QUESTION_SECTION_HEADER_HEIGHT = SHARED_QUESTION_SECTION_HEADER_HEIGHT;
@@ -52,16 +58,22 @@ function questionHasInlineAnswerSpace(question) {
   return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
 }
 
-function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel }) {
+function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language }) {
   if (pageKind === "answer-key") {
-    return "Use this answer sheet for checking and classroom correction.";
+    return t(language, "answerSheetIntro");
   }
 
   if (identity.instructions) {
     return identity.instructions;
   }
 
-  return "Read each question carefully and keep your work neat.";
+  if (worksheetModeLabel && focusLabel) {
+    return normalizeLanguage(language) === "fr"
+      ? `${worksheetModeLabel} centré sur ${focusLabel}. Lis chaque question avec attention et montre clairement ton travail si besoin.`
+      : `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`;
+  }
+
+  return t(language, "worksheetIntroFallback");
 }
 
 function getWorksheetTheme() {
@@ -217,8 +229,10 @@ function drawSectionHeader(pdf, {
   y,
   width,
   sectionLabel,
+  sectionKey,
   worksheetTheme,
-  headerHeight = QUESTION_SECTION_HEADER_HEIGHT
+  headerHeight = QUESTION_SECTION_HEADER_HEIGHT,
+  language = "en"
 }) {
   pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);
   pdf.setLineWidth(0.35);
@@ -226,7 +240,7 @@ function drawSectionHeader(pdf, {
   pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9.1);
-  pdf.text(String(sectionLabel || "Section").toUpperCase(), x, y + Math.max(4.9, headerHeight - 1.8));
+  pdf.text(String(localizeSectionLabel(language, sectionLabel || t(language, "section"), sectionKey)).toUpperCase(), x, y + Math.max(4.9, headerHeight - 1.8));
 }
 
 function drawNotesBlock(pdf, label, value, y, margins, pageWidth, worksheetTheme, metrics) {
@@ -290,7 +304,8 @@ function measurePageHeaderHeight(pdf, {
   margins,
   pageWidth,
   pageKind,
-  currentPage = 1
+  currentPage = 1,
+  language = "en"
 }) {
   const headerMetrics = pageKind === "answer-key"
     ? getAnswerSheetHeaderMetrics(metrics)
@@ -305,7 +320,7 @@ function measurePageHeaderHeight(pdf, {
   const descriptorLines = descriptorLine
     ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
     : [];
-  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
+  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language });
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
     : [];
@@ -354,7 +369,8 @@ function drawPageHeader(pdf, {
   margins,
   pageWidth,
   pageKind,
-  currentPage = 1
+  currentPage = 1,
+  language = "en"
 }) {
   const headerMetrics = pageKind === "answer-key"
     ? getAnswerSheetHeaderMetrics(metrics)
@@ -369,16 +385,16 @@ function drawPageHeader(pdf, {
   const descriptorLines = descriptorLine
     ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
     : [];
-  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
+  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language });
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
     : [];
   const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
   const titleLines = pdf.splitTextToSize(titleText, pageWidth - margins.left - margins.right - 12);
   const identityFields = [
-    { label: "Name", value: getStudentDisplayValue(identity.studentName, "---") },
-    { label: "Date", value: identity.worksheetDate || "" },
-    { label: "Score", value: `____ / ${getScoreTarget(identity.scorePoints)}` }
+    { label: t(language, "name"), value: getStudentDisplayValue(identity.studentName, "---") },
+    { label: t(language, "date"), value: identity.worksheetDate || "" },
+    { label: t(language, "score"), value: `____ / ${getScoreTarget(identity.scorePoints)}` }
   ];
   let y = margins.top;
 
@@ -418,7 +434,7 @@ function drawPageHeader(pdf, {
 
   if (shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind })) {
     y += headerMetrics.notesTopGap;
-    y = drawNotesBlock(pdf, "Teacher Notes", identity.teacherNotes, y, margins, pageWidth, worksheetTheme, headerMetrics);
+    y = drawNotesBlock(pdf, t(language, "teacherNotes"), identity.teacherNotes, y, margins, pageWidth, worksheetTheme, headerMetrics);
   }
 
   pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);
@@ -436,7 +452,8 @@ function drawPageFooter(pdf, {
   totalPages,
   margins,
   pageWidth,
-  pageHeight
+  pageHeight,
+  language = "en"
 }) {
   const footer = getFooterMetrics(pageHeight);
 
@@ -445,8 +462,8 @@ function drawPageFooter(pdf, {
   pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
   pdf.setDrawColor(worksheetTheme.footerLine.r, worksheetTheme.footerLine.g, worksheetTheme.footerLine.b);
   pdf.line(margins.left, footer.lineY, pageWidth - margins.right, footer.lineY);
-  pdf.text("Generated by TeachSheet AI", margins.left, footer.textY);
-  pdf.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - margins.right, footer.textY, {
+  pdf.text(t(language, "generatedBy"), margins.left, footer.textY);
+  pdf.text(t(language, "pageLabel", { current: pageNumber, total: totalPages }), pageWidth - margins.right, footer.textY, {
     align: "right"
   });
 }
@@ -477,7 +494,8 @@ function drawQuestionPages(pdf, questionPages, options) {
     columnWidth,
     columnGap,
     rowGap,
-    totalPages
+    totalPages,
+    language = "en"
   } = options;
 
   questionPages.forEach((pageRows, pageIndex) => {
@@ -501,7 +519,8 @@ function drawQuestionPages(pdf, questionPages, options) {
       margins,
       pageWidth,
       pageKind: "questions",
-      currentPage: pageIndex + 1
+      currentPage: pageIndex + 1,
+      language
     });
 
     pdf.setFont(fontFamily, "normal");
@@ -516,8 +535,10 @@ function drawQuestionPages(pdf, questionPages, options) {
           y,
           width: pageWidth - margins.left - margins.right,
           sectionLabel: row.sectionLabel,
+          sectionKey: row.sectionKey,
           worksheetTheme,
-          headerHeight: sectionHeaderHeight || metrics.sectionHeaderHeight || QUESTION_SECTION_HEADER_HEIGHT
+          headerHeight: sectionHeaderHeight || metrics.sectionHeaderHeight || QUESTION_SECTION_HEADER_HEIGHT,
+          language
         });
       }
 
@@ -589,7 +610,8 @@ function drawQuestionPages(pdf, questionPages, options) {
       totalPages,
       margins,
       pageWidth,
-      pageHeight
+      pageHeight,
+      language
     });
   });
 }
@@ -677,7 +699,8 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
     pageHeight,
     totalPages,
     questionPageCount,
-    startOnCurrentPage = false
+    startOnCurrentPage = false,
+    language = "en"
   } = options;
 
   const answerGap = 3.4;
@@ -703,7 +726,8 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
       margins,
       pageWidth,
       pageKind: "answer-key",
-      currentPage: questionPageCount + pageIndex + 1
+      currentPage: questionPageCount + pageIndex + 1,
+      language
     });
 
     const widestRow = pageRows.reduce((maxColumns, row) => Math.max(maxColumns, row.items.length), 1);
@@ -725,8 +749,10 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
           y,
           width: pageWidth - margins.left - margins.right,
           sectionLabel: row.sectionLabel,
+          sectionKey: row.sectionKey,
           worksheetTheme,
-          headerHeight: sectionHeaderHeight || metrics.answerSectionHeaderHeight || ANSWER_SECTION_HEADER_HEIGHT
+          headerHeight: sectionHeaderHeight || metrics.answerSectionHeaderHeight || ANSWER_SECTION_HEADER_HEIGHT,
+          language
         });
       }
 
@@ -759,7 +785,8 @@ function drawAnswerKeyPages(pdf, answerPages, options) {
       totalPages,
       margins,
       pageWidth,
-      pageHeight
+      pageHeight,
+      language
     });
   });
 }
@@ -778,7 +805,8 @@ export function downloadWorksheetPDF({
   generatedAtLabel,
   trustSignals,
   showAnswerKey,
-  identity
+  identity,
+  language = "en"
 }) {
   const safeQuestions = Array.isArray(questions) ? questions.filter(Boolean) : [];
 
@@ -787,6 +815,7 @@ export function downloadWorksheetPDF({
   }
 
   const { jsPDF } = window.jspdf;
+  const resolvedLanguage = normalizeLanguage(language);
   const pdf = new jsPDF({
     orientation: "p",
     unit: "mm",
@@ -827,7 +856,8 @@ export function downloadWorksheetPDF({
     margins,
     pageWidth,
     pageKind: "questions",
-    currentPage: 1
+    currentPage: 1,
+    language: resolvedLanguage
   });
   const footer = getFooterMetrics(pageHeight);
   const questionContentBottom = footer.top - PDF_PAGE_LAYOUT.footerGap;
@@ -862,7 +892,8 @@ export function downloadWorksheetPDF({
     margins,
     pageWidth,
     pageKind: "questions",
-    currentPage: 1
+    currentPage: 1,
+    language: resolvedLanguage
   });
   const answerHeaderHeight = measurePageHeaderHeight(pdf, {
     identity: resolvedIdentity,
@@ -876,7 +907,8 @@ export function downloadWorksheetPDF({
     margins,
     pageWidth,
     pageKind: "answer-key",
-    currentPage: 1
+    currentPage: 1,
+    language: resolvedLanguage
   });
   const questionUsableHeight = Math.max(0, questionContentBottom - (margins.top + questionHeaderHeight));
   const answerUsableHeight = Math.max(0, questionContentBottom - (margins.top + answerHeaderHeight));
@@ -918,7 +950,8 @@ export function downloadWorksheetPDF({
     columnWidth,
     columnGap,
     rowGap,
-    totalPages
+    totalPages,
+    language: resolvedLanguage
   });
 
   if (showAnswerKey) {
@@ -940,7 +973,8 @@ export function downloadWorksheetPDF({
       pageHeight,
       totalPages,
       questionPageCount: questionPages.length,
-      startOnCurrentPage: questionPages.length === 0
+      startOnCurrentPage: questionPages.length === 0,
+      language: resolvedLanguage
     });
   }
 

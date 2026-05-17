@@ -6,6 +6,12 @@ import {
   parseCompareQuestionText,
   shouldShowTeacherNotes
 } from "../core/worksheetPresentation.js";
+import {
+  localizeSectionInstruction,
+  localizeSectionLabel,
+  normalizeLanguage,
+  t
+} from "./language.js";
 
 function escapeHtml(value = "") {
   return String(value)
@@ -24,9 +30,9 @@ function questionHasInlineAnswerSpace(question) {
   return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
 }
 
-function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel }) {
+function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language }) {
   if (pageKind === "answer-key") {
-    return "Use this page as the reference key for quick checking and classroom correction.";
+    return t(language, "previewAnswerIntro");
   }
 
   if (identity.instructions) {
@@ -34,10 +40,12 @@ function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focus
   }
 
   if (worksheetModeLabel && focusLabel) {
-    return `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`;
+    return normalizeLanguage(language) === "fr"
+      ? `${worksheetModeLabel} centré sur ${focusLabel}. Lis chaque question avec attention et montre clairement ton travail si besoin.`
+      : `${worksheetModeLabel} focused on ${focusLabel}. Read each question carefully and show clear working when needed.`;
   }
 
-  return "Read each question carefully, keep your work neat, and complete every answer in the space provided.";
+  return t(language, "previewWorksheetIntro");
 }
 
 function createHeaderFieldMarkup(label, value, placeholder = "Write here") {
@@ -51,21 +59,21 @@ function createHeaderFieldMarkup(label, value, placeholder = "Write here") {
   `;
 }
 
-function createScoreFieldMarkup(value) {
+function createScoreFieldMarkup(value, language) {
   const scoreTarget = getScoreTarget(value);
 
   return `
     <div class="worksheet-identity-field worksheet-identity-field-score">
-      <span class="worksheet-identity-label">Score</span>
+      <span class="worksheet-identity-label">${escapeHtml(t(language, "score"))}</span>
       <span class="worksheet-identity-score">
-        <span class="worksheet-identity-line" aria-hidden="true">Score line</span>
+        <span class="worksheet-identity-line" aria-hidden="true">${escapeHtml(t(language, "score"))}</span>
         <span class="worksheet-identity-score-target">/ ${escapeHtml(scoreTarget)}</span>
       </span>
     </div>
   `;
 }
 
-function createSectionHeaderMarkup(question, variant = "questions") {
+function createSectionHeaderMarkup(question, variant = "questions", language = "en") {
   if (!question?.sectionLabel) {
     return "";
   }
@@ -73,10 +81,10 @@ function createSectionHeaderMarkup(question, variant = "questions") {
   return `
     <div class="worksheet-section-header${variant === "answers" ? " is-answer-section" : ""}">
       <div class="worksheet-section-title-row">
-        <h3>${escapeHtml(question.sectionLabel)}</h3>
-        <span class="worksheet-section-chip">${variant === "answers" ? "Answer Group" : "Section"}</span>
+        <h3>${escapeHtml(localizeSectionLabel(language, question.sectionLabel, question.sectionKey))}</h3>
+        <span class="worksheet-section-chip">${variant === "answers" ? escapeHtml(t(language, "answerGroup")) : escapeHtml(t(language, "section"))}</span>
       </div>
-      ${question.sectionInstruction ? `<p>${escapeHtml(question.sectionInstruction)}</p>` : ""}
+      ${(question.sectionInstruction || question.sectionKey) ? `<p>${escapeHtml(localizeSectionInstruction(language, question.sectionKey, question.sectionInstruction || ""))}</p>` : ""}
     </div>
   `;
 }
@@ -117,7 +125,7 @@ function createQuestionMarkup(question, questionNumber) {
   `;
 }
 
-function createQuestionsMarkup(questions, startIndex) {
+function createQuestionsMarkup(questions, startIndex, language) {
   let lastSectionKey = null;
 
   return questions.map((question, index) => {
@@ -125,11 +133,11 @@ function createQuestionsMarkup(questions, startIndex) {
     const shouldRenderSection = index === 0 || question.sectionStart || question.sectionKey !== lastSectionKey;
     lastSectionKey = question.sectionKey;
 
-    return `${shouldRenderSection ? createSectionHeaderMarkup(question) : ""}${createQuestionMarkup(question, questionNumber)}`;
+    return `${shouldRenderSection ? createSectionHeaderMarkup(question, "questions", language) : ""}${createQuestionMarkup(question, questionNumber)}`;
   }).join("");
 }
 
-function createAnswerKeyMarkup(questions) {
+function createAnswerKeyMarkup(questions, language) {
   let lastSectionKey = null;
 
   return questions
@@ -138,7 +146,7 @@ function createAnswerKeyMarkup(questions) {
       lastSectionKey = question.sectionKey;
 
       return `
-        ${shouldRenderSection ? createSectionHeaderMarkup(question, "answers") : ""}
+        ${shouldRenderSection ? createSectionHeaderMarkup(question, "answers", language) : ""}
         <div class="answer-item">
           <span class="answer-item-number">${escapeHtml(String(question.answerIndex || ""))}</span>
           <span class="answer-item-value">${escapeHtml(question.answer)}</span>
@@ -148,12 +156,12 @@ function createAnswerKeyMarkup(questions) {
     .join("");
 }
 
-function createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel }) {
+function createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel, language }) {
   const baseItems = [
-    ["Teacher", identity.teacherName || "--"],
-    ["Level", grade || "--"],
-    ["Subject", subjectLabel],
-    ["Focus", focusLabel]
+    [t(language, "teacher"), identity.teacherName || "--"],
+    [t(language, "level"), grade || "--"],
+    [t(language, "subject"), subjectLabel],
+    [t(language, "focus"), focusLabel]
   ];
 
   return baseItems.map(([label, value]) => `
@@ -203,9 +211,12 @@ function createWorksheetHeaderMarkup({
   totalPages,
   pageKind,
   requestType
+  ,
+  language = "en"
 }) {
-  const subtitle = pageKind === "answer-key" ? "Answer Sheet" : worksheetModeLabel;
-  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel });
+  const resolvedLanguage = normalizeLanguage(language);
+  const subtitle = pageKind === "answer-key" ? t(resolvedLanguage, "answerSheet") : worksheetModeLabel;
+  const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language: resolvedLanguage });
   const displayStudentName = getStudentDisplayValue(identity.studentName, "");
   const showTeacherNotes = requestType === "math"
     && shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind });
@@ -228,28 +239,28 @@ function createWorksheetHeaderMarkup({
       <p class="worksheet-intro">${formatMultilineText(introText)}</p>
       <div class="worksheet-divider" aria-hidden="true"></div>
       <div class="worksheet-identity-row">
-        ${createHeaderFieldMarkup("Name", displayStudentName, "Write student name")}
-        ${createHeaderFieldMarkup("Date", identity.worksheetDate, "Add date")}
-        ${createScoreFieldMarkup(identity.scorePoints)}
+        ${createHeaderFieldMarkup(t(resolvedLanguage, "name"), displayStudentName, t(resolvedLanguage, "writeStudentName"))}
+        ${createHeaderFieldMarkup(t(resolvedLanguage, "date"), identity.worksheetDate, t(resolvedLanguage, "addDate"))}
+        ${createScoreFieldMarkup(identity.scorePoints, resolvedLanguage)}
       </div>
       <div class="worksheet-meta-strip worksheet-meta-strip-extended">
-        ${createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel })}
+        ${createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel, language: resolvedLanguage })}
         <div class="worksheet-meta-pill">
-          <strong>Generated</strong>
+          <strong>${escapeHtml(t(resolvedLanguage, "generated"))}</strong>
           <span>${escapeHtml(generatedAtLabel || "--")}</span>
         </div>
       </div>
       ${createConfidenceStripMarkup(trustSignals)}
-      ${showTeacherNotes ? createNotesMarkup("Teacher Notes", identity.teacherNotes) : ""}
+      ${showTeacherNotes ? createNotesMarkup(t(resolvedLanguage, "teacherNotes"), identity.teacherNotes) : ""}
     </div>
   `;
 }
 
-function createWorksheetFooterMarkup(currentPage, totalPages) {
+function createWorksheetFooterMarkup(currentPage, totalPages, language = "en") {
   return `
     <div class="worksheet-footer">
-      <span>Generated by TeachSheet AI</span>
-      <span>Page ${currentPage} of ${totalPages}</span>
+      <span>${escapeHtml(t(language, "generatedBy"))}</span>
+      <span>${escapeHtml(t(language, "pageLabel", { current: currentPage, total: totalPages }))}</span>
     </div>
   `;
 }
@@ -313,8 +324,10 @@ export function renderWorksheetPreview({
   generatedAtLabel,
   trustSignals,
   identity,
-  requestType
+  requestType,
+  language = "en"
 }) {
+  const resolvedLanguage = normalizeLanguage(language);
   const isAnswerPage = pageKind === "answer-key" && showAnswerKey;
   const questionStartIndex = (currentPage - 1) * pageSize;
 
@@ -332,21 +345,22 @@ export function renderWorksheetPreview({
       currentPage,
       totalPages,
       pageKind,
-      requestType
+      requestType,
+      language: resolvedLanguage
     })}
     ${isAnswerPage ? `
       <div class="answer-key standalone-answer-key">
-        <h3>Answer Sheet</h3>
+        <h3>${escapeHtml(t(resolvedLanguage, "answerSheet"))}</h3>
         <div class="answer-grid">
-          ${createAnswerKeyMarkup(answerQuestions)}
+          ${createAnswerKeyMarkup(answerQuestions, resolvedLanguage)}
         </div>
       </div>
     ` : `
       <div id="questions" class="questions${requestType === "math" ? " questions-math" : ""}">
-        ${createQuestionsMarkup(questions, questionStartIndex)}
+        ${createQuestionsMarkup(questions, questionStartIndex, resolvedLanguage)}
       </div>
     `}
-    ${createWorksheetFooterMarkup(currentPage, totalPages)}
+    ${createWorksheetFooterMarkup(currentPage, totalPages, resolvedLanguage)}
   `;
 
   applyTemplatePresentation(worksheetElement, template);
@@ -356,21 +370,22 @@ export function renderWorksheetPreview({
   worksheetElement.dataset.requestType = requestType || "worksheet";
 }
 
-export function renderEmptyWorksheet(worksheetElement, template) {
+export function renderEmptyWorksheet(worksheetElement, template, language = "en") {
+  const resolvedLanguage = normalizeLanguage(language);
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
-      <h2>Worksheet</h2>
-      <p>Choose a preset or type a short prompt, then generate a printable classroom-ready worksheet.</p>
+      <h2>${escapeHtml(t(resolvedLanguage, "worksheet"))}</h2>
+      <p>${escapeHtml(t(resolvedLanguage, "emptyWorksheetBody"))}</p>
     </div>
     <div id="questions" class="questions empty">
       <div class="empty-state">
-        <h3>No worksheet generated yet.</h3>
-        <p>Start with one preset, or write a short prompt such as <strong>grade 3 subtraction</strong>.</p>
+        <h3>${escapeHtml(t(resolvedLanguage, "noWorksheetYet"))}</h3>
+        <p>${t(resolvedLanguage, "emptyWorksheetHint")}</p>
         <ol class="empty-state-steps">
-          <li>Choose a preset or use a short prompt.</li>
-          <li>Click Generate Worksheet.</li>
-          <li>Review the A4 preview.</li>
-          <li>Download the PDF when it looks ready.</li>
+          <li>${escapeHtml(t(resolvedLanguage, "emptyStep1"))}</li>
+          <li>${escapeHtml(t(resolvedLanguage, "emptyStep2"))}</li>
+          <li>${escapeHtml(t(resolvedLanguage, "emptyStep3"))}</li>
+          <li>${escapeHtml(t(resolvedLanguage, "emptyStep4"))}</li>
         </ol>
         <div class="empty-state-actions">
           <button
@@ -380,12 +395,12 @@ export function renderEmptyWorksheet(worksheetElement, template) {
             data-demo-prompt="grade 4 assessment vertical multiplication"
             data-demo-template="exam-style"
             data-demo-mode="assessment"
-          >Try a Demo Worksheet</button>
-          <button type="button" class="empty-state-link" data-empty-action="example-prompt">Use This Example</button>
+          >${escapeHtml(t(resolvedLanguage, "tryDemoWorksheet"))}</button>
+          <button type="button" class="empty-state-link" data-empty-action="example-prompt">${escapeHtml(t(resolvedLanguage, "useExamplePrompt"))}</button>
         </div>
       </div>
     </div>
-    ${createWorksheetFooterMarkup(1, 1)}
+    ${createWorksheetFooterMarkup(1, 1, resolvedLanguage)}
   `;
 
   applyTemplatePresentation(worksheetElement, template);

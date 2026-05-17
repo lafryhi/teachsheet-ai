@@ -1,4 +1,5 @@
 import { getTemplateById } from "../templates/templates.js";
+import { normalizeLanguage, t } from "./language.js";
 
 function escapeHtml(value = "") {
   return String(value)
@@ -9,8 +10,9 @@ function escapeHtml(value = "") {
     .replaceAll("'", "&#39;");
 }
 
-function formatDate(dateValue) {
+function formatDate(dateValue, language = "en") {
   const date = new Date(dateValue);
+  const locale = normalizeLanguage(language) === "fr" ? "fr-FR" : undefined;
 
   if (Number.isNaN(date.getTime())) {
     return {
@@ -20,8 +22,8 @@ function formatDate(dateValue) {
   }
 
   return {
-    full: date.toLocaleString(),
-    short: date.toLocaleDateString(undefined, {
+      full: date.toLocaleString(locale),
+      short: date.toLocaleDateString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric"
@@ -47,32 +49,34 @@ function sortProjects(projects) {
   });
 }
 
-export function renderSavedProjects(projects, activeProjectId = null) {
+export function renderSavedProjects(projects, activeProjectId = null, language = "en") {
+  const resolvedLanguage = normalizeLanguage(language);
+
   if (!projects.length) {
     return `
       <div class="saved-projects-empty">
-        <strong>No saved projects yet.</strong>
-        <span>Generate a worksheet first, then use Save Project to keep it ready for quick edits, PDF export, or later reuse.</span>
+        <strong>${escapeHtml(t(resolvedLanguage, "noSavedProjects"))}</strong>
+        <span>${escapeHtml(t(resolvedLanguage, "noSavedProjectsBody"))}</span>
       </div>
     `;
   }
 
   return sortProjects(projects).map((project) => {
     const isActive = project.id === activeProjectId ? " active-project" : "";
-    const formattedDate = formatDate(project.createdAt);
+    const formattedDate = formatDate(project.createdAt, resolvedLanguage);
     const templateName = getTemplateById(project.template || "classic-math").name;
 
     return `
       <div class="saved-project-card${isActive}">
         <h4>${escapeHtml(buildProjectTitle(project))}</h4>
         <div class="saved-project-meta">
-          <div><strong>Saved:</strong> ${escapeHtml(formattedDate.full)}</div>
-          <div><strong>Day:</strong> ${escapeHtml(formattedDate.short)}</div>
-          <div><strong>Template:</strong> ${escapeHtml(templateName)}</div>
+          <div><strong>${escapeHtml(t(resolvedLanguage, "savedAt"))}</strong> ${escapeHtml(formattedDate.full)}</div>
+          <div><strong>${escapeHtml(t(resolvedLanguage, "savedDay"))}</strong> ${escapeHtml(formattedDate.short)}</div>
+          <div><strong>${escapeHtml(t(resolvedLanguage, "templateLabel"))}</strong> ${escapeHtml(templateName)}</div>
         </div>
         <div class="saved-project-actions">
-          <button type="button" data-load-project="${escapeHtml(project.id)}">Load</button>
-          <button type="button" class="delete-project" data-delete-project="${escapeHtml(project.id)}">Delete</button>
+          <button type="button" data-load-project="${escapeHtml(project.id)}">${escapeHtml(t(resolvedLanguage, "load"))}</button>
+          <button type="button" class="delete-project" data-delete-project="${escapeHtml(project.id)}">${escapeHtml(t(resolvedLanguage, "delete"))}</button>
         </div>
       </div>
     `;

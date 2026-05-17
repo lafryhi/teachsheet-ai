@@ -47,6 +47,31 @@ a {
   align-items: center;
 }
 
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.92);
+  border: 1px solid rgba(15, 76, 129, 0.08);
+}
+
+.language-switcher label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f4c81;
+}
+
+.language-switcher select {
+  border: 0;
+  background: transparent;
+  color: #0f4c81;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+}
+
 .auth-nav {
   display: flex;
   align-items: center;
@@ -2646,6 +2671,8 @@ button:disabled {
 
   .navbar {
     padding: 10px 4%;
+    flex-wrap: wrap;
+    row-gap: 8px;
   }
 
   .logo {
@@ -2658,6 +2685,20 @@ button:disabled {
     width: 100%;
     justify-content: flex-end;
     gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .language-switcher {
+    padding: 5px 8px;
+    gap: 6px;
+  }
+
+  .language-switcher label {
+    font-size: 11px;
+  }
+
+  .language-switcher select {
+    font-size: 12px;
   }
 
   .nav-links > a:not(.nav-btn) {
@@ -2671,6 +2712,9 @@ button:disabled {
   .auth-nav {
     margin-left: 0;
     gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 100%;
   }
 
   .auth-loading-state {
@@ -2680,6 +2724,8 @@ button:disabled {
   .auth-actions,
   .auth-session {
     gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .auth-nav-button {
@@ -2700,6 +2746,13 @@ button:disabled {
 
   .section-heading {
     margin-bottom: 30px;
+  }
+
+  .panel,
+  .preview {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 18px;
   }
 
   .features,

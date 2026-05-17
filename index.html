@@ -19,6 +19,13 @@
     <a href="#demo">Demo</a>
     <a href="#pricing">Pricing</a>
     <a href="#app" class="nav-btn">Try Free</a>
+    <div class="language-switcher">
+      <label for="languageSelect" id="languageSelectorLabel" data-i18n="languageLabel">Language</label>
+      <select id="languageSelect" aria-label="Language selector">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+      </select>
+    </div>
     <div class="auth-nav">
       <div id="authLoadingState" class="auth-loading-state">Checking account...</div>
       <div id="signedOutActions" class="auth-actions">
@@ -439,7 +446,7 @@
         data-demo-template="exam-style"
         data-demo-mode="assessment"
       >Generate Demo Worksheet</button>
-      <a href="#demo-gallery" class="quick-start-link">Browse Demo Gallery</a>
+      <a href="#demo-gallery" class="quick-start-link" data-i18n="tryDemoWorksheet">Try a Demo Worksheet</a>
     </div>
   </div>
   <div class="teacher-trust-strip" aria-label="Product trust points">
@@ -451,25 +458,25 @@
   </div>
   <section id="teacherOnboardingCard" class="teacher-onboarding-card" aria-live="polite">
     <div class="teacher-onboarding-topline">
-      <span class="teacher-onboarding-badge">Quick Guide</span>
+      <span class="teacher-onboarding-badge" data-i18n="quickGuide">Quick Guide</span>
       <button id="dismissOnboardingButton" type="button" class="teacher-onboarding-dismiss" aria-label="Dismiss quick guide">&times;</button>
     </div>
     <div class="teacher-onboarding-grid">
       <article>
-        <strong>1. Choose a preset</strong>
-        <p>Start with Daily Practice, Assessment, Remediation, or Mental Math to avoid manual setup.</p>
+        <strong data-i18n="onboardingStep1Title">1. Choose a preset</strong>
+        <p data-i18n="onboardingStep1Body">Start with Daily Practice, Assessment, Remediation, or Mental Math to avoid manual setup.</p>
       </article>
       <article>
-        <strong>2. Generate the worksheet</strong>
-        <p>Use the preset as-is, or type a short prompt like grade 3 subtraction and generate immediately.</p>
+        <strong data-i18n="onboardingStep2Title">2. Generate the worksheet</strong>
+        <p data-i18n="onboardingStep2Body">Use the preset as-is, or type a short prompt like grade 3 subtraction and generate immediately.</p>
       </article>
       <article>
-        <strong>3. Review the preview</strong>
-        <p>Check the A4 layout, sections, and answer sheet before you export anything.</p>
+        <strong data-i18n="onboardingStep3Title">3. Review the preview</strong>
+        <p data-i18n="onboardingStep3Body">Check the A4 layout, sections, and answer sheet before you export anything.</p>
       </article>
       <article>
-        <strong>4. Download the PDF</strong>
-        <p>Export the printable version once the preview looks ready for class.</p>
+        <strong data-i18n="onboardingStep4Title">4. Download the PDF</strong>
+        <p data-i18n="onboardingStep4Body">Export the printable version once the preview looks ready for class.</p>
       </article>
     </div>
     <div class="teacher-onboarding-actions">
@@ -480,8 +487,8 @@
         data-demo-prompt="grade 4 assessment vertical multiplication"
         data-demo-template="exam-style"
         data-demo-mode="assessment"
-      >Try a Demo Worksheet</button>
-      <button id="useExamplePromptButton" type="button" class="teacher-onboarding-link">Use an Example Prompt</button>
+      data-i18n="tryDemoWorksheet">Try a Demo Worksheet</button>
+      <button id="useExamplePromptButton" type="button" class="teacher-onboarding-link" data-i18n="useExamplePrompt">Use an Example Prompt</button>
     </div>
   </section>
   <div id="dashboardContainer"></div>
@@ -490,21 +497,21 @@
     <section class="panel">
       <div class="panel-heading-row">
         <div>
-          <h2>Worksheet Settings</h2>
-          <p class="panel-intro">Start with a preset or a short prompt, then fine-tune only if you need to.</p>
+          <h2 data-i18n="worksheetSettings">Worksheet Settings</h2>
+          <p class="panel-intro" data-i18n="worksheetSettingsIntro">Start with a preset or a short prompt, then fine-tune only if you need to.</p>
         </div>
-        <button id="showOnboardingButton" type="button" class="subtle-link-button" hidden>Show quick guide</button>
+        <button id="showOnboardingButton" type="button" class="subtle-link-button" hidden data-i18n="showQuickGuide">Show quick guide</button>
       </div>
 
       <div class="settings-group">
         <div class="settings-title-row">
-          <h3>Quick Start</h3>
+          <h3 data-i18n="quickStart">Quick Start</h3>
           <button type="button" class="hint-trigger" aria-label="Preset help">
             <span class="hint-trigger-icon">?</span>
-            <span class="hint-tooltip">Presets set the worksheet goal, teacher mode, template, and sensible defaults in one click.</span>
+            <span class="hint-tooltip" data-i18n="presetHelp">Presets set the worksheet goal, teacher mode, template, and sensible defaults in one click.</span>
           </button>
         </div>
-        <p class="settings-intro">Use one preset to set the worksheet goal, template, and sensible defaults in one step.</p>
+        <p class="settings-intro" data-i18n="quickStartIntro">Use one preset to set the worksheet goal, template, and sensible defaults in one step.</p>
         <div id="workflowPresetGrid" class="workflow-preset-grid" aria-label="Quick workflow presets">
           <button type="button" class="workflow-preset-card" data-workflow-preset="daily-practice">
             <strong>Daily Practice</strong>
@@ -536,30 +543,31 @@
 
       <div class="settings-group">
         <div class="settings-title-row">
-          <h3>Generate Fast</h3>
+          <h3 data-i18n="generateFast">Generate Fast</h3>
           <button type="button" class="hint-trigger" aria-label="Prompt help">
             <span class="hint-trigger-icon">?</span>
-            <span class="hint-tooltip">Short prompts work well. TeachSheet AI fills in missing defaults when it recognizes the grade, goal, and subject.</span>
+            <span class="hint-tooltip" data-i18n="promptHelp">Short prompts work well. TeachSheet AI fills in missing defaults when it recognizes the grade, goal, and subject.</span>
           </button>
         </div>
-        <p class="settings-intro">Type a short teacher-style prompt or use the fields below for a quick worksheet setup.</p>
+        <p class="settings-intro" data-i18n="generateFastIntro">Type a short teacher-style prompt or use the fields below for a quick worksheet setup.</p>
 
-      <label>Prompt
+      <label><span data-i18n="promptLabel">Prompt</span>
         <input
           id="promptInput"
           type="text"
           placeholder="Try: grade 3 subtraction or mental math grade 2"
+          data-i18n-placeholder="promptPlaceholder"
         />
       </label>
       <div class="field-help prompt-help">
-        <strong>Prompt tip:</strong>
-        <span>Short prompts work well. TeachSheet AI will fill missing defaults for grade, mode, and layout when possible.</span>
-        <span>Example: <code>grade 4 assessment vertical multiplication</code></span>
+        <strong data-i18n="promptTipTitle">Prompt tip:</strong>
+        <span data-i18n="promptTipBody">Short prompts work well. TeachSheet AI will fill missing defaults for grade, mode, and layout when possible.</span>
+        <span><span data-i18n="promptTipExample">Example:</span> <code id="promptTipExampleValue">grade 4 assessment vertical multiplication</code></span>
       </div>
 
       <div class="example-prompts">
-        <h3>Example Prompts</h3>
-        <p>Use one of these classroom-ready prompts when you want a solid worksheet fast.</p>
+        <h3 data-i18n="examplePrompts">Example Prompts</h3>
+        <p data-i18n="examplePromptsIntro">Use one of these classroom-ready prompts when you want a solid worksheet fast.</p>
         <div class="example-prompts-list">
           <button type="button" class="example-prompt-chip" data-example-prompt="grade 2 addition practice 20 questions">grade 2 addition practice 20 questions</button>
           <button type="button" class="example-prompt-chip" data-example-prompt="grade 3 remediation subtraction worksheet">grade 3 remediation subtraction worksheet</button>
@@ -570,7 +578,7 @@
       </div>
 
       <div class="workflow-core-grid">
-      <label>Grade
+      <label><span data-i18n="grade">Grade</span>
         <select id="grade">
           <option value="Grade 1">Grade 1</option>
           <option value="Grade 2" selected>Grade 2</option>
@@ -580,7 +588,7 @@
         </select>
       </label>
 
-      <label>Operation
+      <label><span data-i18n="operation">Operation</span>
         <select id="operation">
           <option value="addition">Addition</option>
           <option value="subtraction">Subtraction</option>
@@ -591,7 +599,7 @@
       </label>
       </div>
 
-      <label>Teacher Mode
+      <label><span data-i18n="teacherMode">Teacher Mode</span>
         <select id="teacherMode">
           <option value="practice" selected>Practice Mode</option>
           <option value="homework">Homework Mode</option>
@@ -601,18 +609,18 @@
         </select>
       </label>
       <div class="field-help teacher-mode-help compact-help">
-        <strong>Choose the worksheet goal:</strong>
-        <span><strong>Practice</strong> builds fluency steadily.</span>
-        <span><strong>Homework</strong> stays clean and independent.</span>
-        <span><strong>Assessment</strong> checks mastery more formally.</span>
-        <span><strong>Remediation</strong> slows down and simplifies the work.</span>
-        <span><strong>Fast Review</strong> favors short recall and mental fluency.</span>
+        <strong data-i18n="teacherModeGoal">Choose the worksheet goal:</strong>
+        <span><strong data-i18n="modePractice">Practice Mode</strong> <span data-i18n="practiceHelp">builds fluency steadily.</span></span>
+        <span><strong data-i18n="modeHomework">Homework Mode</strong> <span data-i18n="homeworkHelp">stays clean and independent.</span></span>
+        <span><strong data-i18n="modeAssessment">Assessment Mode</strong> <span data-i18n="assessmentHelp">checks mastery more formally.</span></span>
+        <span><strong data-i18n="modeRemediation">Remediation Mode</strong> <span data-i18n="remediationHelp">slows down and simplifies the work.</span></span>
+        <span><strong data-i18n="modeFastReview">Fast Review Mode</strong> <span data-i18n="fastReviewHelp">favors short recall and mental fluency.</span></span>
       </div>
 
       <details class="settings-disclosure">
-        <summary>Fine tune difficulty, question count, and template</summary>
+        <summary data-i18n="fineTune">Fine tune difficulty, question count, and template</summary>
         <div class="disclosure-content">
-      <label>Difficulty
+      <label><span data-i18n="difficulty">Difficulty</span>
         <select id="difficulty">
           <option value="easy">Easy</option>
           <option value="medium" selected>Medium</option>
@@ -620,7 +628,7 @@
         </select>
       </label>
 
-      <label>Number of Questions
+      <label><span data-i18n="questionCount">Number of Questions</span>
         <select id="questionCount">
           <option value="10">10 Questions</option>
           <option value="15" selected>15 Questions</option>
@@ -630,7 +638,7 @@
         </select>
       </label>
 
-      <label>Template
+      <label><span data-i18n="template">Template</span>
         <select id="template"></select>
       </label>
       <div id="activeTemplateIndicator" class="active-template-indicator" aria-live="polite"></div>
@@ -639,69 +647,69 @@
       </div>
 
       <details class="settings-disclosure identity-disclosure">
-        <summary>Optional worksheet identity and print details</summary>
+        <summary data-i18n="optionalIdentity">Optional worksheet identity and print details</summary>
         <div class="disclosure-content">
-          <label>Worksheet Title
-            <input id="worksheetTitle" type="text" placeholder="e.g. Addition Practice Worksheet" />
+          <label><span data-i18n="worksheetTitle">Worksheet Title</span>
+            <input id="worksheetTitle" type="text" placeholder="e.g. Addition Practice Worksheet" data-i18n-placeholder="worksheetTitlePlaceholder" />
           </label>
 
           <div class="settings-grid">
-            <label>School Name
-              <input id="schoolName" type="text" placeholder="School name" />
+            <label><span data-i18n="schoolName">School Name</span>
+              <input id="schoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
             </label>
 
-            <label>Teacher Name
-              <input id="teacherName" type="text" placeholder="Teacher name" />
+            <label><span data-i18n="teacherName">Teacher Name</span>
+              <input id="teacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
             </label>
 
-            <label>Student Name
-              <input id="studentName" type="text" placeholder="Student name" />
+            <label><span data-i18n="studentName">Student Name</span>
+              <input id="studentName" type="text" placeholder="Student name" data-i18n-placeholder="studentNamePlaceholder" />
             </label>
 
-            <label>Date
+            <label><span data-i18n="date">Date</span>
               <input id="worksheetDate" type="date" />
             </label>
 
-            <label>Score / Points
-              <input id="scorePoints" type="text" placeholder="e.g. /20" />
+            <label><span data-i18n="scorePoints">Score / Points</span>
+              <input id="scorePoints" type="text" placeholder="e.g. /20" data-i18n-placeholder="scorePointsPlaceholder" />
             </label>
           </div>
 
-          <label>Instructions
-            <textarea id="instructions" rows="3" placeholder="e.g. Solve each question carefully and show your work."></textarea>
+          <label><span data-i18n="instructions">Instructions</span>
+            <textarea id="instructions" rows="3" placeholder="e.g. Solve each question carefully and show your work." data-i18n-placeholder="instructionsPlaceholder"></textarea>
           </label>
 
-          <label>Teacher Notes
-            <textarea id="teacherNotes" rows="3" placeholder="Optional notes for teacher use or printing."></textarea>
+          <label><span data-i18n="teacherNotes">Teacher Notes</span>
+            <textarea id="teacherNotes" rows="3" placeholder="Optional notes for teacher use or printing." data-i18n-placeholder="teacherNotesPlaceholder"></textarea>
           </label>
         </div>
       </details>
 
       <div class="settings-group action-settings-group">
         <div class="settings-title-row">
-          <h3>Generate and Export</h3>
+          <h3 data-i18n="generateAndExport">Generate and Export</h3>
           <button type="button" class="hint-trigger" aria-label="Generate and export help">
             <span class="hint-trigger-icon">?</span>
-            <span class="hint-tooltip">Generate uses the current preset, prompt, and settings. Download PDF exports the same printable A4 worksheet shown in the preview.</span>
+            <span class="hint-tooltip" data-i18n="exportHelp">Generate uses the current preset, prompt, and settings. Download PDF exports the same printable A4 worksheet shown in the preview.</span>
           </button>
         </div>
-        <p class="settings-intro">The fastest path is preset or prompt first, then generate. Save or export once the preview looks right.</p>
+        <p class="settings-intro" data-i18n="exportIntro">The fastest path is preset or prompt first, then generate. Save or export once the preview looks right.</p>
         <div class="actions-grid">
-          <button id="generateButton" onclick="generateWorksheet()">Generate Worksheet</button>
-          <button id="promptGenerateButton" type="button" class="secondary-action-button">Generate From Prompt</button>
-          <button id="saveProjectButton" type="button">Save Project</button>
-          <button class="green" onclick="downloadPDF()">Download PDF</button>
-          <button class="red" onclick="clearWorksheet()">Clear</button>
+          <button id="generateButton" onclick="generateWorksheet()" data-i18n="generateWorksheet">Generate Worksheet</button>
+          <button id="promptGenerateButton" type="button" class="secondary-action-button" data-i18n="generateFromPrompt">Generate From Prompt</button>
+          <button id="saveProjectButton" type="button" data-i18n="saveProject">Save Project</button>
+          <button class="green" onclick="downloadPDF()" data-i18n="downloadPdf">Download PDF</button>
+          <button class="red" onclick="clearWorksheet()" data-i18n="clear">Clear</button>
         </div>
         <div class="action-help-row">
-          <span>Generate first, then export the same A4 layout as PDF.</span>
-          <span>Save Project keeps the worksheet ready for later edits.</span>
+          <span data-i18n="actionHelpGenerate">Generate first, then export the same A4 layout as PDF.</span>
+          <span data-i18n="actionHelpSave">Save Project keeps the worksheet ready for later edits.</span>
         </div>
       </div>
       <div id="generationStatus" class="status-message" aria-live="polite"></div>
 
       <div class="saved-projects">
-        <h3>Saved Projects</h3>
+        <h3 data-i18n="savedProjects">Saved Projects</h3>
         <div id="savedProjectsList" class="saved-projects-list"></div>
       </div>
     </section>
@@ -709,18 +717,18 @@
     <section class="preview">
       <div class="preview-heading">
         <div>
-          <h2>A4 Preview</h2>
-          <p>Check the printable worksheet before downloading the final PDF.</p>
+          <h2 data-i18n="preview">A4 Preview</h2>
+          <p data-i18n="previewIntro">Check the printable worksheet before downloading the final PDF.</p>
         </div>
         <button type="button" class="hint-trigger" aria-label="Preview help">
           <span class="hint-trigger-icon">?</span>
-          <span class="hint-tooltip">The preview mirrors the worksheet structure, sections, and answer sheet that will be exported to PDF.</span>
+          <span class="hint-tooltip" data-i18n="previewHelp">The preview mirrors the worksheet structure, sections, and answer sheet that will be exported to PDF.</span>
         </button>
       </div>
       <div class="worksheet" id="worksheet">
         <div class="worksheet-header">
-          <h2>Math Worksheet</h2>
-          <p>Choose settings and click Generate Worksheet.</p>
+          <h2 data-i18n="previewDefaultTitle">Math Worksheet</h2>
+          <p data-i18n="previewDefaultBody">Choose settings and click Generate Worksheet.</p>
         </div>
 
         <div id="questions" class="questions empty">
@@ -728,9 +736,9 @@
         </div>
       </div>
       <div class="preview-controls">
-        <button id="previewPrevButton" type="button" class="preview-nav" onclick="previousPreviewPage()">Previous Page</button>
+        <button id="previewPrevButton" type="button" class="preview-nav" onclick="previousPreviewPage()" data-i18n="previousPage">Previous Page</button>
         <div id="previewPageIndicator" class="preview-page-indicator">Page 1 of 1</div>
-        <button id="previewNextButton" type="button" class="preview-nav" onclick="nextPreviewPage()">Next Page</button>
+        <button id="previewNextButton" type="button" class="preview-nav" onclick="nextPreviewPage()" data-i18n="nextPage">Next Page</button>
       </div>
     </section>
   </main>
@@ -797,6 +805,6 @@
   </div>
 </footer>
 
-<script type="module" src="js/app.js?v=auth-dashboard"></script>
+<script type="module" src="js/app.js?v=french-classroom-support"></script>
 </body>
 </html>
