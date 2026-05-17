@@ -1741,9 +1741,9 @@ button:disabled {
 
 .worksheet-header {
   text-align: left;
-  margin-bottom: 26px;
+  margin-bottom: 27px;
   display: grid;
-  gap: 13px;
+  gap: 14px;
 }
 
 .worksheet-school {
@@ -1764,7 +1764,7 @@ button:disabled {
 
 .worksheet-title-block {
   display: grid;
-  gap: 7px;
+  gap: 8px;
 }
 
 .worksheet-title-aside {
