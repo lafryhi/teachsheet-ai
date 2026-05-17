@@ -1,5 +1,6 @@
 import { getTemplatePresentation } from "../templates/templates.js";
 import {
+  getQuestionDisplayText,
   getScoreTarget,
   getStudentDisplayValue,
   isCompareQuestion,
@@ -27,7 +28,7 @@ function formatMultilineText(value = "") {
 }
 
 function questionHasInlineAnswerSpace(question) {
-  return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
+  return /_{3,}/.test(getQuestionDisplayText(question)) || isCompareQuestion(question);
 }
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language }) {
@@ -92,10 +93,11 @@ function createSectionHeaderMarkup(question, variant = "questions", language = "
 function createQuestionMarkup(question, questionNumber) {
   const isVertical = question.format === "vertical";
   const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
-  const compareParts = !isVertical ? parseCompareQuestionText(question.text) : null;
+  const questionText = getQuestionDisplayText(question);
+  const compareParts = !isVertical ? parseCompareQuestionText(question) : null;
   const hint = question.layoutHints || {};
   const questionMarkup = isVertical
-    ? `<pre class="question-text question-text-vertical">${escapeHtml(question.text)}</pre>`
+    ? `<pre class="question-text question-text-vertical">${escapeHtml(questionText)}</pre>`
     : compareParts
       ? `
         <div class="question-text question-text-compare">
@@ -107,7 +109,7 @@ function createQuestionMarkup(question, questionNumber) {
           </div>
         </div>
       `
-      : `<span class="question-text">${escapeHtml(question.text)}</span>`;
+      : `<span class="question-text">${escapeHtml(questionText)}</span>`;
   const questionStyles = [
     hint.previewUnits > 1.35 ? "--question-card-min-height: 148px" : "",
     hint.answerLineWidth ? `--question-card-answer-width: ${Math.round(hint.answerLineWidth * 3.2)}px` : "",

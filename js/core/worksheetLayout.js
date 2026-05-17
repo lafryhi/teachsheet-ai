@@ -15,6 +15,7 @@ import {
   resolveAnswerColumnCount
 } from "./printLayoutShared.js";
 import {
+  getQuestionDisplayText,
   isCompareQuestion,
   parseCompareQuestionText,
   shouldShowTeacherNotes
@@ -23,7 +24,7 @@ import { getTemplatePresentation } from "../templates/templates.js";
 import { normalizeLanguage, t } from "../ui/language.js";
 
 function questionHasInlineAnswerSpace(question) {
-  return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
+  return /_{3,}/.test(getQuestionDisplayText(question)) || isCompareQuestion(question);
 }
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language = "en" }) {
@@ -164,13 +165,14 @@ function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidt
       const absoluteIndex = question.sequenceIndex || (questions.indexOf(question) + 1);
       const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
       const hint = question.layoutHints || {};
+      const questionText = getQuestionDisplayText(question);
       const textWidth = Math.max(
         18,
         columnWidth - (horizontalPadding * 2) - (question.format === "vertical" ? 2 : (index === 0 ? 8 : 0))
       );
-      const compareParts = parseCompareQuestionText(question.text);
+      const compareParts = parseCompareQuestionText(question);
       const textLines = question.format === "vertical"
-        ? String(question.text || "").split("\n").length
+        ? String(questionText || "").split("\n").length
         : compareParts
           ? (
             estimateWrappedLineCount(compareParts.heading, textWidth, metrics.questionFontSize)
@@ -179,7 +181,7 @@ function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidt
               estimateWrappedLineCount(compareParts.rightExpression, Math.max(18, (textWidth - 26) / 2), metrics.questionFontSize)
             )
           )
-          : estimateWrappedLineCount(question.text, textWidth, metrics.questionFontSize);
+          : estimateWrappedLineCount(questionText, textWidth, metrics.questionFontSize);
       const answerReserve = question.answerLine !== false && !hasInlineAnswerSpace
         ? (hint.answerAreaHeight || answerAreaHeight)
         : 0;
@@ -256,6 +258,7 @@ function buildEstimatedAnswerRows(questions, answerColumns, answerColumnWidth, m
       );
 
       return {
+        question,
         absoluteIndex,
         boxHeight
       };
@@ -400,7 +403,7 @@ function buildEstimatedBreakdown({
     ? pageWidth - margins.left - margins.right
     : ((pageWidth - margins.left - margins.right - columnGap) / 2);
   const questionRows = buildEstimatedQuestionRows(safeQuestions, presentation, metrics, columnWidth);
-  const questionPagesMap = safeQuestions.length > 0
+  const questionRowPages = safeQuestions.length > 0
     ? paginateRows(questionRows, questionUsableHeight, metrics.rowGap, QUESTION_SECTION_HEADER_HEIGHT)
     : [[]];
   const answerColumns = resolveAnswerColumnCount(safeQuestions);
@@ -410,9 +413,15 @@ function buildEstimatedBreakdown({
   const answerRows = showAnswerKey
     ? buildEstimatedAnswerRows(safeQuestions, answerColumns, answerColumnWidth, metrics)
     : [];
-  const answerPagesMap = showAnswerKey && safeQuestions.length > 0
+  const answerRowPages = showAnswerKey && safeQuestions.length > 0
     ? paginateRows(answerRows, answerUsableHeight, 3.6, ANSWER_SECTION_HEADER_HEIGHT)
     : [];
+  const questionPagesMap = questionRowPages.map((pageRows) => (
+    pageRows.flatMap((row) => row.items.map((item) => item.question || item))
+  ));
+  const answerPagesMap = answerRowPages.map((pageRows) => (
+    pageRows.flatMap((row) => row.items.map((item) => item.question || item))
+  ));
   const questionPages = questionPagesMap.length || 1;
   const answerPages = showAnswerKey ? answerPagesMap.length : 0;
 

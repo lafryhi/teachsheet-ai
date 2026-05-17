@@ -17,6 +17,7 @@ import {
   resolveAnswerColumnCount as resolveSharedAnswerColumnCount
 } from "../core/printLayoutShared.js";
 import {
+  getQuestionDisplayText,
   getScoreTarget,
   getStudentDisplayValue,
   isCompareQuestion,
@@ -55,7 +56,7 @@ function getPdfFontFamily(template) {
 }
 
 function questionHasInlineAnswerSpace(question) {
-  return /_{3,}/.test(String(question?.text || "")) || isCompareQuestion(question);
+  return /_{3,}/.test(getQuestionDisplayText(question)) || isCompareQuestion(question);
 }
 
 function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language }) {
@@ -118,7 +119,7 @@ function buildQuestionLines(pdf, questionLabel, columnWidth) {
 }
 
 function buildCompareQuestionParts(pdf, question, availableWidth, lineHeight) {
-  const compareParts = parseCompareQuestionText(question?.text);
+  const compareParts = parseCompareQuestionText(question);
 
   if (!compareParts) {
     return null;
@@ -162,10 +163,11 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth) {
       const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
       const hint = question.layoutHints || {};
       const availableTextWidth = columnWidth - (horizontalPadding * 2);
+      const questionText = getQuestionDisplayText(question);
       const compareParts = buildCompareQuestionParts(pdf, question, availableTextWidth, lineHeight);
       const textLines = compareParts
         ? compareParts.headingLines
-        : buildQuestionLines(pdf, question.text, availableTextWidth);
+        : buildQuestionLines(pdf, questionText, availableTextWidth);
       const answerReserve = question.answerLine !== false && !hasInlineAnswerSpace
         ? (hint.answerAreaHeight || answerAreaHeight)
         : 0;

@@ -26,6 +26,7 @@ import {
   sanitizeTeacherNotes
 } from "./core/worksheetPresentation.js";
 import { getWorksheetPageBreakdown } from "./core/worksheetLayout.js";
+import { sanitizeWorksheetQuestions } from "./core/questionValidation.js";
 import { buildWorksheetInstruction, buildWorksheetModeLabel } from "./core/math/instructionsEngine.js";
 import { createAuthController } from "./auth/auth.js";
 import { renderDashboard } from "./auth/dashboard.js";
@@ -563,6 +564,10 @@ function getPromptValue() {
 
 function getProjectAnswers(questions) {
   return questions.map((question) => question.answer);
+}
+
+function sanitizeQuestionsForRequest(questions, request) {
+  return sanitizeWorksheetQuestions(questions, request).questions;
 }
 
 function getGradeNumber(gradeValue) {
@@ -1581,7 +1586,6 @@ function applyStoredWorksheet(savedWorksheet) {
   state.manualOverrides.template = true;
   state.theme = getTheme(savedWorksheet.theme || state.template.theme).id;
   state.zoom = normalizeZoomValue(savedWorksheet.zoom ?? state.zoom);
-  state.currentQuestions = Array.isArray(savedWorksheet.questions) ? savedWorksheet.questions : [];
 
   if (savedWorksheet.settings) {
     loadProjectIntoInterface({
@@ -1604,6 +1608,11 @@ function applyStoredWorksheet(savedWorksheet) {
         template: savedWorksheet.templateId || state.template.id
       }
       : buildMathRequestFromFormValues(getFormValues()));
+
+  state.currentQuestions = sanitizeQuestionsForRequest(
+    Array.isArray(savedWorksheet.questions) ? savedWorksheet.questions : [],
+    state.currentRequest
+  );
 
   state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
     showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
@@ -1629,11 +1638,12 @@ function hydrateScopedWorkspace() {
 function buildWorksheetFromRequest(worksheetRequest) {
   const generator = GENERATORS[worksheetRequest.type] || generateMathWorksheet;
   const generatorResult = generator(worksheetRequest);
+  const sanitizedQuestions = sanitizeQuestionsForRequest(generatorResult.questions, worksheetRequest);
 
   state.currentRequest = worksheetRequest;
   state.template = getTemplateById(worksheetRequest.template || getFormValues().templateId);
   state.theme = state.template.theme;
-  state.currentQuestions = generatorResult.questions;
+  state.currentQuestions = sanitizedQuestions;
   state.lastGeneratedAt = new Date().toISOString();
   state.currentWorksheetMeta = getWorksheetMeta(worksheetRequest, generatorResult);
   refreshPagination(state.currentWorksheetMeta.showAnswerKey);
@@ -1719,8 +1729,11 @@ function loadProject(projectId) {
   state.templateManuallySelected = true;
   state.activePresetId = null;
   state.theme = state.template.theme;
-  state.currentQuestions = Array.isArray(project.questions) ? project.questions : [];
   state.currentRequest = getRequestFromProject(project);
+  state.currentQuestions = sanitizeQuestionsForRequest(
+    Array.isArray(project.questions) ? project.questions : [],
+    state.currentRequest
+  );
   state.lastGeneratedAt = project.generatedAt || project.createdAt || null;
   state.currentWorksheetMeta = getWorksheetMeta(state.currentRequest, {
     showAnswerKey: !["tracing", "coloring"].includes(state.currentRequest.type)
