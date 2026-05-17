@@ -1741,15 +1741,15 @@ button:disabled {
 
 .worksheet-header {
   text-align: left;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
   display: grid;
-  gap: 12px;
+  gap: 13px;
 }
 
 .worksheet-school {
   text-align: center;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 10.5px;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--worksheet-accent, #183153);
@@ -1764,7 +1764,7 @@ button:disabled {
 
 .worksheet-title-block {
   display: grid;
-  gap: 6px;
+  gap: 7px;
 }
 
 .worksheet-title-aside {
@@ -1775,8 +1775,8 @@ button:disabled {
 
 .worksheet-header h2 {
   margin: 0;
-  font-size: 32px;
-  line-height: 1.08;
+  font-size: 30px;
+  line-height: 1.1;
   letter-spacing: -0.02em;
   color: var(--worksheet-accent, #183153);
 }
@@ -1784,9 +1784,9 @@ button:disabled {
 .worksheet-subtitle {
   color: var(--worksheet-muted, #5f6b7a);
   font-size: 12.5px;
-  font-weight: 700;
+  font-weight: 650;
   letter-spacing: 0.02em;
-  line-height: 1.45;
+  line-height: 1.5;
   max-width: 42ch;
 }
 
