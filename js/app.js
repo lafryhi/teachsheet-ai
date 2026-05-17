@@ -22,6 +22,7 @@ import {
 import { listWorksheetSections } from "./core/math/sectionPlanner.js";
 import {
   getScoreTarget,
+  getLocalizedQuestionDisplayText,
   normalizeStudentName,
   sanitizeTeacherNotes
 } from "./core/worksheetPresentation.js";
@@ -157,6 +158,124 @@ const WORKFLOW_PRESETS = {
   }
 };
 
+const CLASSROOM_EXAMPLES = [
+  {
+    id: "english-addition",
+    previewLanguage: "en",
+    prompts: {
+      en: "grade 2 addition practice 20 questions",
+      fr: "addition CE2"
+    },
+    templateId: "kids-colorful",
+    teacherMode: "practice"
+  },
+  {
+    id: "french-mental-math",
+    previewLanguage: "fr",
+    prompts: {
+      en: "mental math fast review grade 2",
+      fr: "calcul mental CE1"
+    },
+    templateId: "classic-math",
+    teacherMode: "fast-review"
+  },
+  {
+    id: "french-multiplication",
+    previewLanguage: "fr",
+    prompts: {
+      en: "grade 4 multiplication practice",
+      fr: "multiplication CM1"
+    },
+    templateId: "classic-math",
+    teacherMode: "practice"
+  },
+  {
+    id: "remediation-support",
+    previewLanguage: "en",
+    prompts: {
+      en: "grade 3 remediation subtraction worksheet",
+      fr: "fiche de remediation soustraction CE2"
+    },
+    templateId: "homework-sheet",
+    teacherMode: "remediation"
+  },
+  {
+    id: "french-assessment",
+    previewLanguage: "fr",
+    prompts: {
+      en: "grade 5 assessment division",
+      fr: "evaluation division CM2"
+    },
+    templateId: "exam-style",
+    teacherMode: "assessment"
+  },
+  {
+    id: "mixed-review",
+    previewLanguage: "en",
+    prompts: {
+      en: "grade 5 mixed review worksheet",
+      fr: "revision rapide CM1"
+    },
+    templateId: "classic-math",
+    teacherMode: "homework"
+  }
+];
+
+const CLASSROOM_EXAMPLE_COPY = {
+  en: {
+    "english-addition": {
+      title: "English Addition Practice",
+      body: "A classroom-friendly addition worksheet with clear pacing, answer space, and printable structure."
+    },
+    "french-mental-math": {
+      title: "French Mental Math",
+      body: "A quick oral and written fluency activity that works well for warm-up rounds and short revision."
+    },
+    "french-multiplication": {
+      title: "French Multiplication Practice",
+      body: "A structured multiplication page for primary classrooms, with clean line spacing and real A4 pacing."
+    },
+    "remediation-support": {
+      title: "Remediation Support",
+      body: "A slower subtraction worksheet with clearer steps and gentler progression for targeted support."
+    },
+    "french-assessment": {
+      title: "French Assessment Example",
+      body: "A sharper division assessment layout that looks ready for checking, printing, and classroom correction."
+    },
+    "mixed-review": {
+      title: "Mixed Review Worksheet",
+      body: "A mixed operations worksheet that feels like real revision material instead of a generic generator output."
+    }
+  },
+  fr: {
+    "english-addition": {
+      title: "Exemple d'addition",
+      body: "Une fiche d'addition claire, progressive et imprimable pour une utilisation immediate en classe."
+    },
+    "french-mental-math": {
+      title: "Calcul mental",
+      body: "Une activite courte pour l'echauffement, la revision rapide et la fluidite mentale en primaire."
+    },
+    "french-multiplication": {
+      title: "Multiplication en classe",
+      body: "Une fiche de multiplication propre et lisible, avec une mise en page adaptee a l'impression A4."
+    },
+    "remediation-support": {
+      title: "Exemple de remediation",
+      body: "Une fiche de soustraction plus douce, avec une progression plus simple pour l'accompagnement cible."
+    },
+    "french-assessment": {
+      title: "Exemple d'evaluation",
+      body: "Une fiche d'evaluation en division qui semble deja prete pour la correction et l'impression."
+    },
+    "mixed-review": {
+      title: "Revision des operations",
+      body: "Une fiche melangee qui ressemble a un vrai support de revision pour la classe."
+    }
+  }
+};
+
 const ONBOARDING_STORAGE_KEY = "teachsheet-ai-onboarding-v1";
 const state = {
   activePresetId: null,
@@ -253,6 +372,10 @@ function getActiveTemplateIndicator() {
 
 function getOnboardingCard() {
   return getElement("teacherOnboardingCard");
+}
+
+function getClassroomExamplesContainer() {
+  return getElement("classroomExamplesGrid");
 }
 
 function getDismissOnboardingButton() {
@@ -441,6 +564,184 @@ function updateLanguageSelector() {
   }
 }
 
+function getClassroomExampleText(exampleId) {
+  return CLASSROOM_EXAMPLE_COPY[state.language]?.[exampleId]
+    || CLASSROOM_EXAMPLE_COPY.en[exampleId]
+    || { title: "Worksheet Example", body: "Classroom-ready worksheet example." };
+}
+
+function getClassroomExampleLanguageLabel(exampleLanguage) {
+  const isFrench = normalizeLanguage(exampleLanguage) === "fr";
+
+  if (state.language === "fr") {
+    return isFrench ? "Exemple francais" : "Exemple anglais";
+  }
+
+  return isFrench ? "French Example" : "English Example";
+}
+
+function createExampleIdentity(request, worksheetTitle, instructions = "") {
+  return {
+    worksheetTitle,
+    schoolName: "",
+    teacherName: "",
+    studentName: "",
+    worksheetDate: "",
+    instructions,
+    scorePoints: "",
+    teacherNotes: ""
+  };
+}
+
+function buildClassroomExampleRequest(example) {
+  const exampleLanguage = normalizeLanguage(example.previewLanguage || "en");
+  const promptText = normalizeLocalizedPrompt(
+    example.prompts?.[exampleLanguage] || example.prompts?.en || "",
+    exampleLanguage
+  );
+  const parsedPrompt = {
+    ...getSmartPromptDefaults(),
+    ...parseWorksheetPrompt(promptText)
+  };
+  const teacherMode = example.teacherMode || parsedPrompt.teacherMode || "practice";
+  const smartProfile = getSmartDefaultProfile({
+    grade: parsedPrompt.grade,
+    operation: parsedPrompt.topic,
+    teacherMode,
+    focusPattern: parsedPrompt.focusPattern,
+    promptText
+  });
+
+  return {
+    ...parsedPrompt,
+    language: exampleLanguage,
+    difficulty: parsedPrompt.difficulty || smartProfile.difficulty,
+    count: parsedPrompt.count || smartProfile.questionCount,
+    teacherMode,
+    layoutMode: parsedPrompt.layoutMode || smartProfile.layoutMode,
+    template: example.templateId || parsedPrompt.template || smartProfile.templateId,
+    templateId: example.templateId || parsedPrompt.template || smartProfile.templateId
+  };
+}
+
+function renderClassroomExamples() {
+  const container = getClassroomExamplesContainer();
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = CLASSROOM_EXAMPLES.map((example) => {
+    const exampleLanguage = normalizeLanguage(example.previewLanguage || "en");
+    const worksheetRequest = buildClassroomExampleRequest(example);
+    const generator = GENERATORS[worksheetRequest.type] || generateMathWorksheet;
+    const generatorResult = generator(worksheetRequest);
+    const questions = sanitizeQuestionsForRequest(generatorResult.questions, worksheetRequest);
+    const template = getTemplateById(worksheetRequest.templateId);
+    const worksheetTitle = getLocalizedWorksheetTitle(exampleLanguage, worksheetRequest);
+    const subjectLabel = getLocalizedSubjectLabel(exampleLanguage, worksheetRequest);
+    const focusLabel = getLocalizedFocusLabel(exampleLanguage, worksheetRequest);
+    const gradeLabel = getLocalizedGradeLabel(exampleLanguage, worksheetRequest.grade || "");
+    const worksheetModeLabel = getLocalizedWorksheetModeLabel(exampleLanguage, worksheetRequest, buildWorksheetModeLabel(worksheetRequest));
+    const difficultyLabel = getLocalizedDifficultyLabel(exampleLanguage, worksheetRequest.difficulty || "medium");
+    const worksheetSubtitle = focusLabel && gradeLabel ? `${focusLabel}${exampleLanguage === "fr" ? " — " : " - "}${gradeLabel}` : gradeLabel;
+    const identity = createExampleIdentity(
+      worksheetRequest,
+      worksheetTitle,
+      exampleLanguage === "fr"
+        ? getNaturalFrenchWorksheetInstruction(worksheetRequest)
+        : localizeDefaultWorksheetInstruction(exampleLanguage, worksheetRequest)
+    );
+    const layoutBreakdown = getWorksheetPageBreakdown({
+      questions,
+      totalQuestions: questions.length,
+      questionsPerPage: template.questionsPerPage,
+      template,
+      showAnswerKey: false,
+      layoutContext: {
+        grade: gradeLabel,
+        subjectLabel,
+        focusLabel,
+        worksheetModeLabel,
+        worksheetTitle,
+        identity,
+        requestType: worksheetRequest.type || "math",
+        language: exampleLanguage
+      }
+    });
+    const previewElement = document.createElement("div");
+    previewElement.className = "worksheet classroom-example-worksheet";
+    renderWorksheetPreview({
+      worksheetElement: previewElement,
+      grade: gradeLabel,
+      subjectLabel,
+      focusLabel,
+      worksheetSubtitle,
+      questions: layoutBreakdown.questionPagesMap[0] || questions.slice(0, 4),
+      answerQuestions: [],
+      currentPage: 1,
+      totalPages: layoutBreakdown.totalPages,
+      template,
+      pageSize: template.questionsPerPage,
+      showAnswerKey: false,
+      pageKind: "questions",
+      worksheetModeLabel,
+      difficultyLabel,
+      generatedAtLabel: "",
+      trustSignals: [],
+      identity,
+      requestType: worksheetRequest.type,
+      templateDescription: template.description,
+      language: exampleLanguage
+    });
+
+    const localizedPrompt = example.prompts?.[state.language] || example.prompts?.en || example.prompts?.fr || "";
+    const localizedCopy = getClassroomExampleText(example.id);
+    const pageLabel = state.language === "fr"
+      ? `${layoutBreakdown.totalPages} pages`
+      : `${layoutBreakdown.totalPages} pages`;
+    const questionLabel = localizeQuestionCountLabel(state.language, questions.length);
+    const exampleLanguageLabel = getClassroomExampleLanguageLabel(exampleLanguage);
+    const sampleQuestion = questions[0] ? getLocalizedQuestionDisplayText(questions[0], exampleLanguage).replace(/\s+/g, " ").trim() : "";
+
+    return `
+      <article class="classroom-example-card">
+        <div class="classroom-example-topline">
+          <span class="classroom-example-language">${exampleLanguageLabel}</span>
+          <span class="classroom-example-template">${template.name}</span>
+        </div>
+        <div class="classroom-example-paper">${previewElement.outerHTML}</div>
+        <div class="classroom-example-copy">
+          <h3>${localizedCopy.title}</h3>
+          <p>${localizedCopy.body}</p>
+          <div class="classroom-example-meta">
+            <span>${worksheetModeLabel}</span>
+            <span>${questionLabel}</span>
+            <span>${pageLabel}</span>
+          </div>
+          ${sampleQuestion ? `<p>${sampleQuestion}</p>` : ""}
+          <div class="classroom-example-actions">
+            <button
+              type="button"
+              class="demo-gallery-button classroom-example-button"
+              data-demo-prompt="${localizedPrompt}"
+              data-demo-template="${template.id}"
+              data-demo-mode="${example.teacherMode || worksheetRequest.teacherMode || "practice"}"
+            >${t(state.language, "classroomExampleGenerate")}</button>
+            <button
+              type="button"
+              class="classroom-example-link"
+              data-demo-prompt="${localizedPrompt}"
+              data-demo-template="${template.id}"
+              data-demo-mode="${example.teacherMode || worksheetRequest.teacherMode || "practice"}"
+            >${t(state.language, "classroomExamplePreview")}</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 function getNormalizedPromptText(promptText = getPromptValue()) {
   return normalizeLocalizedPrompt(promptText, state.language);
 }
@@ -452,6 +753,7 @@ function applyLanguageUI() {
   renderWorkflowPresetCards();
   renderExamplePromptChips();
   updateLocalizedDemoTriggers();
+  renderClassroomExamples();
 }
 
 function setLanguage(language, options = {}) {
@@ -1993,6 +2295,19 @@ function bindFormPersistence() {
   const demoGallery = document.querySelector(".demo-gallery-grid");
   if (demoGallery) {
     demoGallery.addEventListener("click", async (event) => {
+      const demoPreset = getDemoPresetFromTrigger(event.target);
+
+      if (!demoPreset) {
+        return;
+      }
+
+      await runDemoPreset(demoPreset);
+    });
+  }
+
+  const classroomExamplesGrid = getClassroomExamplesContainer();
+  if (classroomExamplesGrid) {
+    classroomExamplesGrid.addEventListener("click", async (event) => {
       const demoPreset = getDemoPresetFromTrigger(event.target);
 
       if (!demoPreset) {
