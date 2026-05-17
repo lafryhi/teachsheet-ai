@@ -508,6 +508,11 @@ function getWorksheetSubtitle(request) {
     return "";
   }
 
+  if (request.type === "math") {
+    const separator = normalizeLanguage(state.language) === "fr" ? " \u2014 " : " - ";
+    return `${getFocusLabel(request)}${separator}${getLocalizedGradeLabel(state.language, request.grade || "")}`;
+  }
+
   const separator = normalizeLanguage(state.language) === "fr" ? " \u2014 " : " - ";
   return `${getSubjectLabel(request)}${separator}${getFocusLabel(request)}`;
 }

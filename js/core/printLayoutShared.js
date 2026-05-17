@@ -20,13 +20,27 @@ export function scaleMetric(value, factor, minimum) {
   return Math.max(minimum, Number((value * factor).toFixed(2)));
 }
 
+function simplifyDescriptorFocusLabel(focusLabel = "", language = "en") {
+  const rawLabel = String(focusLabel || "").trim();
+
+  if (!rawLabel) {
+    return "";
+  }
+
+  if (String(language || "en").toLowerCase().startsWith("fr")) {
+    return rawLabel.replace(/\s+—\s+Niveau\s+(facile|moyen|difficile)\s*$/i, "").trim();
+  }
+
+  return rawLabel.replace(/\s+-\s+(Easy|Medium|Hard)\s*$/i, "").trim();
+}
+
 export function getPdfLayoutMetrics(presentation) {
   const isSingleColumn = presentation.layout === "single-column";
   const isKids = presentation.id === "kids-colorful";
 
   return {
     questionFontSize: isKids ? 12.4 : isSingleColumn ? 11.7 : 11.5,
-    questionLineHeight: isKids ? 4.8 : isSingleColumn ? 4.45 : 4.2,
+    questionLineHeight: isKids ? 4.9 : isSingleColumn ? 4.55 : 4.32,
     answerLineHeight: 3.9,
     questionPadding: isKids ? 4.2 : isSingleColumn ? 4 : 3.8,
     questionMinHeight: isKids ? 24 : isSingleColumn ? 21.5 : 20.5,
@@ -38,29 +52,29 @@ export function getPdfLayoutMetrics(presentation) {
     answerCardLineHeight: 3.55,
     rowGap: isSingleColumn ? 4.8 : 4.3,
     columnGap: isSingleColumn ? 0 : 6,
-    titleFontSize: 18.1,
-    titleSubtitleFontSize: 7.8,
+    titleFontSize: 17.4,
+    titleSubtitleFontSize: 7.6,
     subtitleFontSize: 8.8,
     schoolFontSize: 7.3,
     introFontSize: 8.3,
     introLineHeight: 3.65,
     schoolGap: 2.7,
-    titleGap: 4.35,
+    titleGap: 4.7,
     subtitleGap: 3.2,
     dividerGap: 2.6,
     fieldHeight: 8.5,
     titleLineUnit: 4.55,
-    descriptorLineUnit: 3,
-    descriptorMinHeight: 3.1,
+    descriptorLineUnit: 3.15,
+    descriptorMinHeight: 3.3,
     schoolBaselineOffset: 2.45,
     titleBaselineOffset: 4.2,
     descriptorBaselineOffset: 2.55,
     identityTopGap: 1.15,
-    introTopGap: 2.55,
+    introTopGap: 2.75,
     introBaselineOffset: 2.95,
     notesTopGap: 2.35,
     dividerTopGap: 1.3,
-    headerBottomGap: 3.55,
+    headerBottomGap: 3.75,
     fieldLabelBaseline: 2.75,
     fieldValueBaseline: 6.2,
     notesLabelGap: 3.2,
@@ -72,6 +86,32 @@ export function getPdfLayoutMetrics(presentation) {
     footerFontSize: 8.2,
     footerLineInset: 1.8
   };
+}
+
+export function getQuestionLineHeight(metrics, question = {}, lineCount = 1) {
+  const base = metrics.questionLineHeight;
+  const patternId = String(question?.patternId || "");
+  const isWordProblem = patternId === "word-problem";
+  const isCompare = patternId.startsWith("compare-");
+  const isMentalMath = patternId === "mental-math";
+
+  if (isMentalMath && lineCount <= 1) {
+    return base;
+  }
+
+  if (isWordProblem) {
+    return scaleMetric(base, lineCount >= 3 ? 1.12 : 1.08, base + 0.22);
+  }
+
+  if (isCompare || lineCount >= 3) {
+    return scaleMetric(base, 1.08, base + 0.18);
+  }
+
+  if (lineCount === 2) {
+    return scaleMetric(base, 1.04, base + 0.08);
+  }
+
+  return base;
 }
 
 export function getPageRowsHeight(rows, rowGap) {
@@ -455,16 +495,24 @@ export function buildCompactDescriptorLine({
   language = "en"
 }) {
   const isFrench = String(language || "en").toLowerCase().startsWith("fr");
-  const parts = [grade];
-
-  if (subjectLabel && subjectLabel !== "Math" && subjectLabel !== "Math\u00e9matiques") {
-    parts.push(subjectLabel);
-  }
-
-  parts.push(normalizePrintFocusLabel(subjectLabel, focusLabel, language));
+  const normalizedFocus = simplifyDescriptorFocusLabel(
+    normalizePrintFocusLabel(subjectLabel, focusLabel, language),
+    language
+  );
+  const parts = [];
 
   if (pageKind === "answer-key") {
-    parts.push(isFrench ? "Corrig\u00e9" : "Answer Sheet");
+    return [grade, isFrench ? "Corrigé" : "Answer Sheet"].filter(Boolean).join(isFrench ? " — " : " | ");
+  }
+
+  if (normalizedFocus) {
+    parts.push(normalizedFocus);
+  }
+
+  if (grade) {
+    parts.push(grade);
+  } else if (subjectLabel && subjectLabel !== "Math" && subjectLabel !== "Math\u00e9matiques") {
+    parts.push(subjectLabel);
   } else if (worksheetModeLabel) {
     parts.push(worksheetModeLabel);
   }

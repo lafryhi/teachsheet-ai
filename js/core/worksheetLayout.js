@@ -8,6 +8,7 @@ import {
   getAnswerSheetHeaderMetrics,
   getFooterMetrics,
   getIdentityFieldHeight,
+  getQuestionLineHeight,
   getLocalizedHeaderMetrics,
   getNotesBlockHeight,
   getPdfLayoutMetrics,
@@ -208,10 +209,11 @@ function buildEstimatedQuestionRows(questions, presentation, metrics, columnWidt
             )
           )
           : estimateWrappedLineCount(questionText, textWidth, metrics.questionFontSize);
+      const effectiveLineHeight = getQuestionLineHeight(metrics, question, textLines);
       const answerReserve = question.answerLine !== false && !hasInlineAnswerSpace
         ? (hint.answerAreaHeight || answerAreaHeight)
         : 0;
-      const baseHeight = (textLines * lineHeight) + answerReserve + 9.4;
+      const baseHeight = (textLines * effectiveLineHeight) + answerReserve + 9.4;
 
       return {
         question,

@@ -12,6 +12,7 @@ import {
   getNotesBlockHeight as getSharedNotesBlockHeight,
   getPageRowsHeight as getSharedPageRowsHeight,
   getPdfLayoutMetrics as getSharedPdfLayoutMetrics,
+  getQuestionLineHeight as getSharedQuestionLineHeight,
   normalizePrintFocusLabel as normalizeSharedPrintFocusLabel,
   normalizePrintWorksheetTitle as normalizeSharedPrintWorksheetTitle,
   paginateRows as paginateSharedRows,
@@ -55,6 +56,7 @@ const getLocalizedHeaderMetrics = getSharedLocalizedHeaderMetrics;
 const getNotesBlockHeight = getSharedNotesBlockHeight;
 const getPageRowsHeight = getSharedPageRowsHeight;
 const getPdfLayoutMetrics = getSharedPdfLayoutMetrics;
+const getQuestionLineHeight = getSharedQuestionLineHeight;
 const normalizePrintFocusLabel = normalizeSharedPrintFocusLabel;
 const normalizePrintWorksheetTitle = normalizeSharedPrintWorksheetTitle;
 const paginateRows = paginateSharedRows;
@@ -138,6 +140,13 @@ function buildQuestionLines(pdf, questionLabel, columnWidth) {
   return lines;
 }
 
+function drawTextLines(pdf, lines, x, y, lineHeight, options = {}) {
+  const safeLines = Array.isArray(lines) ? lines : [lines];
+  safeLines.forEach((line, index) => {
+    pdf.text(String(line ?? ""), x, y + (index * lineHeight), options);
+  });
+}
+
 function buildCompareQuestionParts(pdf, question, availableWidth, lineHeight, language = "en") {
   const compareParts = parseCompareQuestionText(question, language);
 
@@ -168,7 +177,6 @@ function buildCompareQuestionParts(pdf, question, availableWidth, lineHeight, la
 function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth, language = "en") {
   const rows = [];
   const columnsCount = presentation.columnsCount;
-  const lineHeight = metrics.questionLineHeight;
   const horizontalPadding = metrics.questionPadding;
   const answerAreaHeight = metrics.answerAreaHeight;
   let currentRowQuestions = [];
@@ -184,7 +192,15 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth, l
       const hint = question.layoutHints || {};
       const availableTextWidth = columnWidth - (horizontalPadding * 2);
       const questionText = getLocalizedQuestionDisplayText(question, language);
-      const compareParts = buildCompareQuestionParts(pdf, question, availableTextWidth, lineHeight, language);
+      const baseTextLines = question.format === "vertical"
+        ? String(questionText || "").split("\n").length
+        : buildQuestionLines(pdf, questionText, availableTextWidth).length;
+      const effectiveLineHeight = getQuestionLineHeight(
+        metrics,
+        question,
+        baseTextLines
+      );
+      const compareParts = buildCompareQuestionParts(pdf, question, availableTextWidth, effectiveLineHeight, language);
       const textLines = compareParts
         ? compareParts.headingLines
         : buildQuestionLines(pdf, questionText, availableTextWidth);
@@ -193,13 +209,14 @@ function buildQuestionRows(pdf, questions, presentation, metrics, columnWidth, l
         : 0;
       const baseHeight = compareParts
         ? compareParts.compareBlockHeight + 9.4
-        : (textLines.length * lineHeight) + answerReserve + 9.4;
+        : (textLines.length * effectiveLineHeight) + answerReserve + 9.4;
 
       return {
         question,
         questionNumber: absoluteIndex,
         hasInlineAnswerSpace,
         compareParts,
+        lineHeight: effectiveLineHeight,
         textLines,
         boxHeight: Math.max(
           question.format === "vertical"
@@ -439,7 +456,7 @@ function drawPageHeader(pdf, {
   pdf.setTextColor(worksheetTheme.titleColor.r, worksheetTheme.titleColor.g, worksheetTheme.titleColor.b);
   pdf.setFont(fontFamily, "bold");
   pdf.setFontSize(headerMetrics.titleFontSize);
-  pdf.text(titleText, pageWidth / 2, y + headerMetrics.titleBaselineOffset, { align: "center" });
+  drawTextLines(pdf, titleLines, pageWidth / 2, y + headerMetrics.titleBaselineOffset, headerMetrics.titleLineUnit, { align: "center" });
 
   y += Math.max(headerMetrics.titleGap, Math.max(1, titleLines.length) * headerMetrics.titleLineUnit);
 
@@ -447,7 +464,7 @@ function drawPageHeader(pdf, {
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(headerMetrics.titleSubtitleFontSize);
-    pdf.text(descriptorLines, pageWidth / 2, y + headerMetrics.descriptorBaselineOffset, { align: "center" });
+    drawTextLines(pdf, descriptorLines, pageWidth / 2, y + headerMetrics.descriptorBaselineOffset, headerMetrics.descriptorLineUnit, { align: "center" });
     y += Math.max(headerMetrics.descriptorMinHeight, descriptorLines.length * headerMetrics.descriptorLineUnit);
   }
 
@@ -458,7 +475,7 @@ function drawPageHeader(pdf, {
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(headerMetrics.introFontSize);
-    pdf.text(introLines, margins.left, y + headerMetrics.introBaselineOffset);
+    drawTextLines(pdf, introLines, margins.left, y + headerMetrics.introBaselineOffset, headerMetrics.introLineHeight);
     y += Math.max(3.4, introLines.length * headerMetrics.introLineHeight);
   }
 
@@ -593,11 +610,11 @@ function drawQuestionPages(pdf, questionPages, options) {
           pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
           pdf.setFont("courier", "bold");
           pdf.setFontSize(Math.max(10.5, questionFontSize - 0.5));
-          pdf.text(item.textLines, x + columnWidth - boxPadding - 0.8, textY, { align: "right" });
+          drawTextLines(pdf, item.textLines, x + columnWidth - boxPadding - 0.8, textY, item.lineHeight, { align: "right" });
         } else if (item.compareParts) {
           const compareStartX = x + boxPadding + numberWidth + 1.8;
           const compareTopY = textY;
-          const compareRowY = compareTopY + (item.compareParts.headingLines.length * metrics.questionLineHeight) + 1.8;
+          const compareRowY = compareTopY + (item.compareParts.headingLines.length * item.lineHeight) + 1.8;
           const leftX = compareStartX;
           const rightX = x + columnWidth - boxPadding;
           const blankStartX = leftX + item.compareParts.expressionWidth + item.compareParts.compareGap;
@@ -606,9 +623,9 @@ function drawQuestionPages(pdf, questionPages, options) {
           pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
           pdf.setFont(fontFamily, "normal");
           pdf.setFontSize(questionFontSize);
-          pdf.text(item.compareParts.headingLines, compareStartX, compareTopY);
-          pdf.text(item.compareParts.leftLines, leftX, compareRowY);
-          pdf.text(item.compareParts.rightLines, rightX, compareRowY, { align: "right" });
+          drawTextLines(pdf, item.compareParts.headingLines, compareStartX, compareTopY, item.lineHeight);
+          drawTextLines(pdf, item.compareParts.leftLines, leftX, compareRowY, item.lineHeight);
+          drawTextLines(pdf, item.compareParts.rightLines, rightX, compareRowY, item.lineHeight, { align: "right" });
           pdf.setDrawColor(worksheetTheme.questionBorder.r, worksheetTheme.questionBorder.g, worksheetTheme.questionBorder.b);
           pdf.setLineWidth(0.35);
           pdf.line(blankStartX, compareRowY - 0.5, blankEndX, compareRowY - 0.5);
@@ -616,7 +633,7 @@ function drawQuestionPages(pdf, questionPages, options) {
           pdf.setTextColor(worksheetTheme.textColor.r, worksheetTheme.textColor.g, worksheetTheme.textColor.b);
           pdf.setFont(fontFamily, "normal");
           pdf.setFontSize(questionFontSize);
-          pdf.text(item.textLines, x + boxPadding + numberWidth + 1.8, textY);
+          drawTextLines(pdf, item.textLines, x + boxPadding + numberWidth + 1.8, textY, item.lineHeight);
         }
 
         if (item.question.answerLine !== false && !item.hasInlineAnswerSpace) {
