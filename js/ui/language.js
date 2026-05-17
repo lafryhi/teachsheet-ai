@@ -542,7 +542,177 @@ export function getLocalizedSubjectLabel(language, request) {
   return t(language, mapping[type] || type);
 }
 
-export function getLocalizedWorksheetTitle(language, type = "math") {
+function getFrenchOperationNoun(operation = "") {
+  const mapping = {
+    addition: "addition",
+    subtraction: "soustraction",
+    multiplication: "multiplication",
+    division: "division",
+    mixed: "op\u00e9rations mixtes"
+  };
+
+  return mapping[operation] || String(operation || "");
+}
+
+function capitalizeWord(value = "") {
+  const text = String(value || "");
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : "";
+}
+
+function formatFrenchExercisesTitle(operation = "") {
+  const normalized = String(operation || "").trim().toLowerCase();
+  if (!normalized) {
+    return "Exercices de calcul";
+  }
+
+  if (/^[aeiouy\u00e9\u00e8\u00ea\u00eb]/i.test(normalized)) {
+    return `Exercices d'${normalized}`;
+  }
+
+  return `Exercices de ${normalized}`;
+}
+
+function getFrenchDifficultyPhrase(difficulty = "") {
+  const mapping = {
+    easy: "Niveau facile",
+    medium: "Niveau moyen",
+    hard: "Niveau difficile"
+  };
+
+  return mapping[difficulty] || "";
+}
+
+function getFrenchMathFocusLabel(request = {}) {
+  const operation = getFrenchOperationNoun(request.topic || "mixed");
+  const difficultyPhrase = getFrenchDifficultyPhrase(request.difficulty);
+
+  if (request.focusPattern === "mental-math") {
+    return difficultyPhrase ? `Calcul mental \u2014 ${difficultyPhrase}` : "Calcul mental";
+  }
+
+  if (request.topic === "mixed") {
+    return difficultyPhrase
+      ? `Op\u00e9rations mixtes \u2014 ${difficultyPhrase}`
+      : "Op\u00e9rations mixtes";
+  }
+
+  if (request.focusPattern === "word-problems") {
+    return difficultyPhrase ? `Probl\u00e8mes \u2014 ${difficultyPhrase}` : "Probl\u00e8mes";
+  }
+
+  if (request.focusPattern === "compare-totals" || request.focusPattern === "compare-differences") {
+    return difficultyPhrase ? `Comparaison de r\u00e9sultats \u2014 ${difficultyPhrase}` : "Comparaison de r\u00e9sultats";
+  }
+
+  if (request.focusPattern === "true-false") {
+    return difficultyPhrase ? `Vrai ou faux \u2014 ${difficultyPhrase}` : "Vrai ou faux";
+  }
+
+  if (request.focusPattern === "missing-number") {
+    return difficultyPhrase ? `Nombre manquant \u2014 ${difficultyPhrase}` : "Nombre manquant";
+  }
+
+  if (request.layoutMode === "vertical") {
+    return difficultyPhrase
+      ? `${capitalizeWord(operation)} verticale \u2014 ${difficultyPhrase}`
+      : `${capitalizeWord(operation)} verticale`;
+  }
+
+  if (request.layoutMode === "horizontal") {
+    return difficultyPhrase
+      ? `${capitalizeWord(operation)} horizontale \u2014 ${difficultyPhrase}`
+      : `${capitalizeWord(operation)} horizontale`;
+  }
+
+  return difficultyPhrase
+    ? `${capitalizeWord(operation)} \u2014 ${difficultyPhrase}`
+    : capitalizeWord(operation);
+}
+
+function getFrenchWorksheetTitleFromRequest(request = {}) {
+  const gradeLabel = getLocalizedGradeLabel("fr", request.grade || "");
+  const operation = getFrenchOperationNoun(request.topic || "mixed");
+
+  if (request.type === "grammar") {
+    return gradeLabel ? `Exercices de grammaire ${gradeLabel}` : "Exercices de grammaire";
+  }
+
+  if (request.type === "reading") {
+    return gradeLabel ? `Lecture guid\u00e9e ${gradeLabel}` : "Lecture guid\u00e9e";
+  }
+
+  if (request.type === "tracing") {
+    return "Activit\u00e9 de graphisme";
+  }
+
+  if (request.type === "coloring") {
+    return "Activit\u00e9 de coloriage";
+  }
+
+  if (request.focusPattern === "mental-math") {
+    return gradeLabel ? `Calcul mental ${gradeLabel}` : "Calcul mental";
+  }
+
+  if (request.teacherMode === "assessment") {
+    return request.topic && request.topic !== "mixed"
+      ? `\u00c9valuation de ${operation}`
+      : "\u00c9valuation";
+  }
+
+  if (request.teacherMode === "remediation") {
+    return request.topic && request.topic !== "mixed"
+      ? `Fiche de rem\u00e9diation en ${operation}`
+      : "Fiche de rem\u00e9diation";
+  }
+
+  if (request.teacherMode === "fast-review") {
+    return request.topic && request.topic !== "mixed"
+      ? `R\u00e9vision de ${operation}`
+      : "R\u00e9vision des op\u00e9rations mixtes";
+  }
+
+  if (request.teacherMode === "homework") {
+    return request.topic && request.topic !== "mixed"
+      ? formatFrenchExercisesTitle(operation)
+      : "Fiche d'exercices";
+  }
+
+  if (request.topic === "mixed") {
+    return "R\u00e9vision des op\u00e9rations mixtes";
+  }
+
+  if (request.topic && request.topic !== "mixed") {
+    return formatFrenchExercisesTitle(operation);
+  }
+
+  return "Exercices de calcul";
+}
+
+function getFrenchWorksheetModePhrase(request = {}) {
+  if (request.focusPattern === "mental-math") {
+    return "Activit\u00e9 de calcul mental";
+  }
+
+  const mapping = {
+    practice: "Fiche d'exercices",
+    homework: "Devoir \u00e0 la maison",
+    assessment: "\u00c9valuation",
+    remediation: "Fiche de rem\u00e9diation",
+    "fast-review": "R\u00e9vision rapide"
+  };
+
+  return mapping[request.teacherMode || "practice"] || "";
+}
+
+export function getLocalizedWorksheetTitle(language, requestOrType = "math") {
+  const type = typeof requestOrType === "string"
+    ? requestOrType
+    : (requestOrType?.type || "math");
+
+  if (normalizeLanguage(language) === "fr" && typeof requestOrType === "object" && requestOrType) {
+    return getFrenchWorksheetTitleFromRequest(requestOrType);
+  }
+
   const mapping = {
     math: "worksheetTitleMath",
     grammar: "worksheetTitleGrammar",
@@ -559,6 +729,10 @@ export function getLocalizedFocusLabel(language, request) {
   }
 
   const resolvedLanguage = normalizeLanguage(language);
+  if (resolvedLanguage === "fr" && request.type === "math") {
+    return getFrenchMathFocusLabel(request);
+  }
+
   const topicLabel = request.focusPattern === "mental-math"
     ? t(language, "focusMentalMath")
     : request.type === "math"
@@ -578,6 +752,10 @@ export function getLocalizedFocusLabel(language, request) {
     ? topicLabel
     : `${layoutPrefix}${topicLabel}`.trim();
 
+  if (resolvedLanguage === "fr" && localizedDifficulty) {
+    return `${baseLabel} \u2014 ${getFrenchDifficultyPhrase(request.difficulty)}`;
+  }
+
   return localizedDifficulty ? `${baseLabel} - ${localizedDifficulty}` : baseLabel;
 }
 
@@ -585,6 +763,11 @@ export function getLocalizedWorksheetModeLabel(language, request, fallback = "")
   if (!request?.type || request.type !== "math") {
     return fallback || "";
   }
+
+  if (normalizeLanguage(language) === "fr") {
+    return getFrenchWorksheetModePhrase(request);
+  }
+
   return getLocalizedTeacherModeLabel(language, request.teacherMode || "practice");
 }
 
@@ -712,6 +895,118 @@ export function localizeStoredInstructionText(value = "", language = "en") {
   const operationMatch = text.match(/^Solve the following (.+) questions carefully and show clear working when needed\.?$/i);
   if (operationMatch) {
     return `Résous les exercices de ${operationMatch[1].toLowerCase()} suivants avec soin et montre clairement ta méthode si besoin.`;
+  }
+
+  return text;
+}
+
+export function getNaturalFrenchWorksheetInstruction(request = {}) {
+  if (request?.type !== "math") {
+    return "Lis chaque question avec attention et compl\u00e8te chaque r\u00e9ponse dans l'espace pr\u00e9vu.";
+  }
+
+  if (request.focusPattern === "mental-math") {
+    return "R\u00e9ponds mentalement si possible. \u00c9cris uniquement la bonne r\u00e9ponse.";
+  }
+
+  if (request.focusPattern === "word-problems") {
+    return "Lis chaque probl\u00e8me avec attention puis \u00e9cris la bonne r\u00e9ponse.";
+  }
+
+  if (request.focusPattern === "compare-totals" || request.focusPattern === "compare-differences") {
+    return "Compare les r\u00e9sultats puis compl\u00e8te avec le bon signe.";
+  }
+
+  if (request.focusPattern === "true-false") {
+    return "Lis chaque \u00e9galit\u00e9 puis indique si elle est vraie ou fausse.";
+  }
+
+  if (request.focusPattern === "missing-number") {
+    return "Compl\u00e8te avec le nombre manquant.";
+  }
+
+  if (request.layoutMode === "vertical") {
+    return "Effectue les calculs suivants en alignant bien les chiffres.";
+  }
+
+  if (request.topic === "mixed") {
+    return "Effectue les calculs suivants avec soin.";
+  }
+
+  return "Effectue les calculs suivants. Montre clairement ta m\u00e9thode si besoin.";
+}
+
+function normalizeStoredFrenchOperationWord(operationText = "") {
+  const normalized = String(operationText || "").trim().toLowerCase();
+  const mapping = {
+    addition: "addition",
+    subtraction: "soustraction",
+    multiplication: "multiplication",
+    division: "division",
+    "mixed operations": "op\u00e9rations mixtes"
+  };
+
+  return mapping[normalized] || operationText;
+}
+
+export function normalizeFrenchInstructionText(value = "", request = null) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return request ? getNaturalFrenchWorksheetInstruction(request) : text;
+  }
+
+  if (/^R[\u00e9Ã©]sous les exercices de addition suivants/i.test(text)) {
+    return "Effectue les exercices d'addition suivants avec soin. Montre clairement ta m\u00e9thode si besoin.";
+  }
+
+  if (/^R[\u00e9Ã©]sous les exercices de soustraction suivants/i.test(text)) {
+    return "Effectue les exercices de soustraction suivants avec soin. Montre clairement ta m\u00e9thode si besoin.";
+  }
+
+  if (/^R[\u00e9Ã©]sous les exercices de multiplication suivants/i.test(text)) {
+    return "Effectue les exercices de multiplication suivants avec soin. Montre clairement ta m\u00e9thode si besoin.";
+  }
+
+  if (/^R[\u00e9Ã©]sous les exercices de division suivants/i.test(text)) {
+    return "Effectue les exercices de division suivants avec soin. Montre clairement ta m\u00e9thode si besoin.";
+  }
+
+  if (/^R[\u00e9Ã©]sous les exercices de op[\u00e9Ã©]rations mixtes suivants/i.test(text)) {
+    return "Effectue les calculs suivants avec soin. Montre clairement ta m\u00e9thode si besoin.";
+  }
+
+  if (/^Calcule mentalement /i.test(text)) {
+    return "R\u00e9ponds mentalement si possible. \u00c9cris uniquement la bonne r\u00e9ponse.";
+  }
+
+  const verticalMatch = text.match(/^R[\u00e9Ã©]sous les (.+?) verticales suivantes/i);
+  if (verticalMatch) {
+    const operation = normalizeStoredFrenchOperationWord(verticalMatch[1]);
+    return `Effectue les ${operation} verticales suivantes avec soin et aligne bien les chiffres.`;
+  }
+
+  return text;
+}
+
+export function localizeTeacherNotesText(value = "", language = "en") {
+  const text = String(value || "").trim();
+
+  if (!text || normalizeLanguage(language) !== "fr") {
+    return text;
+  }
+
+  const directMap = [
+    [/^Review basic operations and mental calculation strategies\.?$/i, "R\u00e9vise les op\u00e9rations de base et les strat\u00e9gies de calcul mental."],
+    [/^Support digit alignment and clear written methods\.?$/i, "Veille \u00e0 l'alignement des chiffres et \u00e0 la clart\u00e9 des m\u00e9thodes \u00e9crites."],
+    [/^Encourage students to show their reasoning\.?$/i, "Encourage les \u00e9l\u00e8ves \u00e0 montrer leur raisonnement."],
+    [/^Check mental strategies before written work\.?$/i, "V\u00e9rifie d'abord les strat\u00e9gies de calcul mental avant le travail \u00e9crit."]
+  ];
+
+  for (const [pattern, replacement] of directMap) {
+    if (pattern.test(text)) {
+      return replacement;
+    }
   }
 
   return text;

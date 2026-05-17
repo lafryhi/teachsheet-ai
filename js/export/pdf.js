@@ -32,6 +32,9 @@ import {
 import { getTemplatePresentation } from "../templates/templates.js";
 import {
   getLocalizedWorksheetIntroCopy,
+  getNaturalFrenchWorksheetInstruction,
+  localizeTeacherNotesText,
+  normalizeFrenchInstructionText,
   localizeStoredInstructionText,
   localizeSectionInstruction,
   localizeSectionLabel,
@@ -71,7 +74,14 @@ function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focus
   }
 
   if (identity.instructions) {
-    return localizeStoredInstructionText(identity.instructions, language);
+    const localizedInstruction = localizeStoredInstructionText(identity.instructions, language);
+    return normalizeLanguage(language) === "fr"
+      ? normalizeFrenchInstructionText(localizedInstruction)
+      : localizedInstruction;
+  }
+
+  if (worksheetModeLabel && normalizeLanguage(language) === "fr") {
+    return `${worksheetModeLabel}. ${getNaturalFrenchWorksheetInstruction({ type: "math" })}`;
   }
 
   if (worksheetModeLabel && focusLabel && normalizeLanguage(language) === "fr") {
@@ -330,7 +340,8 @@ function measurePageHeaderHeight(pdf, {
     grade,
     subjectLabel,
     focusLabel,
-    worksheetModeLabel
+    worksheetModeLabel,
+    language
   });
   const descriptorLines = descriptorLine
     ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
@@ -339,7 +350,7 @@ function measurePageHeaderHeight(pdf, {
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
     : [];
-  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
+  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel, language);
   const titleLines = pdf.splitTextToSize(titleText, pageWidth - margins.left - margins.right - 12);
   let y = margins.top;
 
@@ -362,7 +373,7 @@ function measurePageHeaderHeight(pdf, {
 
   if (shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind })) {
     const notesLines = pdf.splitTextToSize(
-      identity.teacherNotes,
+      localizeTeacherNotesText(identity.teacherNotes, language),
       pageWidth - margins.left - margins.right - (headerMetrics.notesPadding * 2)
     );
     y += headerMetrics.notesTopGap;
@@ -398,7 +409,8 @@ function drawPageHeader(pdf, {
     grade,
     subjectLabel,
     focusLabel,
-    worksheetModeLabel
+    worksheetModeLabel,
+    language
   });
   const descriptorLines = descriptorLine
     ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
@@ -407,7 +419,7 @@ function drawPageHeader(pdf, {
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
     : [];
-  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
+  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel, language);
   const titleLines = pdf.splitTextToSize(titleText, pageWidth - margins.left - margins.right - 12);
   const identityFields = [
     { label: t(language, "name"), value: getStudentDisplayValue(identity.studentName, "---") },
@@ -452,7 +464,7 @@ function drawPageHeader(pdf, {
 
   if (shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind })) {
     y += headerMetrics.notesTopGap;
-    y = drawNotesBlock(pdf, t(language, "teacherNotes"), identity.teacherNotes, y, margins, pageWidth, worksheetTheme, headerMetrics);
+    y = drawNotesBlock(pdf, t(language, "teacherNotes"), localizeTeacherNotesText(identity.teacherNotes, language), y, margins, pageWidth, worksheetTheme, headerMetrics);
   }
 
   pdf.setDrawColor(worksheetTheme.dividerColor.r, worksheetTheme.dividerColor.g, worksheetTheme.dividerColor.b);

@@ -394,9 +394,13 @@ export function getIdentityFieldHeight(metrics) {
   return metrics.fieldHeight;
 }
 
-export function normalizePrintFocusLabel(subjectLabel, focusLabel) {
+export function normalizePrintFocusLabel(subjectLabel, focusLabel, language = "en") {
   if (!focusLabel) {
     return "";
+  }
+
+  if (String(language || "en").toLowerCase().startsWith("fr")) {
+    return String(focusLabel).trim();
   }
 
   if (subjectLabel === "Math") {
@@ -406,18 +410,36 @@ export function normalizePrintFocusLabel(subjectLabel, focusLabel) {
   return String(focusLabel);
 }
 
-export function normalizePrintWorksheetTitle(title, subjectLabel, focusLabel) {
+export function normalizePrintWorksheetTitle(title, subjectLabel, focusLabel, language = "en") {
   const rawTitle = String(title || "").trim();
 
   if (!rawTitle) {
-    return "Worksheet";
+    return String(language || "en").toLowerCase().startsWith("fr") ? "Fiche d'exercices" : "Worksheet";
   }
 
   const normalized = rawTitle.toLowerCase();
   const genericTitles = new Set(["exercices", "exercises", "exercise", "worksheet"]);
 
   if (genericTitles.has(normalized)) {
-    const focusPart = normalizePrintFocusLabel(subjectLabel, focusLabel);
+    const focusPart = normalizePrintFocusLabel(subjectLabel, focusLabel, language);
+
+    if (String(language || "en").toLowerCase().startsWith("fr")) {
+      if (/calcul mental/i.test(focusPart)) {
+        return "Calcul mental";
+      }
+
+      if (/op\u00e9rations mixtes/i.test(focusPart)) {
+        return "R\u00e9vision des op\u00e9rations mixtes";
+      }
+
+      const operationMatch = focusPart.match(/(addition|soustraction|multiplication|division)/i);
+      if (operationMatch) {
+        return `Exercices de ${operationMatch[1].toLowerCase()}`;
+      }
+
+      return focusPart || "Fiche d'exercices";
+    }
+
     return focusPart ? `${focusPart} Worksheet` : "Worksheet";
   }
 
@@ -429,23 +451,25 @@ export function buildCompactDescriptorLine({
   grade,
   subjectLabel,
   focusLabel,
-  worksheetModeLabel
+  worksheetModeLabel,
+  language = "en"
 }) {
+  const isFrench = String(language || "en").toLowerCase().startsWith("fr");
   const parts = [grade];
 
-  if (subjectLabel && subjectLabel !== "Math") {
+  if (subjectLabel && subjectLabel !== "Math" && subjectLabel !== "Math\u00e9matiques") {
     parts.push(subjectLabel);
   }
 
-  parts.push(normalizePrintFocusLabel(subjectLabel, focusLabel));
+  parts.push(normalizePrintFocusLabel(subjectLabel, focusLabel, language));
 
   if (pageKind === "answer-key") {
-    parts.push("Answer Sheet");
+    parts.push(isFrench ? "Corrig\u00e9" : "Answer Sheet");
   } else if (worksheetModeLabel) {
     parts.push(worksheetModeLabel);
   }
 
-  return parts.filter(Boolean).join(" | ");
+  return parts.filter(Boolean).join(isFrench ? " \u2014 " : " | ");
 }
 
 export function getNotesBlockHeight(linesCount, metrics) {

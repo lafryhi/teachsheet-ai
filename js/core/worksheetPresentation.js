@@ -232,19 +232,19 @@ function localizeQuestionTextByPattern(question = {}, language = "en") {
 
   if (patternId === "word-problem" && operands.length >= 2) {
     if (operation === "addition") {
-      return `Il y a ${operands[0]} objets, puis ${operands[1]} autres s’ajoutent. Combien y en a-t-il en tout ?`;
+      return `Lina a ${operands[0]} billes. Elle en re\u00e7oit ${operands[1]} de plus. Combien de billes a-t-elle maintenant ?`;
     }
 
     if (operation === "subtraction") {
-      return `Il y a ${operands[0]} objets, puis ${operands[1]} sont retirés. Combien en reste-t-il ?`;
+      return `Lina a ${operands[0]} billes. On lui en retire ${operands[1]}. Combien lui en reste-t-il ?`;
     }
 
     if (operation === "multiplication") {
-      return `Il y a ${operands[0]} groupes de ${operands[1]}. Combien y en a-t-il en tout ?`;
+      return `${operands[0]} bo\u00eetes contiennent ${operands[1]} crayons chacune. Combien y a-t-il de crayons en tout ?`;
     }
 
     if (operation === "division") {
-      return `${operands[0]} objets sont partagés en ${operands[1]} groupes égaux. Combien dans chaque groupe ?`;
+      return `${operands[0]} billes sont partag\u00e9es en ${operands[1]} groupes \u00e9gaux. Combien y a-t-il de billes dans chaque groupe ?`;
     }
   }
 
@@ -273,29 +273,76 @@ function localizeQuestionTextFallback(text = "", language = "en") {
     .replace(/^Trace the model carefully on the line\.$/i, "Repasse soigneusement le modèle sur la ligne.")
     .replace(/^Color the picture carefully and follow the instruction\.$/i, "Colorie l’image avec soin et suis la consigne.")
     .replace(/^Complete question (\d+)\.$/i, "Complète la question $1.")
-    .replace(/^Circle the verb in this sentence:/i, "Entoure le verbe dans cette phrase :")
-    .replace(/^Choose the verb:/i, "Choisis le verbe :")
-    .replace(/^Find the action word:/i, "Trouve le mot d’action :")
-    .replace(/^Underline the verb:/i, "Souligne le verbe :")
-    .replace(/^Write the verb in this sentence:/i, "Écris le verbe dans cette phrase :")
-    .replace(/^Pick the verb:/i, "Choisis le verbe :")
-    .replace(/^Find the verb:/i, "Trouve le verbe :")
-    .replace(/^Circle the action word:/i, "Entoure le mot d’action :")
-    .replace(/^Circle the noun:/i, "Entoure le nom :")
-    .replace(/^Find the naming word:/i, "Trouve le nom :")
-    .replace(/^Underline the noun:/i, "Souligne le nom :")
-    .replace(/^Choose the noun:/i, "Choisis le nom :")
-    .replace(/^Write the noun in this sentence:/i, "Écris le nom dans cette phrase :")
-    .replace(/^Pick the noun:/i, "Choisis le nom :")
-    .replace(/^Circle the adjective:/i, "Entoure l’adjectif :")
-    .replace(/^Find the describing word:/i, "Trouve l’adjectif :")
-    .replace(/^Underline the adjective:/i, "Souligne l’adjectif :")
-    .replace(/^Choose the adjective:/i, "Choisis l’adjectif :")
-    .replace(/^Write the adjective in this sentence:/i, "Écris l’adjectif dans cette phrase :")
-    .replace(/^Read and answer:/i, "Lis puis réponds :")
-    .replace(/^Write only the correct word on the line\.$/i, "Écris seulement le mot correct sur la ligne.")
-    .replace(/^Grammar check:/i, "Vérification de grammaire :")
-    .replace(/Then use the word \"([^\"]+)\" in a short new sentence\./i, "Puis utilise le mot \"$1\" dans une nouvelle phrase courte.");
+    .replace(/Circle the verb in this sentence:/gi, "Entoure le verbe dans cette phrase :")
+    .replace(/Choose the verb:/gi, "Choisis le verbe :")
+    .replace(/Find the action word:/gi, "Trouve le mot d’action :")
+    .replace(/Underline the verb:/gi, "Souligne le verbe :")
+    .replace(/Write the verb in this sentence:/gi, "Écris le verbe dans cette phrase :")
+    .replace(/Pick the verb:/gi, "Choisis le verbe :")
+    .replace(/Find the verb:/gi, "Trouve le verbe :")
+    .replace(/Circle the action word:/gi, "Entoure le mot d’action :")
+    .replace(/Circle the noun:/gi, "Entoure le nom :")
+    .replace(/Find the naming word:/gi, "Trouve le nom :")
+    .replace(/Underline the noun:/gi, "Souligne le nom :")
+    .replace(/Choose the noun:/gi, "Choisis le nom :")
+    .replace(/Write the noun in this sentence:/gi, "Écris le nom dans cette phrase :")
+    .replace(/Pick the noun:/gi, "Choisis le nom :")
+    .replace(/Circle the adjective:/gi, "Entoure l’adjectif :")
+    .replace(/Find the describing word:/gi, "Trouve l’adjectif :")
+    .replace(/Underline the adjective:/gi, "Souligne l’adjectif :")
+    .replace(/Choose the adjective:/gi, "Choisis l’adjectif :")
+    .replace(/Write the adjective in this sentence:/gi, "Écris l’adjectif dans cette phrase :")
+    .replace(/Read and answer:/gi, "Lis puis réponds :")
+    .replace(/Write only the correct word on the line\./gi, "Écris seulement le mot correct sur la ligne.")
+    .replace(/Grammar check:/gi, "Vérification de grammaire :")
+    .replace(/Then use the word \"([^\"]+)\" in a short new sentence\./i, "Puis utilise le mot \"$1\" dans une nouvelle phrase courte.")
+    .replace(/The children jump outside after lunch\./g, "Les enfants sautent dehors après le déjeuner.")
+    .replace(/Mother cooks dinner every night for the family\./g, "Maman prépare le dîner chaque soir pour la famille.")
+    .replace(/Birds sing on the branch before sunrise\./g, "Les oiseaux chantent sur la branche avant le lever du soleil.")
+    .replace(/We walk to school together every morning\./g, "Nous allons à l'école ensemble chaque matin.")
+    .replace(/The baby sleeps quietly in the crib\./g, "Le bébé dort tranquillement dans son berceau.")
+    .replace(/My brother carries his books in a blue bag\./g, "Mon frère porte ses livres dans un sac bleu.")
+    .replace(/The rain falls softly on the playground\./g, "La pluie tombe doucement sur la cour de récréation.")
+    .replace(/The teacher explains the lesson clearly\./g, "L'enseignant explique la leçon clairement.")
+    .replace(/The cat sleeps on the sofa near the window\./g, "Le chat dort sur le canapé près de la fenêtre.")
+    .replace(/My brother rides a bike after school\./g, "Mon frère fait du vélo après l'école.")
+    .replace(/The teacher opened the book on the table\./g, "L'enseignant a ouvert le livre sur la table.")
+    .replace(/The flowers smell fresh in the garden\./g, "Les fleurs sentent bon dans le jardin.")
+    .replace(/The apple is red and shiny\./g, "La pomme est rouge et brillante.")
+    .replace(/The bus stopped beside the library\./g, "Le bus s'est arrêté près de la bibliothèque.")
+    .replace(/Sara packed a notebook and a pencil\./g, "Sara a rangé un cahier et un crayon.")
+    .replace(/The river flows behind the village\./g, "La rivière coule derrière le village.")
+    .replace(/The blue balloon floated across the yard\./g, "Le ballon bleu a traversé la cour.")
+    .replace(/We saw a tall building near the square\./g, "Nous avons vu un grand bâtiment près de la place.")
+    .replace(/She wore a shiny dress for the play\./g, "Elle portait une robe brillante pour le spectacle.")
+    .replace(/The soup is hot and tasty\./g, "La soupe est chaude et savoureuse.")
+    .replace(/They found a small shell on the beach\./g, "Ils ont trouvé un petit coquillage sur la plage.")
+    .replace(/We sat under a shady tree in the park\./g, "Nous nous sommes assis sous un arbre ombragé dans le parc.")
+    .replace(/The kitten has soft fur\./g, "Le chaton a une fourrure douce.")
+    .replace(/Omar solved a difficult puzzle\./g, "Omar a résolu un puzzle difficile.")
+    .replace(/"jump"/g, "\"sautent\"")
+    .replace(/"cooks"/g, "\"prépare\"")
+    .replace(/"sing"/g, "\"chantent\"")
+    .replace(/"walk"/g, "\"allons\"")
+    .replace(/"sleeps"/g, "\"dort\"")
+    .replace(/"carries"/g, "\"porte\"")
+    .replace(/"falls"/g, "\"tombe\"")
+    .replace(/"explains"/g, "\"explique\"")
+    .replace(/"cat"/g, "\"chat\"")
+    .replace(/"brother"/g, "\"frère\"")
+    .replace(/"teacher"/g, "\"enseignant\"")
+    .replace(/"flowers"/g, "\"fleurs\"")
+    .replace(/"apple"/g, "\"pomme\"")
+    .replace(/"notebook"/g, "\"cahier\"")
+    .replace(/"river"/g, "\"rivière\"")
+    .replace(/"blue"/g, "\"bleu\"")
+    .replace(/"tall"/g, "\"grand\"")
+    .replace(/"shiny"/g, "\"brillante\"")
+    .replace(/"hot"/g, "\"chaude\"")
+    .replace(/"small"/g, "\"petit\"")
+    .replace(/"shady"/g, "\"ombragé\"")
+    .replace(/"soft"/g, "\"douce\"")
+    .replace(/"difficult"/g, "\"difficile\"");
 }
 
 export function getLocalizedQuestionDisplayText(question = {}, language = "en") {
@@ -343,6 +390,37 @@ export function getLocalizedAnswerText(question = {}, language = "en") {
 
   if (/^false$/i.test(answer)) {
     return "Faux";
+  }
+
+  const grammarAnswerMap = {
+    jump: "sautent",
+    cooks: "prépare",
+    sing: "chantent",
+    walk: "allons",
+    sleeps: "dort",
+    carries: "porte",
+    falls: "tombe",
+    explains: "explique",
+    cat: "chat",
+    brother: "frère",
+    teacher: "enseignant",
+    flowers: "fleurs",
+    apple: "pomme",
+    bus: "bus",
+    notebook: "cahier",
+    river: "rivière",
+    blue: "bleu",
+    tall: "grand",
+    shiny: "brillante",
+    hot: "chaude",
+    small: "petit",
+    shady: "ombragé",
+    soft: "douce",
+    difficult: "difficile"
+  };
+
+  if (grammarAnswerMap[answer]) {
+    return grammarAnswerMap[answer];
   }
 
   return answer

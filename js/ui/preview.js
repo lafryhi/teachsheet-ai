@@ -10,7 +10,11 @@ import {
   shouldShowTeacherNotes
 } from "../core/worksheetPresentation.js";
 import {
+  getLocalizedGradeLabel,
+  getNaturalFrenchWorksheetInstruction,
   getLocalizedWorksheetIntroCopy,
+  localizeTeacherNotesText,
+  normalizeFrenchInstructionText,
   localizeStoredInstructionText,
   localizeSectionInstruction,
   localizeSectionLabel,
@@ -41,7 +45,14 @@ function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focus
   }
 
   if (identity.instructions) {
-    return localizeStoredInstructionText(identity.instructions, language);
+    const localizedInstruction = localizeStoredInstructionText(identity.instructions, language);
+    return normalizeLanguage(language) === "fr"
+      ? normalizeFrenchInstructionText(localizedInstruction)
+      : localizedInstruction;
+  }
+
+  if (worksheetModeLabel && normalizeLanguage(language) === "fr") {
+    return `${worksheetModeLabel}. ${getNaturalFrenchWorksheetInstruction({ type: "math" })}`;
   }
 
   if (worksheetModeLabel && focusLabel && normalizeLanguage(language) === "fr") {
@@ -167,9 +178,10 @@ function createAnswerKeyMarkup(questions, language) {
 }
 
 function createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel, language }) {
+  const displayGrade = getLocalizedGradeLabel(language, grade || "");
   const baseItems = [
     [t(language, "teacher"), identity.teacherName || "--"],
-    [t(language, "level"), grade || "--"],
+    [t(language, "level"), displayGrade || "--"],
     [t(language, "subject"), subjectLabel],
     [t(language, "focus"), focusLabel]
   ];
@@ -243,7 +255,7 @@ function createWorksheetHeaderMarkup({
         </div>
         <div class="worksheet-title-aside">
           ${difficultyLabel && pageKind !== "answer-key" ? `<div class="worksheet-difficulty-badge">${escapeHtml(difficultyLabel)}</div>` : ""}
-          <div class="worksheet-page-badge">Page ${currentPage} of ${totalPages}</div>
+          <div class="worksheet-page-badge">${escapeHtml(t(resolvedLanguage, "pageLabel", { current: currentPage, total: totalPages }))}</div>
         </div>
       </div>
       <p class="worksheet-intro">${formatMultilineText(introText)}</p>
@@ -261,7 +273,7 @@ function createWorksheetHeaderMarkup({
         </div>
       </div>
       ${createConfidenceStripMarkup(trustSignals)}
-      ${showTeacherNotes ? createNotesMarkup(t(resolvedLanguage, "teacherNotes"), identity.teacherNotes) : ""}
+      ${showTeacherNotes ? createNotesMarkup(t(resolvedLanguage, "teacherNotes"), localizeTeacherNotesText(identity.teacherNotes, resolvedLanguage)) : ""}
     </div>
   `;
 }

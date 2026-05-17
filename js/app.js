@@ -53,6 +53,7 @@ import {
   getLocalizedPresetContent,
   getLocalizedPromptExamples,
   getLocalizedSubjectLabel,
+  getNaturalFrenchWorksheetInstruction,
   getLocalizedTeacherModeLabel,
   getLocalizedWorksheetModeLabel,
   getLocalizedWorksheetTitle,
@@ -486,8 +487,8 @@ function formatGeneratedAtLabel(dateValue) {
   return localizeGeneratedAtLabel(state.language, dateValue);
 }
 
-function getWorksheetTitle(type) {
-  return getLocalizedWorksheetTitle(state.language, type);
+function getWorksheetTitle(request) {
+  return getLocalizedWorksheetTitle(state.language, request || "math");
 }
 
 function getSubjectLabel(request) {
@@ -507,7 +508,8 @@ function getWorksheetSubtitle(request) {
     return "";
   }
 
-  return `${getSubjectLabel(request)} - ${getFocusLabel(request)}`;
+  const separator = normalizeLanguage(state.language) === "fr" ? " \u2014 " : " - ";
+  return `${getSubjectLabel(request)}${separator}${getFocusLabel(request)}`;
 }
 
 function getWorksheetTrustSignals(request) {
@@ -1159,7 +1161,7 @@ function buildMathRequestFromFormValues(formValues) {
 
 function getResolvedWorksheetIdentity(formValues, request, worksheetTitleFallback = null, smartInstructions = "") {
   return {
-    worksheetTitle: formValues.worksheetTitle || worksheetTitleFallback || getWorksheetTitle(request.type),
+    worksheetTitle: formValues.worksheetTitle || worksheetTitleFallback || getWorksheetTitle(request),
     schoolName: formValues.schoolName,
     teacherName: formValues.teacherName,
     studentName: normalizeStudentName(formValues.studentName),
@@ -1177,7 +1179,9 @@ function getCurrentWorksheetBreakdown(showAnswerKey = state.currentWorksheetMeta
     formValues,
     fallbackRequest,
     state.currentWorksheetMeta?.worksheetTitle || null,
-    localizeDefaultWorksheetInstruction(state.language, fallbackRequest) || buildWorksheetInstruction(fallbackRequest)
+    (normalizeLanguage(state.language) === "fr"
+      ? getNaturalFrenchWorksheetInstruction(fallbackRequest)
+      : localizeDefaultWorksheetInstruction(state.language, fallbackRequest)) || buildWorksheetInstruction(fallbackRequest)
   );
 
   return getWorksheetPageBreakdown({
@@ -1187,7 +1191,7 @@ function getCurrentWorksheetBreakdown(showAnswerKey = state.currentWorksheetMeta
     template: state.template,
     showAnswerKey,
     layoutContext: {
-      grade: fallbackRequest.grade || formValues.grade,
+      grade: getLocalizedGradeLabel(state.language, fallbackRequest.grade || formValues.grade),
       subjectLabel: state.currentWorksheetMeta?.subjectLabel || getSubjectLabel(fallbackRequest),
       focusLabel: state.currentWorksheetMeta?.focusLabel || getFocusLabel(fallbackRequest),
       worksheetModeLabel: state.currentWorksheetMeta?.worksheetModeLabel || getWorksheetModeLabel(fallbackRequest),
@@ -1333,9 +1337,11 @@ function getWorksheetRequest() {
 
 function getWorksheetMeta(request, generatorResult) {
   const formValues = getFormValues();
-  const defaultTitle = getWorksheetTitle(request.type);
+  const defaultTitle = getWorksheetTitle(request);
   const smartInstructions = formValues.instructions
-    || localizeDefaultWorksheetInstruction(state.language, request)
+    || (normalizeLanguage(state.language) === "fr"
+      ? getNaturalFrenchWorksheetInstruction(request)
+      : localizeDefaultWorksheetInstruction(state.language, request))
     || generatorResult.instructions
     || buildWorksheetInstruction(request);
   const worksheetModeLabel = getWorksheetModeLabel(request);
@@ -1536,7 +1542,7 @@ function syncPreview() {
 
   renderWorksheetPreview({
     worksheetElement: getWorksheetElement(),
-    grade: state.currentRequest?.grade || formValues.grade,
+    grade: getLocalizedGradeLabel(state.language, state.currentRequest?.grade || formValues.grade),
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
     worksheetSubtitle: state.currentWorksheetMeta?.worksheetSubtitle || getWorksheetSubtitle(state.currentRequest),
@@ -1559,7 +1565,9 @@ function syncPreview() {
       formValues,
       state.currentRequest,
       null,
-      localizeDefaultWorksheetInstruction(state.language, state.currentRequest || {}) || buildWorksheetInstruction(state.currentRequest || {})
+      (normalizeLanguage(state.language) === "fr"
+        ? getNaturalFrenchWorksheetInstruction(state.currentRequest || {})
+        : localizeDefaultWorksheetInstruction(state.language, state.currentRequest || {})) || buildWorksheetInstruction(state.currentRequest || {})
     ),
     requestType: state.currentRequest?.type || "math",
     templateDescription: state.currentWorksheetMeta?.templateDescription || state.template.description,
@@ -1798,7 +1806,7 @@ function downloadPDF() {
     questions: state.currentQuestions,
     template: state.template,
     theme: getTheme(state.theme),
-    grade: state.currentRequest?.grade || getFormValues().grade,
+    grade: getLocalizedGradeLabel(state.language, state.currentRequest?.grade || getFormValues().grade),
     worksheetTitle: state.currentWorksheetMeta?.worksheetTitle || "Worksheet",
     subjectLabel: state.currentWorksheetMeta?.subjectLabel || "Math",
     focusLabel: state.currentWorksheetMeta?.focusLabel || "Addition - Medium",
@@ -1813,7 +1821,9 @@ function downloadPDF() {
       getFormValues(),
       state.currentRequest,
       null,
-      localizeDefaultWorksheetInstruction(state.language, state.currentRequest || {}) || buildWorksheetInstruction(state.currentRequest || {})
+      (normalizeLanguage(state.language) === "fr"
+        ? getNaturalFrenchWorksheetInstruction(state.currentRequest || {})
+        : localizeDefaultWorksheetInstruction(state.language, state.currentRequest || {})) || buildWorksheetInstruction(state.currentRequest || {})
     )
   });
 }

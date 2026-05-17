@@ -24,7 +24,15 @@ import {
   shouldShowTeacherNotes
 } from "./worksheetPresentation.js";
 import { getTemplatePresentation } from "../templates/templates.js";
-import { getLocalizedWorksheetIntroCopy, localizeStoredInstructionText, normalizeLanguage, t } from "../ui/language.js";
+import {
+  getLocalizedWorksheetIntroCopy,
+  getNaturalFrenchWorksheetInstruction,
+  localizeTeacherNotesText,
+  localizeStoredInstructionText,
+  normalizeFrenchInstructionText,
+  normalizeLanguage,
+  t
+} from "../ui/language.js";
 
 function questionHasInlineAnswerSpace(question) {
   return /_{3,}/.test(getQuestionDisplayText(question)) || isCompareQuestion(question);
@@ -36,7 +44,14 @@ function buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focus
   }
 
   if (identity.instructions) {
-    return localizeStoredInstructionText(identity.instructions, language);
+    const localizedInstruction = localizeStoredInstructionText(identity.instructions, language);
+    return normalizeLanguage(language) === "fr"
+      ? normalizeFrenchInstructionText(localizedInstruction)
+      : localizedInstruction;
+  }
+
+  if (worksheetModeLabel && normalizeLanguage(language) === "fr") {
+    return `${worksheetModeLabel}. ${getNaturalFrenchWorksheetInstruction({ type: "math" })}`;
   }
 
   if (worksheetModeLabel && focusLabel && normalizeLanguage(language) === "fr") {
@@ -102,7 +117,8 @@ function measureEstimatedHeaderHeight({
     grade,
     subjectLabel,
     focusLabel,
-    worksheetModeLabel
+    worksheetModeLabel,
+    language
   });
   const descriptorLines = descriptorLine
     ? estimateWrappedLineCount(
@@ -119,7 +135,7 @@ function measureEstimatedHeaderHeight({
       headerMetrics.introFontSize
     )
     : 0;
-  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel);
+  const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel, language);
   const titleLines = estimateWrappedLineCount(
     titleText,
     pageWidth - margins.left - margins.right - 12,
@@ -147,7 +163,7 @@ function measureEstimatedHeaderHeight({
 
   if (shouldShowTeacherNotes(identity.teacherNotes, { currentPage, pageKind })) {
     const notesLines = estimateWrappedLineCount(
-      identity.teacherNotes,
+      localizeTeacherNotesText(identity.teacherNotes, language),
       pageWidth - margins.left - margins.right - (headerMetrics.notesPadding * 2),
       headerMetrics.introFontSize
     );
