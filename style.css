@@ -1587,6 +1587,14 @@ a {
   line-height: 1.6;
 }
 
+.teacher-form-section-print {
+  gap: 14px;
+}
+
+.teacher-form-section-print textarea {
+  min-height: 84px;
+}
+
 .global-school-settings-section {
   gap: 18px;
 }

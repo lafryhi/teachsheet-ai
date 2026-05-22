@@ -638,69 +638,6 @@
         <div id="workflowSmartSummary" class="workflow-smart-summary" aria-live="polite"></div>
       </div>
 
-      <div class="teacher-form-section global-school-settings-section">
-        <div class="teacher-form-section-header">
-          <div>
-            <h3 data-i18n="globalSchoolSettings">School Settings</h3>
-            <p data-i18n="globalSchoolSettingsIntro">Save your school details once and reuse them across new worksheets, previews, saved projects, and PDF exports.</p>
-          </div>
-        </div>
-
-        <div class="teacher-form-grid teacher-form-grid-primary">
-          <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
-            <input id="globalSchoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
-            <input id="globalTeacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="defaultClassGrade">Default Class / Grade</span>
-            <select id="globalDefaultGrade">
-              <option value="" data-i18n="noDefaultGrade">No default grade</option>
-              <option value="Grade 1">Grade 1</option>
-              <option value="Grade 2">Grade 2</option>
-              <option value="Grade 3">Grade 3</option>
-              <option value="Grade 4">Grade 4</option>
-              <option value="Grade 5">Grade 5</option>
-            </select>
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="defaultSubject">Default Subject</span>
-            <select id="globalDefaultSubject">
-              <option value="" data-i18n="noDefaultSubject">No default subject</option>
-              <option value="math" data-i18n="subjectMath">Math</option>
-              <option value="grammar" data-i18n="subjectGrammar">Grammar</option>
-              <option value="reading" data-i18n="subjectReading">Reading</option>
-              <option value="tracing" data-i18n="subjectTracing">Tracing</option>
-              <option value="coloring" data-i18n="subjectColoring">Coloring</option>
-            </select>
-          </label>
-
-          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="schoolLogo">School Logo</span>
-            <input id="globalSchoolLogo" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-        </div>
-
-        <div class="global-school-settings-footer">
-          <div id="globalSchoolLogoCard" class="school-logo-card" hidden>
-            <div class="school-logo-card-preview">
-              <img id="globalSchoolLogoPreview" alt="School logo preview" />
-            </div>
-            <div class="school-logo-card-copy">
-              <strong data-i18n="schoolLogoReady">Logo ready for preview and PDF</strong>
-              <span id="globalSchoolLogoName" data-i18n="schoolLogoStored">Saved in this browser for future worksheets.</span>
-            </div>
-            <button id="clearGlobalSchoolLogoButton" type="button" class="subtle-link-button school-logo-clear-button" data-i18n="removeLogo">Remove logo</button>
-          </div>
-
-          <div class="global-school-settings-actions">
-            <span id="globalSchoolSettingsStatus" class="global-school-settings-status" data-i18n="schoolSettingsSaved">School settings save automatically in this browser.</span>
-            <button id="resetGlobalSchoolSettingsButton" type="button" class="secondary-action-button school-settings-reset-button" data-i18n="resetSchoolSettings">Reset school settings</button>
-          </div>
-        </div>
-      </div>
-
       <div class="teacher-form-section">
         <div class="teacher-form-section-header">
           <div>
@@ -782,14 +719,8 @@
         </div>
 
         <div class="teacher-form-grid teacher-form-grid-content">
-          <label class="teacher-form-field"><span data-i18n="questionCount">Number of Questions</span>
-            <select id="questionCount">
-              <option value="10">10 Questions</option>
-              <option value="15" selected>15 Questions</option>
-              <option value="20">20 Questions</option>
-              <option value="25">25 Questions</option>
-              <option value="30">30 Questions</option>
-            </select>
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="template">Template</span>
+            <select id="template"></select>
           </label>
 
           <label class="teacher-form-field"><span data-i18n="difficulty">Difficulty</span>
@@ -800,8 +731,14 @@
             </select>
           </label>
 
-          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="template">Template</span>
-            <select id="template"></select>
+          <label class="teacher-form-field"><span data-i18n="questionCount">Number of Questions</span>
+            <select id="questionCount">
+              <option value="10">10 Questions</option>
+              <option value="15" selected>15 Questions</option>
+              <option value="20">20 Questions</option>
+              <option value="25">25 Questions</option>
+              <option value="30">30 Questions</option>
+            </select>
           </label>
         </div>
 
@@ -839,34 +776,99 @@
         </div>
       </div>
 
-      <details class="settings-disclosure identity-disclosure">
-        <summary data-i18n="additionalDetails">Additional classroom details</summary>
-        <div class="disclosure-content">
-          <p class="settings-intro disclosure-intro" data-i18n="additionalDetailsIntro">Add the school, teacher, instructions, score target, or teacher notes only when you need them on the printed worksheet.</p>
-
-          <div class="settings-grid">
-            <label><span data-i18n="schoolName">School Name</span>
-              <input id="schoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
-            </label>
-
-            <label><span data-i18n="teacherName">Teacher Name</span>
-              <input id="teacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
-            </label>
-
-            <label><span data-i18n="scorePoints">Score / Points</span>
-              <input id="scorePoints" type="text" placeholder="e.g. /20" data-i18n-placeholder="scorePointsPlaceholder" />
-            </label>
+      <div class="teacher-form-section teacher-form-section-print">
+        <div class="teacher-form-section-header">
+          <div>
+            <h3 data-i18n="printInfoSection">Informations d'impression</h3>
+            <p data-i18n="printInfoIntro">Add only the printed classroom details you want to appear on the worksheet and PDF.</p>
           </div>
+        </div>
 
-          <label><span data-i18n="instructions">Instructions</span>
+        <div class="teacher-form-grid teacher-form-grid-primary">
+          <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
+            <input id="schoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
+            <input id="teacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
+          </label>
+
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="scorePoints">Score / Points</span>
+            <input id="scorePoints" type="text" placeholder="e.g. /20" data-i18n-placeholder="scorePointsPlaceholder" />
+          </label>
+
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="instructions">Instructions</span>
             <textarea id="instructions" rows="3" placeholder="e.g. Solve each question carefully and show your work." data-i18n-placeholder="instructionsPlaceholder"></textarea>
           </label>
 
-          <label><span data-i18n="teacherNotes">Teacher Notes</span>
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="teacherNotes">Teacher Notes</span>
             <textarea id="teacherNotes" rows="3" placeholder="Optional notes for teacher use or printing." data-i18n-placeholder="teacherNotesPlaceholder"></textarea>
           </label>
         </div>
-      </details>
+      </div>
+
+      <div class="teacher-form-section global-school-settings-section">
+        <div class="teacher-form-section-header">
+          <div>
+            <h3 data-i18n="globalSchoolSettings">School Settings</h3>
+            <p data-i18n="globalSchoolSettingsIntro">Save your school details once and reuse them across new worksheets, previews, saved projects, and PDF exports.</p>
+          </div>
+        </div>
+
+        <div class="teacher-form-grid teacher-form-grid-primary">
+          <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
+            <input id="globalSchoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
+            <input id="globalTeacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="defaultClassGrade">Default Class / Grade</span>
+            <select id="globalDefaultGrade">
+              <option value="" data-i18n="noDefaultGrade">No default grade</option>
+              <option value="Grade 1">Grade 1</option>
+              <option value="Grade 2">Grade 2</option>
+              <option value="Grade 3">Grade 3</option>
+              <option value="Grade 4">Grade 4</option>
+              <option value="Grade 5">Grade 5</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="defaultSubject">Default Subject</span>
+            <select id="globalDefaultSubject">
+              <option value="" data-i18n="noDefaultSubject">No default subject</option>
+              <option value="math" data-i18n="subjectMath">Math</option>
+              <option value="grammar" data-i18n="subjectGrammar">Grammar</option>
+              <option value="reading" data-i18n="subjectReading">Reading</option>
+              <option value="tracing" data-i18n="subjectTracing">Tracing</option>
+              <option value="coloring" data-i18n="subjectColoring">Coloring</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="schoolLogo">School Logo</span>
+            <input id="globalSchoolLogo" type="file" accept="image/png,image/jpeg,image/webp" />
+          </label>
+        </div>
+
+        <div class="global-school-settings-footer">
+          <div id="globalSchoolLogoCard" class="school-logo-card" hidden>
+            <div class="school-logo-card-preview">
+              <img id="globalSchoolLogoPreview" alt="School logo preview" />
+            </div>
+            <div class="school-logo-card-copy">
+              <strong data-i18n="schoolLogoReady">Logo ready for preview and PDF</strong>
+              <span id="globalSchoolLogoName" data-i18n="schoolLogoStored">Saved in this browser for future worksheets.</span>
+            </div>
+            <button id="clearGlobalSchoolLogoButton" type="button" class="subtle-link-button school-logo-clear-button" data-i18n="removeLogo">Remove logo</button>
+          </div>
+
+          <div class="global-school-settings-actions">
+            <span id="globalSchoolSettingsStatus" class="global-school-settings-status" data-i18n="schoolSettingsSaved">School settings save automatically in this browser.</span>
+            <button id="resetGlobalSchoolSettingsButton" type="button" class="secondary-action-button school-settings-reset-button" data-i18n="resetSchoolSettings">Reset school settings</button>
+          </div>
+        </div>
+      </div>
 
       <div class="settings-group action-settings-group">
         <div class="settings-title-row">
