@@ -1,4 +1,4 @@
-import { normalizeLanguage } from "../ui/language.js";
+import { getLocalizedGradeLabel, normalizeLanguage, t } from "../ui/language.js";
 
 export function normalizeWhitespace(value = "") {
   return String(value).replace(/\r\n/g, "\n").replace(/[ \t]+/g, " ").trim();
@@ -26,6 +26,22 @@ export function hasMeaningfulStudentName(value = "") {
 
 export function getStudentDisplayValue(value = "", fallback = "---") {
   return hasMeaningfulStudentName(value) ? normalizeStudentName(value) : fallback;
+}
+
+export function getWorksheetHeaderMetaItems({
+  identity = {},
+  grade = "",
+  subjectLabel = "",
+  language = "en"
+} = {}) {
+  const localizedGrade = getLocalizedGradeLabel(language, grade || "");
+  const teacherName = normalizeWhitespace(identity.teacherName || "");
+
+  return [
+    localizedGrade ? { label: t(language, "classGrade"), value: localizedGrade } : null,
+    subjectLabel ? { label: t(language, "subject"), value: subjectLabel } : null,
+    teacherName ? { label: t(language, "teacher"), value: teacherName } : null
+  ].filter(Boolean);
 }
 
 export function getScoreTarget(value = "", fallback = "10") {

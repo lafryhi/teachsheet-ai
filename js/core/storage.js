@@ -1,4 +1,5 @@
 const SETTINGS_KEY = "teachsheet-ai:settings";
+const GLOBAL_SCHOOL_SETTINGS_KEY = "teachsheet-ai:global-school-settings";
 const WORKSHEET_KEY = "teachsheet-ai:worksheet";
 const PROJECTS_KEY = "teachsheet-ai:projects";
 const GUEST_SCOPE = "guest";
@@ -78,6 +79,14 @@ export function loadSettings() {
 
 export function saveSettings(settings) {
   writeJson(SETTINGS_KEY, settings);
+}
+
+export function loadGlobalSchoolSettings() {
+  return readJson(GLOBAL_SCHOOL_SETTINGS_KEY);
+}
+
+export function saveGlobalSchoolSettings(settings) {
+  writeJson(GLOBAL_SCHOOL_SETTINGS_KEY, settings);
 }
 
 export function loadWorksheet(scope = GUEST_SCOPE) {

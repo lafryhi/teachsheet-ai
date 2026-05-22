@@ -20,6 +20,7 @@ import {
   getLocalizedAnswerText,
   getLocalizedQuestionDisplayText,
   getQuestionDisplayText,
+  getWorksheetHeaderMetaItems,
   isCompareQuestion,
   parseCompareQuestionText,
   shouldShowTeacherNotes
@@ -128,6 +129,22 @@ function measureEstimatedHeaderHeight({
       headerMetrics.titleSubtitleFontSize
     )
     : 0;
+  const headerMetaItems = getWorksheetHeaderMetaItems({
+    identity,
+    grade,
+    subjectLabel,
+    language
+  });
+  const headerMetaText = headerMetaItems
+    .map((item) => `${item.label}: ${item.value}`)
+    .join(" • ");
+  const headerMetaLines = headerMetaText
+    ? estimateWrappedLineCount(
+      headerMetaText,
+      pageWidth - margins.left - margins.right,
+      headerMetrics.metaFontSize
+    )
+    : 0;
   const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language });
   const introLines = identity.instructions || pageKind === "answer-key"
     ? estimateWrappedLineCount(
@@ -145,6 +162,10 @@ function measureEstimatedHeaderHeight({
   );
   let y = margins.top;
 
+  if (identity.schoolLogoDataUrl) {
+    y += headerMetrics.schoolLogoSize + headerMetrics.schoolLogoGap;
+  }
+
   if (identity.schoolName) {
     y += headerMetrics.schoolGap;
   }
@@ -153,6 +174,11 @@ function measureEstimatedHeaderHeight({
 
   if (descriptorLines > 0) {
     y += Math.max(headerMetrics.descriptorMinHeight, descriptorLines * headerMetrics.descriptorLineUnit);
+  }
+
+  if (headerMetaLines > 0) {
+    y += headerMetrics.metaTopGap;
+    y += Math.max(headerMetrics.metaMinHeight, headerMetaLines * headerMetrics.metaLineHeight);
   }
 
   y += getIdentityFieldHeight(headerMetrics);
@@ -342,6 +368,8 @@ function getResolvedIdentity(layoutContext = {}, requestType = "math") {
   return {
     worksheetTitle: identity.worksheetTitle || layoutContext.worksheetTitle || "Worksheet",
     schoolName: identity.schoolName || "",
+    schoolLogoDataUrl: identity.schoolLogoDataUrl || "",
+    schoolLogoName: identity.schoolLogoName || "",
     teacherName: identity.teacherName || "",
     studentName: identity.studentName || "",
     worksheetDate: identity.worksheetDate || "",

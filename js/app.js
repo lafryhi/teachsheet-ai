@@ -7,10 +7,12 @@ import {
 import {
   deleteProject,
   getGuestScope,
+  loadGlobalSchoolSettings,
   loadProjects,
   loadSettings,
   loadWorksheet,
   saveProject,
+  saveGlobalSchoolSettings,
   saveSettings,
   saveWorksheet,
   clearWorksheetStorage
@@ -83,6 +85,7 @@ const GENERATORS = {
 };
 
 const PERSISTED_FIELD_IDS = [
+  "subject",
   "grade",
   "operation",
   "difficulty",
@@ -98,8 +101,9 @@ const PERSISTED_FIELD_IDS = [
   "teacherNotes"
 ];
 
-const SMART_DEFAULT_TRIGGER_FIELDS = new Set(["grade", "operation", "teacherMode"]);
+const SMART_DEFAULT_TRIGGER_FIELDS = new Set(["subject", "grade", "operation", "teacherMode"]);
 const MANUAL_OVERRIDE_FIELDS = new Set(["difficulty", "questionCount", "teacherMode"]);
+const GLOBAL_SCHOOL_LOGO_MAX_BYTES = 800 * 1024;
 
 const GRADE_DEFAULTS = {
   "Grade 1": { difficulty: "easy", questionCount: 10, templateId: "kids-colorful" },
@@ -285,6 +289,14 @@ const state = {
   currentRequest: null,
   currentUser: null,
   currentWorksheetMeta: null,
+  globalSchoolSettings: {
+    schoolName: "",
+    teacherName: "",
+    schoolLogoDataUrl: "",
+    schoolLogoName: "",
+    defaultGrade: "",
+    defaultSubject: ""
+  },
   isApplyingWorkflowUpdate: false,
   isGenerating: false,
   lastGeneratedAt: null,
@@ -366,6 +378,50 @@ function getDashboardContainer() {
   return getElement("dashboardContainer");
 }
 
+function getGlobalSchoolNameInput() {
+  return getElement("globalSchoolName");
+}
+
+function getGlobalTeacherNameInput() {
+  return getElement("globalTeacherName");
+}
+
+function getGlobalSchoolLogoInput() {
+  return getElement("globalSchoolLogo");
+}
+
+function getGlobalDefaultGradeSelect() {
+  return getElement("globalDefaultGrade");
+}
+
+function getGlobalDefaultSubjectSelect() {
+  return getElement("globalDefaultSubject");
+}
+
+function getGlobalSchoolLogoCard() {
+  return getElement("globalSchoolLogoCard");
+}
+
+function getGlobalSchoolLogoPreview() {
+  return getElement("globalSchoolLogoPreview");
+}
+
+function getGlobalSchoolLogoName() {
+  return getElement("globalSchoolLogoName");
+}
+
+function getClearGlobalSchoolLogoButton() {
+  return getElement("clearGlobalSchoolLogoButton");
+}
+
+function getResetGlobalSchoolSettingsButton() {
+  return getElement("resetGlobalSchoolSettingsButton");
+}
+
+function getGlobalSchoolSettingsStatus() {
+  return getElement("globalSchoolSettingsStatus");
+}
+
 function getActiveTemplateIndicator() {
   return getElement("activeTemplateIndicator");
 }
@@ -415,6 +471,34 @@ function getSmartPromptDefaults() {
     teacherMode: "practice",
     focusPattern: null,
     template: "classic-math"
+  };
+}
+
+function getEmptyGlobalSchoolSettings() {
+  return {
+    schoolName: "",
+    teacherName: "",
+    schoolLogoDataUrl: "",
+    schoolLogoName: "",
+    defaultGrade: "",
+    defaultSubject: ""
+  };
+}
+
+function normalizeGlobalSchoolSettings(settings = {}) {
+  const base = getEmptyGlobalSchoolSettings();
+  const source = settings && typeof settings === "object" ? settings : {};
+
+  return {
+    ...base,
+    schoolName: String(source.schoolName || "").trim(),
+    teacherName: String(source.teacherName || "").trim(),
+    schoolLogoDataUrl: /^data:image\//.test(String(source.schoolLogoDataUrl || ""))
+      ? String(source.schoolLogoDataUrl)
+      : "",
+    schoolLogoName: String(source.schoolLogoName || "").trim(),
+    defaultGrade: String(source.defaultGrade || ""),
+    defaultSubject: String(source.defaultSubject || "")
   };
 }
 
@@ -754,6 +838,7 @@ function applyLanguageUI() {
   renderExamplePromptChips();
   updateLocalizedDemoTriggers();
   renderClassroomExamples();
+  syncGlobalSchoolLogoCard();
 }
 
 function setLanguage(language, options = {}) {
@@ -854,6 +939,7 @@ function ensureSelectOption(selectElement, value, label) {
 
 function getFormValues() {
   return {
+    subject: getElement("subject").value,
     grade: getElement("grade").value,
     operation: getElement("operation").value,
     difficulty: getElement("difficulty").value,
@@ -869,6 +955,17 @@ function getFormValues() {
     scorePoints: getElement("scorePoints").value.trim(),
     teacherNotes: getElement("teacherNotes").value.trim()
   };
+}
+
+function getGlobalSchoolSettingsFormValues() {
+  return normalizeGlobalSchoolSettings({
+    schoolName: getGlobalSchoolNameInput()?.value || "",
+    teacherName: getGlobalTeacherNameInput()?.value || "",
+    schoolLogoDataUrl: state.globalSchoolSettings.schoolLogoDataUrl || "",
+    schoolLogoName: state.globalSchoolSettings.schoolLogoName || "",
+    defaultGrade: getGlobalDefaultGradeSelect()?.value || "",
+    defaultSubject: getGlobalDefaultSubjectSelect()?.value || ""
+  });
 }
 
 function getSelectedTemplateId() {
@@ -900,6 +997,136 @@ function withWorkflowUpdate(callback) {
   } finally {
     state.isApplyingWorkflowUpdate = false;
   }
+}
+
+function syncGlobalSchoolLogoCard() {
+  const logoCard = getGlobalSchoolLogoCard();
+  const logoPreview = getGlobalSchoolLogoPreview();
+  const logoName = getGlobalSchoolLogoName();
+  const logoDataUrl = state.globalSchoolSettings.schoolLogoDataUrl;
+
+  if (!logoCard || !logoPreview || !logoName) {
+    return;
+  }
+
+  const hasLogo = Boolean(logoDataUrl);
+  logoCard.hidden = !hasLogo;
+
+  if (!hasLogo) {
+    logoPreview.removeAttribute("src");
+    logoName.textContent = t(state.language, "schoolLogoStored");
+    return;
+  }
+
+  logoPreview.src = logoDataUrl;
+  logoName.textContent = state.globalSchoolSettings.schoolLogoName || t(state.language, "schoolLogoStored");
+}
+
+function applyGlobalSchoolSettingsToForm({
+  forceIdentity = true,
+  forceGrade = true,
+  forceSubject = true,
+  persist = false,
+  refresh = false
+} = {}) {
+  const globalSettings = state.globalSchoolSettings;
+
+  withWorkflowUpdate(() => {
+    if (globalSettings.schoolName && (forceIdentity || !getElement("schoolName").value.trim())) {
+      getElement("schoolName").value = globalSettings.schoolName;
+    }
+
+    if (globalSettings.teacherName && (forceIdentity || !getElement("teacherName").value.trim())) {
+      getElement("teacherName").value = globalSettings.teacherName;
+    }
+
+    if (globalSettings.defaultGrade && (forceGrade || !getElement("grade").value)) {
+      getElement("grade").value = globalSettings.defaultGrade;
+    }
+
+    if (globalSettings.defaultSubject && (forceSubject || !getElement("subject").value)) {
+      getElement("subject").value = globalSettings.defaultSubject;
+    }
+  });
+
+  updateSubjectWorkflowUI();
+
+  if (persist) {
+    persistSettings();
+  }
+
+  if (refresh) {
+    refreshWorksheetPreviewState();
+    updateWorkflowSmartSummary();
+  }
+}
+
+function hydrateGlobalSchoolSettings() {
+  state.globalSchoolSettings = normalizeGlobalSchoolSettings(loadGlobalSchoolSettings());
+
+  withWorkflowUpdate(() => {
+    getGlobalSchoolNameInput().value = state.globalSchoolSettings.schoolName;
+    getGlobalTeacherNameInput().value = state.globalSchoolSettings.teacherName;
+    getGlobalDefaultGradeSelect().value = state.globalSchoolSettings.defaultGrade;
+    getGlobalDefaultSubjectSelect().value = state.globalSchoolSettings.defaultSubject;
+  });
+
+  syncGlobalSchoolLogoCard();
+  applyGlobalSchoolSettingsToForm({
+    forceIdentity: true,
+    forceGrade: true,
+    forceSubject: true,
+    persist: true,
+    refresh: false
+  });
+  updateWorkflowSmartSummary();
+}
+
+function persistGlobalSchoolSettings(options = {}) {
+  state.globalSchoolSettings = getGlobalSchoolSettingsFormValues();
+  saveGlobalSchoolSettings(state.globalSchoolSettings);
+  syncGlobalSchoolLogoCard();
+  applyGlobalSchoolSettingsToForm({
+    forceIdentity: true,
+    forceGrade: state.currentQuestions.length === 0,
+    forceSubject: state.currentQuestions.length === 0,
+    persist: options.persistForm !== false,
+    refresh: options.refreshPreview !== false
+  });
+
+  if (getGlobalSchoolSettingsStatus()) {
+    getGlobalSchoolSettingsStatus().textContent = t(state.language, "schoolSettingsSaved");
+  }
+}
+
+function resetGlobalSchoolSettings() {
+  state.globalSchoolSettings = getEmptyGlobalSchoolSettings();
+  saveGlobalSchoolSettings(state.globalSchoolSettings);
+
+  withWorkflowUpdate(() => {
+    getGlobalSchoolNameInput().value = "";
+    getGlobalTeacherNameInput().value = "";
+    getGlobalDefaultGradeSelect().value = "";
+    getGlobalDefaultSubjectSelect().value = "";
+    if (getGlobalSchoolLogoInput()) {
+      getGlobalSchoolLogoInput().value = "";
+    }
+  });
+
+  syncGlobalSchoolLogoCard();
+
+  if (getGlobalSchoolSettingsStatus()) {
+    getGlobalSchoolSettingsStatus().textContent = t(state.language, "schoolSettingsReset");
+  }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("File read failed"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function resetManualOverrides(fields = ["difficulty", "questionCount", "teacherMode", "template"]) {
@@ -1459,26 +1686,56 @@ function createProjectId() {
 }
 
 function buildMathRequestFromFormValues(formValues) {
+  const subjectType = formValues.subject || "math";
+  const subjectDefaults = {
+    math: { topic: formValues.operation, layoutMode: "horizontal", focusPattern: null },
+    grammar: { topic: "verbs", layoutMode: "horizontal", focusPattern: null },
+    reading: { topic: "short passage", layoutMode: "horizontal", focusPattern: null },
+    tracing: { topic: "letter A", layoutMode: "horizontal", focusPattern: null },
+    coloring: { topic: "animals", layoutMode: "horizontal", focusPattern: null }
+  };
+  const resolvedSubject = subjectDefaults[subjectType] ? subjectType : "math";
+  const subjectConfig = subjectDefaults[resolvedSubject];
+
   return {
-    type: "math",
-    subject: "math",
-    topic: formValues.operation,
+    type: resolvedSubject,
+    subject: resolvedSubject,
+    topic: subjectConfig.topic,
     difficulty: formValues.difficulty,
     count: formValues.questionCount,
     grade: formValues.grade,
     mode: "practice",
-    layoutMode: "horizontal",
+    layoutMode: subjectConfig.layoutMode,
     teacherMode: formValues.teacherMode || "practice",
-    focusPattern: null,
+    focusPattern: subjectConfig.focusPattern,
     template: formValues.templateId
   };
 }
 
+function updateSubjectWorkflowUI() {
+  const subject = getElement("subject").value || "math";
+  const mathOnlyFields = document.querySelectorAll("[data-subject-math-only]");
+
+  mathOnlyFields.forEach((field) => {
+    const isMath = subject === "math";
+    field.hidden = !isMath;
+    field.setAttribute("aria-hidden", String(!isMath));
+
+    field.querySelectorAll("select, input, textarea, button").forEach((control) => {
+      control.disabled = !isMath;
+    });
+  });
+}
+
 function getResolvedWorksheetIdentity(formValues, request, worksheetTitleFallback = null, smartInstructions = "") {
+  const globalSettings = state.globalSchoolSettings;
+
   return {
     worksheetTitle: formValues.worksheetTitle || worksheetTitleFallback || getWorksheetTitle(request),
-    schoolName: formValues.schoolName,
-    teacherName: formValues.teacherName,
+    schoolName: formValues.schoolName || globalSettings.schoolName,
+    teacherName: formValues.teacherName || globalSettings.teacherName,
+    schoolLogoDataUrl: globalSettings.schoolLogoDataUrl || "",
+    schoolLogoName: globalSettings.schoolLogoName || "",
     studentName: normalizeStudentName(formValues.studentName),
     worksheetDate: formValues.worksheetDate,
     instructions: formValues.instructions || smartInstructions,
@@ -1568,6 +1825,10 @@ function applyParsedPromptSettings(parsedPrompt, options = {}) {
   const { applyTemplate = false } = options;
 
   withWorkflowUpdate(() => {
+    if (parsedPrompt.type) {
+      getElement("subject").value = parsedPrompt.type;
+    }
+
     if (parsedPrompt.grade) {
       getElement("grade").value = parsedPrompt.grade;
     }
@@ -1581,6 +1842,8 @@ function applyParsedPromptSettings(parsedPrompt, options = {}) {
     getElement("questionCount").value = String(parsedPrompt.count);
     getElement("teacherMode").value = parsedPrompt.teacherMode || "practice";
   });
+
+  updateSubjectWorkflowUI();
 
   if (applyTemplate && parsedPrompt.template) {
     state.templateManuallySelected = false;
@@ -1741,6 +2004,7 @@ function loadProjectIntoInterface(project) {
     state.activePresetId = null;
     resetManualOverrides();
     getElement("promptInput").value = project.prompt || "";
+    getElement("subject").value = project.settings.subject || "math";
     getElement("grade").value = project.settings.grade;
     getElement("operation").value = project.settings.operation;
     getElement("difficulty").value = project.settings.difficulty;
@@ -1760,6 +2024,14 @@ function loadProjectIntoInterface(project) {
     getElement("instructions").value = project.settings.instructions || "";
     getElement("scorePoints").value = project.settings.scorePoints || "";
     getElement("teacherNotes").value = project.settings.teacherNotes || "";
+  });
+  updateSubjectWorkflowUI();
+  applyGlobalSchoolSettingsToForm({
+    forceIdentity: false,
+    forceGrade: false,
+    forceSubject: false,
+    persist: false,
+    refresh: false
   });
 }
 
@@ -1781,6 +2053,7 @@ function getRequestFromProject(project) {
   }
 
   return buildMathRequestFromFormValues({
+    subject: project.settings.subject || "math",
     grade: project.settings.grade,
     operation: project.settings.operation,
     difficulty: project.settings.difficulty,
@@ -2190,6 +2463,7 @@ function hydrateSettings() {
 
   if (!savedSettings) {
     getElement("template").value = state.template.id;
+    updateSubjectWorkflowUI();
     updateWorkflowSmartSummary();
     return;
   }
@@ -2209,13 +2483,94 @@ function hydrateSettings() {
   getElement("template").value = state.template.id;
   state.theme = getTheme(savedSettings.theme).id;
   state.zoom = normalizeZoomValue(savedSettings.zoom ?? 100);
+  updateSubjectWorkflowUI();
   updateActiveTemplateIndicator();
   updateWorkflowSmartSummary();
 }
 
 function bindFormPersistence() {
+  getGlobalSchoolNameInput().addEventListener("change", () => {
+    persistGlobalSchoolSettings();
+  });
+
+  getGlobalTeacherNameInput().addEventListener("change", () => {
+    persistGlobalSchoolSettings();
+  });
+
+  getGlobalDefaultGradeSelect().addEventListener("change", () => {
+    persistGlobalSchoolSettings();
+  });
+
+  getGlobalDefaultSubjectSelect().addEventListener("change", () => {
+    persistGlobalSchoolSettings();
+  });
+
+  getGlobalSchoolLogoInput().addEventListener("change", async (event) => {
+    const [file] = event.target.files || [];
+
+    if (!file) {
+      return;
+    }
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setStatusMessage(t(state.language, "schoolLogoInvalid"), "error");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > GLOBAL_SCHOOL_LOGO_MAX_BYTES) {
+      setStatusMessage(t(state.language, "schoolLogoTooLarge"), "error");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      state.globalSchoolSettings = normalizeGlobalSchoolSettings({
+        ...state.globalSchoolSettings,
+        schoolLogoDataUrl: await readFileAsDataUrl(file),
+        schoolLogoName: file.name
+      });
+      saveGlobalSchoolSettings(state.globalSchoolSettings);
+      syncGlobalSchoolLogoCard();
+      applyGlobalSchoolSettingsToForm({
+        forceIdentity: true,
+        forceGrade: false,
+        forceSubject: false,
+        persist: true,
+        refresh: true
+      });
+      setStatusMessage(t(state.language, "schoolLogoUpdated"), "success");
+    } catch (error) {
+      console.error(error);
+      setStatusMessage(t(state.language, "schoolLogoInvalid"), "error");
+    } finally {
+      event.target.value = "";
+    }
+  });
+
+  getClearGlobalSchoolLogoButton().addEventListener("click", () => {
+    state.globalSchoolSettings = normalizeGlobalSchoolSettings({
+      ...state.globalSchoolSettings,
+      schoolLogoDataUrl: "",
+      schoolLogoName: ""
+    });
+    saveGlobalSchoolSettings(state.globalSchoolSettings);
+    syncGlobalSchoolLogoCard();
+    refreshWorksheetPreviewState();
+    setStatusMessage(t(state.language, "schoolLogoRemoved"), "success");
+  });
+
+  getResetGlobalSchoolSettingsButton().addEventListener("click", () => {
+    resetGlobalSchoolSettings();
+    refreshWorksheetPreviewState();
+  });
+
   for (const fieldId of PERSISTED_FIELD_IDS) {
     getElement(fieldId).addEventListener("change", () => {
+      if (fieldId === "subject") {
+        updateSubjectWorkflowUI();
+      }
+
       if (!state.isApplyingWorkflowUpdate && MANUAL_OVERRIDE_FIELDS.has(fieldId)) {
         state.manualOverrides[fieldId] = true;
         state.activePresetId = null;
@@ -2435,6 +2790,7 @@ async function init() {
   populateTemplateOptions();
   applyLanguageUI();
   hydrateSettings();
+  hydrateGlobalSchoolSettings();
   bindFormPersistence();
   await authController.init();
   refreshOnboardingUI();

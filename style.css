@@ -560,8 +560,11 @@ a {
 .classroom-example-paper .worksheet-notes-block,
 .classroom-example-paper .worksheet-meta-strip,
 .classroom-example-paper .worksheet-footer,
+.classroom-example-paper .worksheet-brand-row,
+.classroom-example-paper .worksheet-header-facts,
 .classroom-example-paper .worksheet-title-aside,
-.classroom-example-paper .worksheet-identity-row {
+.classroom-example-paper .worksheet-identity-row,
+.classroom-example-paper .worksheet-school-row {
   display: none;
 }
 
@@ -1428,12 +1431,14 @@ a {
   padding: 24px;
   border-radius: 22px;
   box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+  min-width: 0;
 }
 
 .preview {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.96)),
     #ffffff;
+  border: 1px solid #e0e8f1;
 }
 
 .panel h2,
@@ -1529,6 +1534,17 @@ a {
   transform: translateX(-50%) translateY(-2px);
 }
 
+.preview-heading .hint-tooltip {
+  left: auto;
+  right: 0;
+  transform: translateY(0);
+}
+
+.preview-heading .hint-trigger:hover .hint-tooltip,
+.preview-heading .hint-trigger:focus-visible .hint-tooltip {
+  transform: translateY(-2px);
+}
+
 .settings-group {
   margin-bottom: 22px;
   padding-bottom: 18px;
@@ -1544,11 +1560,148 @@ a {
   font-size: 18px;
 }
 
+.teacher-form-section {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 20px 20px 18px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
+  border: 1px solid #dbe7f3;
+}
+
+.teacher-form-section-header {
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-form-section-header h3 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.teacher-form-section-header p {
+  margin: 0;
+  color: #5b6472;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.global-school-settings-section {
+  gap: 18px;
+}
+
+.global-school-settings-footer {
+  display: grid;
+  gap: 14px;
+}
+
+.global-school-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.global-school-settings-status {
+  color: #5b6472;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.school-settings-reset-button,
+.school-logo-clear-button {
+  width: auto;
+  margin-top: 0;
+  padding: 10px 14px;
+}
+
+.school-logo-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #dbe7f3;
+  background: #f9fcff;
+}
+
+.school-logo-card-preview {
+  display: grid;
+  place-items: center;
+  width: 66px;
+  height: 66px;
+  border-radius: 18px;
+  background: white;
+  border: 1px solid #dbe7f3;
+  overflow: hidden;
+}
+
+.school-logo-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.school-logo-card-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.school-logo-card-copy strong {
+  font-size: 14px;
+}
+
+.school-logo-card-copy span {
+  color: #5b6472;
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.teacher-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.teacher-form-grid-primary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.teacher-form-grid-content {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.teacher-form-grid-secondary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.teacher-form-field {
+  display: block;
+}
+
+.teacher-form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.teacher-form-field-math[hidden] {
+  display: none;
+}
+
 .settings-intro {
   margin: 0 0 14px;
   color: #5b6472;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.disclosure-intro {
+  margin-bottom: 16px;
 }
 
 .panel label {
@@ -2018,6 +2171,52 @@ button:disabled {
   position: relative;
 }
 
+.preview-stage {
+  position: relative;
+  padding: 18px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(244, 248, 252, 0.98), rgba(232, 239, 247, 0.94)),
+    #eef4fa;
+  border: 1px solid #dde6ef;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -24px 60px rgba(148, 163, 184, 0.08);
+  overflow: hidden;
+}
+
+.preview-stage::before,
+.preview-stage::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.preview-stage::before {
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.68), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(148, 163, 184, 0.11), transparent 28%);
+}
+
+.preview-stage::after {
+  left: 22px;
+  right: 22px;
+  bottom: 16px;
+  height: 22px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(148, 163, 184, 0.22), transparent 72%);
+  filter: blur(12px);
+  opacity: 0.62;
+}
+
+.preview-stage > #worksheet {
+  width: min(100%, 820px);
+  min-height: 1080px;
+  aspect-ratio: 210 / 297;
+  margin: 0 auto;
+}
+
 .worksheet::after {
   content: "";
   position: absolute;
@@ -2030,9 +2229,58 @@ button:disabled {
 
 .worksheet-header {
   text-align: left;
-  margin-bottom: 27px;
+  margin-bottom: 28px;
   display: grid;
+  gap: 15px;
+}
+
+.worksheet-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 14px;
+}
+
+.worksheet-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.worksheet-brand-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #17375e, #28578c);
+  color: white;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  box-shadow: 0 10px 20px rgba(23, 55, 94, 0.22);
+}
+
+.worksheet-brand-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.worksheet-brand-copy strong {
+  color: #153655;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.worksheet-brand-copy span {
+  color: #627083;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .worksheet-school {
@@ -2044,6 +2292,26 @@ button:disabled {
   color: var(--worksheet-accent, #183153);
 }
 
+.worksheet-school-row {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.worksheet-school-row.has-logo {
+  gap: 10px;
+}
+
+.worksheet-school-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: white;
+  border: 1px solid rgba(207, 222, 235, 0.9);
+  padding: 8px;
+}
+
 .worksheet-title-row {
   display: flex;
   justify-content: space-between;
@@ -2053,7 +2321,7 @@ button:disabled {
 
 .worksheet-title-block {
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .worksheet-title-aside {
@@ -2064,8 +2332,8 @@ button:disabled {
 
 .worksheet-header h2 {
   margin: 0;
-  font-size: 30px;
-  line-height: 1.1;
+  font-size: 28px;
+  line-height: 1.12;
   letter-spacing: -0.02em;
   color: var(--worksheet-accent, #183153);
 }
@@ -2109,6 +2377,36 @@ button:disabled {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.worksheet-header-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.worksheet-header-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(248, 251, 255, 0.95);
+  border: 1px solid rgba(207, 222, 235, 0.86);
+  color: var(--worksheet-muted, #5f6b7a);
+}
+
+.worksheet-header-fact span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.worksheet-header-fact strong {
+  font-size: 12.5px;
+  color: var(--worksheet-accent, #183153);
+  font-weight: 800;
 }
 
 .worksheet-intro {
@@ -2692,9 +2990,13 @@ button:disabled {
 .preview-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(247, 251, 255, 0.92), rgba(239, 246, 252, 0.95));
+  border: 1px solid #dbe7f3;
 }
 
 .preview-nav {
@@ -2705,11 +3007,17 @@ button:disabled {
 }
 
 .preview-page-indicator {
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 180px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: white;
+  border: 1px solid #dbe7f3;
   text-align: center;
   font-weight: 700;
   color: #4b5563;
   letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .worksheet-footer {
@@ -3080,6 +3388,7 @@ button:disabled {
 
   .workflow-preset-grid,
   .settings-grid,
+  .teacher-form-grid,
   .workflow-core-grid,
   .meta,
   .actions-grid {
@@ -3095,13 +3404,42 @@ button:disabled {
     align-items: flex-start;
   }
 
+  .global-school-settings-actions,
+  .school-logo-card {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .school-logo-card {
+    justify-items: flex-start;
+  }
+
+  .school-settings-reset-button,
+  .school-logo-clear-button {
+    width: 100%;
+  }
+
   .worksheet {
     padding: 24px;
+  }
+
+  .preview-stage {
+    padding: 12px;
+  }
+
+  .preview-stage > #worksheet {
+    min-height: 860px;
   }
 
   .worksheet-title-row,
   .worksheet-footer {
     flex-direction: column;
+  }
+
+  .worksheet-brand-row,
+  .worksheet-header-facts {
+    gap: 8px;
   }
 
   .worksheet-intro {
@@ -3147,6 +3485,11 @@ button:disabled {
 
   .preview-nav {
     width: 100%;
+  }
+
+  .preview-page-indicator {
+    width: 100%;
+    min-width: 0;
   }
 
   .quick-start-link,

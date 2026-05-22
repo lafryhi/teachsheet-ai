@@ -638,117 +638,211 @@
         <div id="workflowSmartSummary" class="workflow-smart-summary" aria-live="polite"></div>
       </div>
 
-      <div class="settings-group">
-        <div class="settings-title-row">
-          <h3 data-i18n="generateFast">Generate Fast</h3>
-          <button type="button" class="hint-trigger" aria-label="Prompt help">
-            <span class="hint-trigger-icon">?</span>
-            <span class="hint-tooltip" data-i18n="promptHelp">Short prompts work well. TeachSheet AI fills in missing defaults when it recognizes the grade, goal, and subject.</span>
-          </button>
+      <div class="teacher-form-section global-school-settings-section">
+        <div class="teacher-form-section-header">
+          <div>
+            <h3 data-i18n="globalSchoolSettings">School Settings</h3>
+            <p data-i18n="globalSchoolSettingsIntro">Save your school details once and reuse them across new worksheets, previews, saved projects, and PDF exports.</p>
+          </div>
         </div>
-        <p class="settings-intro" data-i18n="generateFastIntro">Type a short teacher-style prompt or use the fields below for a quick worksheet setup.</p>
 
-      <label><span data-i18n="promptLabel">Prompt</span>
-        <input
-          id="promptInput"
-          type="text"
-          placeholder="Try: grade 3 subtraction or mental math grade 2"
-          data-i18n-placeholder="promptPlaceholder"
-        />
-      </label>
-      <div class="field-help prompt-help">
-        <strong data-i18n="promptTipTitle">Prompt tip:</strong>
-        <span data-i18n="promptTipBody">Short prompts work well. TeachSheet AI will fill missing defaults for grade, mode, and layout when possible.</span>
-        <span><span data-i18n="promptTipExample">Example:</span> <code id="promptTipExampleValue">grade 4 assessment vertical multiplication</code></span>
-      </div>
+        <div class="teacher-form-grid teacher-form-grid-primary">
+          <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
+            <input id="globalSchoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
+          </label>
 
-      <div class="example-prompts">
-        <h3 data-i18n="examplePrompts">Example Prompts</h3>
-        <p data-i18n="examplePromptsIntro">Use one of these classroom-ready prompts when you want a solid worksheet fast.</p>
-        <div class="example-prompts-list">
-          <button type="button" class="example-prompt-chip" data-example-prompt="grade 2 addition practice 20 questions">grade 2 addition practice 20 questions</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="grade 3 remediation subtraction worksheet">grade 3 remediation subtraction worksheet</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="grade 4 assessment vertical multiplication">grade 4 assessment vertical multiplication</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="grade 5 mixed review worksheet">grade 5 mixed review worksheet</button>
-          <button type="button" class="example-prompt-chip" data-example-prompt="mental math fast review grade 3">mental math fast review grade 3</button>
+          <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
+            <input id="globalTeacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="defaultClassGrade">Default Class / Grade</span>
+            <select id="globalDefaultGrade">
+              <option value="" data-i18n="noDefaultGrade">No default grade</option>
+              <option value="Grade 1">Grade 1</option>
+              <option value="Grade 2">Grade 2</option>
+              <option value="Grade 3">Grade 3</option>
+              <option value="Grade 4">Grade 4</option>
+              <option value="Grade 5">Grade 5</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="defaultSubject">Default Subject</span>
+            <select id="globalDefaultSubject">
+              <option value="" data-i18n="noDefaultSubject">No default subject</option>
+              <option value="math" data-i18n="subjectMath">Math</option>
+              <option value="grammar" data-i18n="subjectGrammar">Grammar</option>
+              <option value="reading" data-i18n="subjectReading">Reading</option>
+              <option value="tracing" data-i18n="subjectTracing">Tracing</option>
+              <option value="coloring" data-i18n="subjectColoring">Coloring</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="schoolLogo">School Logo</span>
+            <input id="globalSchoolLogo" type="file" accept="image/png,image/jpeg,image/webp" />
+          </label>
+        </div>
+
+        <div class="global-school-settings-footer">
+          <div id="globalSchoolLogoCard" class="school-logo-card" hidden>
+            <div class="school-logo-card-preview">
+              <img id="globalSchoolLogoPreview" alt="School logo preview" />
+            </div>
+            <div class="school-logo-card-copy">
+              <strong data-i18n="schoolLogoReady">Logo ready for preview and PDF</strong>
+              <span id="globalSchoolLogoName" data-i18n="schoolLogoStored">Saved in this browser for future worksheets.</span>
+            </div>
+            <button id="clearGlobalSchoolLogoButton" type="button" class="subtle-link-button school-logo-clear-button" data-i18n="removeLogo">Remove logo</button>
+          </div>
+
+          <div class="global-school-settings-actions">
+            <span id="globalSchoolSettingsStatus" class="global-school-settings-status" data-i18n="schoolSettingsSaved">School settings save automatically in this browser.</span>
+            <button id="resetGlobalSchoolSettingsButton" type="button" class="secondary-action-button school-settings-reset-button" data-i18n="resetSchoolSettings">Reset school settings</button>
+          </div>
         </div>
       </div>
 
-      <div class="workflow-core-grid">
-      <label><span data-i18n="grade">Grade</span>
-        <select id="grade">
-          <option value="Grade 1">Grade 1</option>
-          <option value="Grade 2" selected>Grade 2</option>
-          <option value="Grade 3">Grade 3</option>
-          <option value="Grade 4">Grade 4</option>
-          <option value="Grade 5">Grade 5</option>
-        </select>
-      </label>
-
-      <label><span data-i18n="operation">Operation</span>
-        <select id="operation">
-          <option value="addition">Addition</option>
-          <option value="subtraction">Subtraction</option>
-          <option value="multiplication">Multiplication</option>
-          <option value="division">Division</option>
-          <option value="mixed">Mixed Operations</option>
-        </select>
-      </label>
-      </div>
-
-      <label><span data-i18n="teacherMode">Teacher Mode</span>
-        <select id="teacherMode">
-          <option value="practice" selected>Practice Mode</option>
-          <option value="homework">Homework Mode</option>
-          <option value="assessment">Assessment Mode</option>
-          <option value="remediation">Remediation Mode</option>
-          <option value="fast-review">Fast Review Mode</option>
-        </select>
-      </label>
-      <div class="field-help teacher-mode-help compact-help">
-        <strong data-i18n="teacherModeGoal">Choose the worksheet goal:</strong>
-        <span><strong data-i18n="modePractice">Practice Mode</strong> <span data-i18n="practiceHelp">builds fluency steadily.</span></span>
-        <span><strong data-i18n="modeHomework">Homework Mode</strong> <span data-i18n="homeworkHelp">stays clean and independent.</span></span>
-        <span><strong data-i18n="modeAssessment">Assessment Mode</strong> <span data-i18n="assessmentHelp">checks mastery more formally.</span></span>
-        <span><strong data-i18n="modeRemediation">Remediation Mode</strong> <span data-i18n="remediationHelp">slows down and simplifies the work.</span></span>
-        <span><strong data-i18n="modeFastReview">Fast Review Mode</strong> <span data-i18n="fastReviewHelp">favors short recall and mental fluency.</span></span>
-      </div>
-
-      <details class="settings-disclosure">
-        <summary data-i18n="fineTune">Fine tune difficulty, question count, and template</summary>
-        <div class="disclosure-content">
-      <label><span data-i18n="difficulty">Difficulty</span>
-        <select id="difficulty">
-          <option value="easy">Easy</option>
-          <option value="medium" selected>Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-      </label>
-
-      <label><span data-i18n="questionCount">Number of Questions</span>
-        <select id="questionCount">
-          <option value="10">10 Questions</option>
-          <option value="15" selected>15 Questions</option>
-          <option value="20">20 Questions</option>
-          <option value="25">25 Questions</option>
-          <option value="30">30 Questions</option>
-        </select>
-      </label>
-
-      <label><span data-i18n="template">Template</span>
-        <select id="template"></select>
-      </label>
-      <div id="activeTemplateIndicator" class="active-template-indicator" aria-live="polite"></div>
+      <div class="teacher-form-section">
+        <div class="teacher-form-section-header">
+          <div>
+            <h3 data-i18n="worksheetInfoSection">Worksheet Information</h3>
+            <p data-i18n="worksheetInfoIntro">Add the key classroom details first so the worksheet feels ready for class before you generate anything.</p>
+          </div>
         </div>
-      </details>
+        <div class="teacher-form-grid teacher-form-grid-primary">
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="worksheetTitle">Worksheet Title</span>
+            <input id="worksheetTitle" type="text" placeholder="e.g. Addition Practice Worksheet" data-i18n-placeholder="worksheetTitlePlaceholder" />
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="studentName">Student Name</span>
+            <input id="studentName" type="text" placeholder="Student name" data-i18n-placeholder="studentNamePlaceholder" />
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="classGrade">Class / Grade</span>
+            <select id="grade">
+              <option value="Grade 1">Grade 1</option>
+              <option value="Grade 2" selected>Grade 2</option>
+              <option value="Grade 3">Grade 3</option>
+              <option value="Grade 4">Grade 4</option>
+              <option value="Grade 5">Grade 5</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="subject">Subject</span>
+            <select id="subject">
+              <option value="math" selected data-i18n="subjectMath">Math</option>
+              <option value="grammar" data-i18n="subjectGrammar">Grammar</option>
+              <option value="reading" data-i18n="subjectReading">Reading</option>
+              <option value="tracing" data-i18n="subjectTracing">Tracing</option>
+              <option value="coloring" data-i18n="subjectColoring">Coloring</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="date">Date</span>
+            <input id="worksheetDate" type="date" />
+          </label>
+        </div>
+      </div>
+
+      <div class="teacher-form-section">
+        <div class="teacher-form-section-header">
+          <div class="settings-title-row">
+            <h3 data-i18n="contentGenerateSection">Content to Generate</h3>
+            <button type="button" class="hint-trigger" aria-label="Prompt help">
+              <span class="hint-trigger-icon">?</span>
+              <span class="hint-tooltip" data-i18n="promptHelp">Short prompts work well. TeachSheet AI fills in missing defaults when it recognizes the grade, goal, and subject.</span>
+            </button>
+          </div>
+          <p data-i18n="contentGenerateIntro">Choose the classroom goal, add a short prompt, then adjust only the settings you really need.</p>
+        </div>
+
+        <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="promptLabel">Prompt</span>
+          <textarea
+            id="promptInput"
+            rows="4"
+            placeholder="Try: grade 3 subtraction or mental math grade 2"
+            data-i18n-placeholder="promptPlaceholder"
+          ></textarea>
+        </label>
+        <div class="field-help prompt-help">
+          <strong data-i18n="promptTipTitle">Prompt tip:</strong>
+          <span data-i18n="promptTipBody">Short prompts work well. TeachSheet AI will fill missing defaults for grade, mode, and layout when possible.</span>
+          <span><span data-i18n="promptTipExample">Example:</span> <code id="promptTipExampleValue">grade 4 assessment vertical multiplication</code></span>
+        </div>
+
+        <div class="example-prompts">
+          <h3 data-i18n="examplePrompts">Example Prompts</h3>
+          <p data-i18n="examplePromptsIntro">Use one of these classroom-ready prompts when you want a solid worksheet fast.</p>
+          <div class="example-prompts-list">
+            <button type="button" class="example-prompt-chip" data-example-prompt="grade 2 addition practice 20 questions">grade 2 addition practice 20 questions</button>
+            <button type="button" class="example-prompt-chip" data-example-prompt="grade 3 remediation subtraction worksheet">grade 3 remediation subtraction worksheet</button>
+            <button type="button" class="example-prompt-chip" data-example-prompt="grade 4 assessment vertical multiplication">grade 4 assessment vertical multiplication</button>
+            <button type="button" class="example-prompt-chip" data-example-prompt="grade 5 mixed review worksheet">grade 5 mixed review worksheet</button>
+            <button type="button" class="example-prompt-chip" data-example-prompt="mental math fast review grade 3">mental math fast review grade 3</button>
+          </div>
+        </div>
+
+        <div class="teacher-form-grid teacher-form-grid-content">
+          <label class="teacher-form-field"><span data-i18n="questionCount">Number of Questions</span>
+            <select id="questionCount">
+              <option value="10">10 Questions</option>
+              <option value="15" selected>15 Questions</option>
+              <option value="20">20 Questions</option>
+              <option value="25">25 Questions</option>
+              <option value="30">30 Questions</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="difficulty">Difficulty</span>
+            <select id="difficulty">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="template">Template</span>
+            <select id="template"></select>
+          </label>
+        </div>
+
+        <div id="activeTemplateIndicator" class="active-template-indicator" aria-live="polite"></div>
+
+        <div class="teacher-form-grid teacher-form-grid-secondary">
+          <label class="teacher-form-field teacher-form-field-math" data-subject-math-only><span data-i18n="operation">Operation</span>
+            <select id="operation">
+              <option value="addition">Addition</option>
+              <option value="subtraction">Subtraction</option>
+              <option value="multiplication">Multiplication</option>
+              <option value="division">Division</option>
+              <option value="mixed">Mixed Operations</option>
+            </select>
+          </label>
+
+          <label class="teacher-form-field"><span data-i18n="teacherMode">Teacher Mode</span>
+            <select id="teacherMode">
+              <option value="practice" selected>Practice Mode</option>
+              <option value="homework">Homework Mode</option>
+              <option value="assessment">Assessment Mode</option>
+              <option value="remediation">Remediation Mode</option>
+              <option value="fast-review">Fast Review Mode</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="field-help teacher-mode-help compact-help">
+          <strong data-i18n="teacherModeGoal">Choose the worksheet goal:</strong>
+          <span><strong data-i18n="modePractice">Practice Mode</strong> <span data-i18n="practiceHelp">builds fluency steadily.</span></span>
+          <span><strong data-i18n="modeHomework">Homework Mode</strong> <span data-i18n="homeworkHelp">stays clean and independent.</span></span>
+          <span><strong data-i18n="modeAssessment">Assessment Mode</strong> <span data-i18n="assessmentHelp">checks mastery more formally.</span></span>
+          <span><strong data-i18n="modeRemediation">Remediation Mode</strong> <span data-i18n="remediationHelp">slows down and simplifies the work.</span></span>
+          <span><strong data-i18n="modeFastReview">Fast Review Mode</strong> <span data-i18n="fastReviewHelp">favors short recall and mental fluency.</span></span>
+        </div>
       </div>
 
       <details class="settings-disclosure identity-disclosure">
-        <summary data-i18n="optionalIdentity">Optional worksheet identity and print details</summary>
+        <summary data-i18n="additionalDetails">Additional classroom details</summary>
         <div class="disclosure-content">
-          <label><span data-i18n="worksheetTitle">Worksheet Title</span>
-            <input id="worksheetTitle" type="text" placeholder="e.g. Addition Practice Worksheet" data-i18n-placeholder="worksheetTitlePlaceholder" />
-          </label>
+          <p class="settings-intro disclosure-intro" data-i18n="additionalDetailsIntro">Add the school, teacher, instructions, score target, or teacher notes only when you need them on the printed worksheet.</p>
 
           <div class="settings-grid">
             <label><span data-i18n="schoolName">School Name</span>
@@ -757,14 +851,6 @@
 
             <label><span data-i18n="teacherName">Teacher Name</span>
               <input id="teacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
-            </label>
-
-            <label><span data-i18n="studentName">Student Name</span>
-              <input id="studentName" type="text" placeholder="Student name" data-i18n-placeholder="studentNamePlaceholder" />
-            </label>
-
-            <label><span data-i18n="date">Date</span>
-              <input id="worksheetDate" type="date" />
             </label>
 
             <label><span data-i18n="scorePoints">Score / Points</span>
@@ -822,14 +908,16 @@
           <span class="hint-tooltip" data-i18n="previewHelp">The preview mirrors the worksheet structure, sections, and answer sheet that will be exported to PDF.</span>
         </button>
       </div>
-      <div class="worksheet" id="worksheet">
-        <div class="worksheet-header">
-          <h2 data-i18n="previewDefaultTitle">Math Worksheet</h2>
-          <p data-i18n="previewDefaultBody">Choose settings and click Generate Worksheet.</p>
-        </div>
+      <div class="preview-stage">
+        <div class="worksheet" id="worksheet">
+          <div class="worksheet-header">
+            <h2 data-i18n="previewDefaultTitle">Math Worksheet</h2>
+            <p data-i18n="previewDefaultBody">Choose settings and click Generate Worksheet.</p>
+          </div>
 
-        <div id="questions" class="questions empty">
-          No worksheet generated yet.
+          <div id="questions" class="questions empty">
+            No worksheet generated yet.
+          </div>
         </div>
       </div>
       <div class="preview-controls">
@@ -902,6 +990,6 @@
   </div>
 </footer>
 
-<script type="module" src="js/app.js?v=french-classroom-support"></script>
+<script type="module" src="js/app.js?v=teacher-form-ux"></script>
 </body>
 </html>

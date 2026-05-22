@@ -24,6 +24,7 @@ import {
   getQuestionDisplayText,
   getScoreTarget,
   getStudentDisplayValue,
+  getWorksheetHeaderMetaItems,
   isCompareQuestion,
   normalizeStudentName,
   parseCompareQuestionText,
@@ -333,6 +334,45 @@ function drawIdentityFieldRow(pdf, fields, y, margins, pageWidth, worksheetTheme
   return y + fieldHeight;
 }
 
+function drawSchoolLogo(pdf, dataUrl, pageWidth, y, maxSize) {
+  if (!dataUrl) {
+    return false;
+  }
+
+  try {
+    const imageProperties = pdf.getImageProperties(dataUrl);
+    const width = Number(imageProperties.width || maxSize);
+    const height = Number(imageProperties.height || maxSize);
+    const scale = Math.min(maxSize / width, maxSize / height);
+    const renderWidth = width * scale;
+    const renderHeight = height * scale;
+    const x = (pageWidth - renderWidth) / 2;
+    const imageType = String(imageProperties.fileType || "PNG").toUpperCase();
+
+    pdf.addImage(dataUrl, imageType, x, y, renderWidth, renderHeight, undefined, "FAST");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function buildHeaderMetadataLine({ identity, grade, subjectLabel, language = "en" }) {
+  const items = getWorksheetHeaderMetaItems({
+    identity,
+    grade,
+    subjectLabel,
+    language
+  });
+
+  if (!items.length) {
+    return "";
+  }
+
+  return items
+    .map((item) => `${item.label}: ${item.value}`)
+    .join(" • ");
+}
+
 function measurePageHeaderHeight(pdf, {
   metrics,
   identity,
@@ -363,6 +403,15 @@ function measurePageHeaderHeight(pdf, {
   const descriptorLines = descriptorLine
     ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
     : [];
+  const headerMetaText = buildHeaderMetadataLine({
+    identity,
+    grade,
+    subjectLabel,
+    language
+  });
+  const headerMetaLines = headerMetaText
+    ? pdf.splitTextToSize(headerMetaText, pageWidth - margins.left - margins.right)
+    : [];
   const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language });
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
@@ -370,6 +419,10 @@ function measurePageHeaderHeight(pdf, {
   const titleText = normalizePrintWorksheetTitle(identity.worksheetTitle || "Worksheet", subjectLabel, focusLabel, language);
   const titleLines = pdf.splitTextToSize(titleText, pageWidth - margins.left - margins.right - 12);
   let y = margins.top;
+
+  if (identity.schoolLogoDataUrl) {
+    y += headerMetrics.schoolLogoSize + headerMetrics.schoolLogoGap;
+  }
 
   if (identity.schoolName) {
     y += headerMetrics.schoolGap;
@@ -379,6 +432,11 @@ function measurePageHeaderHeight(pdf, {
 
   if (descriptorLines.length > 0) {
     y += Math.max(headerMetrics.descriptorMinHeight, descriptorLines.length * headerMetrics.descriptorLineUnit);
+  }
+
+  if (headerMetaLines.length > 0) {
+    y += headerMetrics.metaTopGap;
+    y += Math.max(headerMetrics.metaMinHeight, headerMetaLines.length * headerMetrics.metaLineHeight);
   }
 
   y += getIdentityFieldHeight(headerMetrics);
@@ -432,6 +490,15 @@ function drawPageHeader(pdf, {
   const descriptorLines = descriptorLine
     ? pdf.splitTextToSize(descriptorLine, pageWidth - margins.left - margins.right)
     : [];
+  const headerMetaText = buildHeaderMetadataLine({
+    identity,
+    grade,
+    subjectLabel,
+    language
+  });
+  const headerMetaLines = headerMetaText
+    ? pdf.splitTextToSize(headerMetaText, pageWidth - margins.left - margins.right)
+    : [];
   const introText = buildWorksheetIntroText({ identity, pageKind, worksheetModeLabel, focusLabel, language });
   const introLines = identity.instructions || pageKind === "answer-key"
     ? pdf.splitTextToSize(introText, pageWidth - margins.left - margins.right)
@@ -444,6 +511,11 @@ function drawPageHeader(pdf, {
     { label: t(language, "score"), value: `____ / ${getScoreTarget(identity.scorePoints)}` }
   ];
   let y = margins.top;
+
+  if (identity.schoolLogoDataUrl) {
+    drawSchoolLogo(pdf, identity.schoolLogoDataUrl, pageWidth, y, headerMetrics.schoolLogoSize);
+    y += headerMetrics.schoolLogoSize + headerMetrics.schoolLogoGap;
+  }
 
   if (identity.schoolName) {
     pdf.setTextColor(worksheetTheme.mutedText.r, worksheetTheme.mutedText.g, worksheetTheme.mutedText.b);
@@ -466,6 +538,15 @@ function drawPageHeader(pdf, {
     pdf.setFontSize(headerMetrics.titleSubtitleFontSize);
     drawTextLines(pdf, descriptorLines, pageWidth / 2, y + headerMetrics.descriptorBaselineOffset, headerMetrics.descriptorLineUnit, { align: "center" });
     y += Math.max(headerMetrics.descriptorMinHeight, descriptorLines.length * headerMetrics.descriptorLineUnit);
+  }
+
+  if (headerMetaLines.length > 0) {
+    y += headerMetrics.metaTopGap;
+    pdf.setTextColor(worksheetTheme.subtleText.r, worksheetTheme.subtleText.g, worksheetTheme.subtleText.b);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(headerMetrics.metaFontSize);
+    drawTextLines(pdf, headerMetaLines, pageWidth / 2, y + headerMetrics.metaBaselineOffset, headerMetrics.metaLineHeight, { align: "center" });
+    y += Math.max(headerMetrics.metaMinHeight, headerMetaLines.length * headerMetrics.metaLineHeight);
   }
 
   y = drawIdentityFieldRow(pdf, identityFields, y + headerMetrics.identityTopGap, margins, pageWidth, worksheetTheme, headerMetrics);
@@ -886,6 +967,8 @@ export function downloadWorksheetPDF({
   const resolvedIdentity = {
     worksheetTitle: identity?.worksheetTitle || worksheetTitle || "Worksheet",
     schoolName: identity?.schoolName || "",
+    schoolLogoDataUrl: identity?.schoolLogoDataUrl || "",
+    schoolLogoName: identity?.schoolLogoName || "",
     teacherName: identity?.teacherName || "",
     studentName: normalizeStudentName(identity?.studentName || ""),
     worksheetDate: identity?.worksheetDate || "",

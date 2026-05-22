@@ -5,12 +5,12 @@ import {
   getQuestionDisplayText,
   getScoreTarget,
   getStudentDisplayValue,
+  getWorksheetHeaderMetaItems,
   isCompareQuestion,
   parseCompareQuestionText,
   shouldShowTeacherNotes
 } from "../core/worksheetPresentation.js";
 import {
-  getLocalizedGradeLabel,
   getNaturalFrenchWorksheetInstruction,
   getLocalizedWorksheetIntroCopy,
   localizeTeacherNotesText,
@@ -109,6 +109,61 @@ function createSectionHeaderMarkup(question, variant = "questions", language = "
   `;
 }
 
+function createWorksheetBrandMarkup(pageKind, language = "en") {
+  const brandTagline = pageKind === "answer-key"
+    ? t(language, "previewBrandAnswers")
+    : t(language, "previewBrandWorksheet");
+
+  return `
+    <div class="worksheet-brand-row">
+      <div class="worksheet-brand-mark">
+        <span class="worksheet-brand-seal" aria-hidden="true">TS</span>
+        <div class="worksheet-brand-copy">
+          <strong>TeachSheet AI</strong>
+          <span>${escapeHtml(brandTagline)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function createSchoolIdentityMarkup(identity = {}, language = "en") {
+  if (!identity?.schoolName && !identity?.schoolLogoDataUrl) {
+    return "";
+  }
+
+  return `
+    <div class="worksheet-school-row${identity.schoolLogoDataUrl ? " has-logo" : ""}">
+      ${identity.schoolLogoDataUrl ? `<img class="worksheet-school-logo" src="${escapeHtml(identity.schoolLogoDataUrl)}" alt="${escapeHtml(identity.schoolLogoName || t(language, "schoolLogo"))}" />` : ""}
+      ${identity.schoolName ? `<div class="worksheet-school">${escapeHtml(identity.schoolName)}</div>` : ""}
+    </div>
+  `;
+}
+
+function createWorksheetFactsMarkup({ grade, subjectLabel, identity, language = "en" }) {
+  const facts = getWorksheetHeaderMetaItems({
+    identity,
+    grade,
+    subjectLabel,
+    language
+  });
+
+  if (facts.length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="worksheet-header-facts">
+      ${facts.map((fact) => `
+        <div class="worksheet-header-fact">
+          <span>${escapeHtml(fact.label)}</span>
+          <strong>${escapeHtml(fact.value)}</strong>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function createQuestionMarkup(question, questionNumber, language = "en") {
   const isVertical = question.format === "vertical";
   const hasInlineAnswerSpace = questionHasInlineAnswerSpace(question);
@@ -177,23 +232,6 @@ function createAnswerKeyMarkup(questions, language) {
     .join("");
 }
 
-function createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel, language }) {
-  const displayGrade = getLocalizedGradeLabel(language, grade || "");
-  const baseItems = [
-    [t(language, "teacher"), identity.teacherName || "--"],
-    [t(language, "level"), displayGrade || "--"],
-    [t(language, "subject"), subjectLabel],
-    [t(language, "focus"), focusLabel]
-  ];
-
-  return baseItems.map(([label, value]) => `
-    <div class="worksheet-meta-pill">
-      <strong>${escapeHtml(label)}</strong>
-      <span>${escapeHtml(value)}</span>
-    </div>
-  `).join("");
-}
-
 function createNotesMarkup(label, value = "") {
   if (!value) {
     return "";
@@ -227,13 +265,11 @@ function createWorksheetHeaderMarkup({
   worksheetSubtitle,
   worksheetModeLabel,
   difficultyLabel,
-  generatedAtLabel,
   trustSignals,
   currentPage,
   totalPages,
   pageKind,
-  requestType
-  ,
+  requestType,
   language = "en"
 }) {
   const resolvedLanguage = normalizeLanguage(language);
@@ -246,7 +282,8 @@ function createWorksheetHeaderMarkup({
 
   return `
     <div class="worksheet-header${answerHeaderClass}">
-      ${identity.schoolName ? `<div class="worksheet-school">${escapeHtml(identity.schoolName)}</div>` : ""}
+      ${createWorksheetBrandMarkup(pageKind, resolvedLanguage)}
+      ${createSchoolIdentityMarkup(identity, resolvedLanguage)}
       <div class="worksheet-title-row">
         <div class="worksheet-title-block">
           <h2>${escapeHtml(identity.worksheetTitle || "Worksheet")}</h2>
@@ -258,19 +295,13 @@ function createWorksheetHeaderMarkup({
           <div class="worksheet-page-badge">${escapeHtml(t(resolvedLanguage, "pageLabel", { current: currentPage, total: totalPages }))}</div>
         </div>
       </div>
+      ${createWorksheetFactsMarkup({ grade, subjectLabel, identity, language: resolvedLanguage })}
       <p class="worksheet-intro">${formatMultilineText(introText)}</p>
       <div class="worksheet-divider" aria-hidden="true"></div>
       <div class="worksheet-identity-row">
         ${createHeaderFieldMarkup(t(resolvedLanguage, "name"), displayStudentName, t(resolvedLanguage, "writeStudentName"))}
         ${createHeaderFieldMarkup(t(resolvedLanguage, "date"), identity.worksheetDate, t(resolvedLanguage, "addDate"))}
         ${createScoreFieldMarkup(identity.scorePoints, resolvedLanguage)}
-      </div>
-      <div class="worksheet-meta-strip worksheet-meta-strip-extended">
-        ${createIdentityMetaMarkup({ identity, grade, subjectLabel, focusLabel, language: resolvedLanguage })}
-        <div class="worksheet-meta-pill">
-          <strong>${escapeHtml(t(resolvedLanguage, "generated"))}</strong>
-          <span>${escapeHtml(generatedAtLabel || "--")}</span>
-        </div>
       </div>
       ${createConfidenceStripMarkup(trustSignals)}
       ${showTeacherNotes ? createNotesMarkup(t(resolvedLanguage, "teacherNotes"), localizeTeacherNotesText(identity.teacherNotes, resolvedLanguage)) : ""}
@@ -343,7 +374,6 @@ export function renderWorksheetPreview({
   pageKind,
   worksheetModeLabel,
   difficultyLabel,
-  generatedAtLabel,
   trustSignals,
   identity,
   requestType,
@@ -362,7 +392,6 @@ export function renderWorksheetPreview({
       worksheetSubtitle,
       worksheetModeLabel,
       difficultyLabel,
-      generatedAtLabel,
       trustSignals,
       currentPage,
       totalPages,
@@ -396,6 +425,7 @@ export function renderEmptyWorksheet(worksheetElement, template, language = "en"
   const resolvedLanguage = normalizeLanguage(language);
   worksheetElement.innerHTML = `
     <div class="worksheet-header">
+      ${createWorksheetBrandMarkup("questions", resolvedLanguage)}
       <h2>${escapeHtml(t(resolvedLanguage, "worksheet"))}</h2>
       <p>${escapeHtml(t(resolvedLanguage, "emptyWorksheetBody"))}</p>
     </div>
