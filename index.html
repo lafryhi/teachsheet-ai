@@ -600,44 +600,6 @@
         <button id="showOnboardingButton" type="button" class="subtle-link-button" hidden data-i18n="showQuickGuide">Show quick guide</button>
       </div>
 
-      <div class="settings-group">
-        <div class="settings-title-row">
-          <h3 data-i18n="quickStart">Quick Start</h3>
-          <button type="button" class="hint-trigger" aria-label="Preset help">
-            <span class="hint-trigger-icon">?</span>
-            <span class="hint-tooltip" data-i18n="presetHelp">Presets set the worksheet goal, teacher mode, template, and sensible defaults in one click.</span>
-          </button>
-        </div>
-        <p class="settings-intro" data-i18n="quickStartIntro">Use one preset to set the worksheet goal, template, and sensible defaults in one step.</p>
-        <div id="workflowPresetGrid" class="workflow-preset-grid" aria-label="Quick workflow presets">
-          <button type="button" class="workflow-preset-card" data-workflow-preset="daily-practice">
-            <strong>Daily Practice</strong>
-            <span>Balanced classwork with steady progression.</span>
-          </button>
-          <button type="button" class="workflow-preset-card" data-workflow-preset="homework">
-            <strong>Homework</strong>
-            <span>Independent follow-up with clean printable spacing.</span>
-          </button>
-          <button type="button" class="workflow-preset-card" data-workflow-preset="quick-review">
-            <strong>Quick Review</strong>
-            <span>Short mixed recall for fast warm-up or revision.</span>
-          </button>
-          <button type="button" class="workflow-preset-card" data-workflow-preset="assessment">
-            <strong>Assessment</strong>
-            <span>Exam-style setup with clearer mastery checking.</span>
-          </button>
-          <button type="button" class="workflow-preset-card" data-workflow-preset="remediation">
-            <strong>Remediation</strong>
-            <span>Simpler pacing with easier numbers and extra support.</span>
-          </button>
-          <button type="button" class="workflow-preset-card" data-workflow-preset="mental-math-drill">
-            <strong>Mental Math Drill</strong>
-            <span>Fast horizontal fluency for short review rounds.</span>
-          </button>
-        </div>
-        <div id="workflowSmartSummary" class="workflow-smart-summary" aria-live="polite"></div>
-      </div>
-
       <div class="teacher-form-section">
         <div class="teacher-form-section-header">
           <div>
@@ -743,154 +705,214 @@
         </div>
 
         <div id="activeTemplateIndicator" class="active-template-indicator" aria-live="polite"></div>
-
-        <div class="teacher-form-grid teacher-form-grid-secondary">
-          <label class="teacher-form-field teacher-form-field-math" data-subject-math-only><span data-i18n="operation">Operation</span>
-            <select id="operation">
-              <option value="addition">Addition</option>
-              <option value="subtraction">Subtraction</option>
-              <option value="multiplication">Multiplication</option>
-              <option value="division">Division</option>
-              <option value="mixed">Mixed Operations</option>
-            </select>
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="teacherMode">Teacher Mode</span>
-            <select id="teacherMode">
-              <option value="practice" selected>Practice Mode</option>
-              <option value="homework">Homework Mode</option>
-              <option value="assessment">Assessment Mode</option>
-              <option value="remediation">Remediation Mode</option>
-              <option value="fast-review">Fast Review Mode</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field-help teacher-mode-help compact-help">
-          <strong data-i18n="teacherModeGoal">Choose the worksheet goal:</strong>
-          <span><strong data-i18n="modePractice">Practice Mode</strong> <span data-i18n="practiceHelp">builds fluency steadily.</span></span>
-          <span><strong data-i18n="modeHomework">Homework Mode</strong> <span data-i18n="homeworkHelp">stays clean and independent.</span></span>
-          <span><strong data-i18n="modeAssessment">Assessment Mode</strong> <span data-i18n="assessmentHelp">checks mastery more formally.</span></span>
-          <span><strong data-i18n="modeRemediation">Remediation Mode</strong> <span data-i18n="remediationHelp">slows down and simplifies the work.</span></span>
-          <span><strong data-i18n="modeFastReview">Fast Review Mode</strong> <span data-i18n="fastReviewHelp">favors short recall and mental fluency.</span></span>
-        </div>
       </div>
 
-      <div class="teacher-form-section teacher-form-section-print">
+      <div class="teacher-form-section teacher-form-section-actions">
         <div class="teacher-form-section-header">
           <div>
-            <h3 data-i18n="printInfoSection">Informations d'impression</h3>
-            <p data-i18n="printInfoIntro">Add only the printed classroom details you want to appear on the worksheet and PDF.</p>
+            <h3 data-i18n="actionsSection">Actions</h3>
+            <p data-i18n="actionsIntro">Generate the worksheet, save it, or export the printable PDF from one clear place.</p>
           </div>
         </div>
-
-        <div class="teacher-form-grid teacher-form-grid-primary">
-          <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
-            <input id="schoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
-            <input id="teacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
-          </label>
-
-          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="scorePoints">Score / Points</span>
-            <input id="scorePoints" type="text" placeholder="e.g. /20" data-i18n-placeholder="scorePointsPlaceholder" />
-          </label>
-
-          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="instructions">Instructions</span>
-            <textarea id="instructions" rows="3" placeholder="e.g. Solve each question carefully and show your work." data-i18n-placeholder="instructionsPlaceholder"></textarea>
-          </label>
-
-          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="teacherNotes">Teacher Notes</span>
-            <textarea id="teacherNotes" rows="3" placeholder="Optional notes for teacher use or printing." data-i18n-placeholder="teacherNotesPlaceholder"></textarea>
-          </label>
-        </div>
-      </div>
-
-      <div class="teacher-form-section global-school-settings-section">
-        <div class="teacher-form-section-header">
-          <div>
-            <h3 data-i18n="globalSchoolSettings">School Settings</h3>
-            <p data-i18n="globalSchoolSettingsIntro">Save your school details once and reuse them across new worksheets, previews, saved projects, and PDF exports.</p>
-          </div>
-        </div>
-
-        <div class="teacher-form-grid teacher-form-grid-primary">
-          <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
-            <input id="globalSchoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
-            <input id="globalTeacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="defaultClassGrade">Default Class / Grade</span>
-            <select id="globalDefaultGrade">
-              <option value="" data-i18n="noDefaultGrade">No default grade</option>
-              <option value="Grade 1">Grade 1</option>
-              <option value="Grade 2">Grade 2</option>
-              <option value="Grade 3">Grade 3</option>
-              <option value="Grade 4">Grade 4</option>
-              <option value="Grade 5">Grade 5</option>
-            </select>
-          </label>
-
-          <label class="teacher-form-field"><span data-i18n="defaultSubject">Default Subject</span>
-            <select id="globalDefaultSubject">
-              <option value="" data-i18n="noDefaultSubject">No default subject</option>
-              <option value="math" data-i18n="subjectMath">Math</option>
-              <option value="grammar" data-i18n="subjectGrammar">Grammar</option>
-              <option value="reading" data-i18n="subjectReading">Reading</option>
-              <option value="tracing" data-i18n="subjectTracing">Tracing</option>
-              <option value="coloring" data-i18n="subjectColoring">Coloring</option>
-            </select>
-          </label>
-
-          <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="schoolLogo">School Logo</span>
-            <input id="globalSchoolLogo" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-        </div>
-
-        <div class="global-school-settings-footer">
-          <div id="globalSchoolLogoCard" class="school-logo-card" hidden>
-            <div class="school-logo-card-preview">
-              <img id="globalSchoolLogoPreview" alt="School logo preview" />
-            </div>
-            <div class="school-logo-card-copy">
-              <strong data-i18n="schoolLogoReady">Logo ready for preview and PDF</strong>
-              <span id="globalSchoolLogoName" data-i18n="schoolLogoStored">Saved in this browser for future worksheets.</span>
-            </div>
-            <button id="clearGlobalSchoolLogoButton" type="button" class="subtle-link-button school-logo-clear-button" data-i18n="removeLogo">Remove logo</button>
-          </div>
-
-          <div class="global-school-settings-actions">
-            <span id="globalSchoolSettingsStatus" class="global-school-settings-status" data-i18n="schoolSettingsSaved">School settings save automatically in this browser.</span>
-            <button id="resetGlobalSchoolSettingsButton" type="button" class="secondary-action-button school-settings-reset-button" data-i18n="resetSchoolSettings">Reset school settings</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-group action-settings-group">
-        <div class="settings-title-row">
-          <h3 data-i18n="generateAndExport">Generate and Export</h3>
-          <button type="button" class="hint-trigger" aria-label="Generate and export help">
-            <span class="hint-trigger-icon">?</span>
-            <span class="hint-tooltip" data-i18n="exportHelp">Generate uses the current preset, prompt, and settings. Download PDF exports the same printable A4 worksheet shown in the preview.</span>
-          </button>
-        </div>
-        <p class="settings-intro" data-i18n="exportIntro">The fastest path is preset or prompt first, then generate. Save or export once the preview looks right.</p>
-        <div class="actions-grid">
+        <div class="actions-grid actions-grid-primary">
           <button id="generateButton" onclick="generateWorksheet()" data-i18n="generateWorksheet">Generate Worksheet</button>
-          <button id="promptGenerateButton" type="button" class="secondary-action-button" data-i18n="generateFromPrompt">Generate From Prompt</button>
-          <button id="saveProjectButton" type="button" data-i18n="saveProject">Save Project</button>
           <button class="green" onclick="downloadPDF()" data-i18n="downloadPdf">Download PDF</button>
-          <button class="red" onclick="clearWorksheet()" data-i18n="clear">Clear</button>
+          <button id="saveProjectButton" type="button" data-i18n="saveProject">Save Project</button>
         </div>
-        <div class="action-help-row">
+        <div class="action-help-row action-help-row-compact">
           <span data-i18n="actionHelpGenerate">Generate first, then export the same A4 layout as PDF.</span>
           <span data-i18n="actionHelpSave">Save Project keeps the worksheet ready for later edits.</span>
         </div>
       </div>
+
+      <details class="teacher-form-section settings-disclosure teacher-form-section-advanced">
+        <summary><span data-i18n="advancedSettings">Advanced Settings</span></summary>
+        <div class="disclosure-content advanced-settings-content">
+          <p class="advanced-settings-intro" data-i18n="advancedSettingsIntro">Open this section for print details, teacher mode, school defaults, and secondary worksheet tools.</p>
+
+          <div class="advanced-settings-subsection">
+            <div class="teacher-form-section-header teacher-form-section-header-compact">
+              <div>
+                <h4 data-i18n="quickStart">Quick Start</h4>
+                <p data-i18n="quickStartIntro">Use one preset to set the worksheet goal, template, and sensible defaults in one step.</p>
+              </div>
+            </div>
+            <div id="workflowPresetGrid" class="workflow-preset-grid workflow-preset-grid-compact" aria-label="Quick workflow presets">
+              <button type="button" class="workflow-preset-card" data-workflow-preset="daily-practice">
+                <strong>Daily Practice</strong>
+                <span>Balanced classwork with steady progression.</span>
+              </button>
+              <button type="button" class="workflow-preset-card" data-workflow-preset="homework">
+                <strong>Homework</strong>
+                <span>Independent follow-up with clean printable spacing.</span>
+              </button>
+              <button type="button" class="workflow-preset-card" data-workflow-preset="quick-review">
+                <strong>Quick Review</strong>
+                <span>Short mixed recall for fast warm-up or revision.</span>
+              </button>
+              <button type="button" class="workflow-preset-card" data-workflow-preset="assessment">
+                <strong>Assessment</strong>
+                <span>Exam-style setup with clearer mastery checking.</span>
+              </button>
+              <button type="button" class="workflow-preset-card" data-workflow-preset="remediation">
+                <strong>Remediation</strong>
+                <span>Simpler pacing with easier numbers and extra support.</span>
+              </button>
+              <button type="button" class="workflow-preset-card" data-workflow-preset="mental-math-drill">
+                <strong>Mental Math Drill</strong>
+                <span>Fast horizontal fluency for short review rounds.</span>
+              </button>
+            </div>
+            <div id="workflowSmartSummary" class="workflow-smart-summary workflow-smart-summary-compact" aria-live="polite"></div>
+          </div>
+
+          <div class="advanced-settings-subsection">
+            <div class="teacher-form-section-header teacher-form-section-header-compact">
+              <div>
+                <h4 data-i18n="advancedPedagogySection">Worksheet Controls</h4>
+                <p data-i18n="advancedPedagogyIntro">Use these only when you need a specific operation, teacher mode, or manual fine-tuning.</p>
+              </div>
+            </div>
+            <div class="teacher-form-grid teacher-form-grid-secondary">
+              <label class="teacher-form-field teacher-form-field-math" data-subject-math-only><span data-i18n="operation">Operation</span>
+                <select id="operation">
+                  <option value="addition">Addition</option>
+                  <option value="subtraction">Subtraction</option>
+                  <option value="multiplication">Multiplication</option>
+                  <option value="division">Division</option>
+                  <option value="mixed">Mixed Operations</option>
+                </select>
+              </label>
+
+              <label class="teacher-form-field"><span data-i18n="teacherMode">Teacher Mode</span>
+                <select id="teacherMode">
+                  <option value="practice" selected>Practice Mode</option>
+                  <option value="homework">Homework Mode</option>
+                  <option value="assessment">Assessment Mode</option>
+                  <option value="remediation">Remediation Mode</option>
+                  <option value="fast-review">Fast Review Mode</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field-help teacher-mode-help compact-help">
+              <strong data-i18n="teacherModeGoal">Choose the worksheet goal:</strong>
+              <span><strong data-i18n="modePractice">Practice Mode</strong> <span data-i18n="practiceHelp">builds fluency steadily.</span></span>
+              <span><strong data-i18n="modeHomework">Homework Mode</strong> <span data-i18n="homeworkHelp">stays clean and independent.</span></span>
+              <span><strong data-i18n="modeAssessment">Assessment Mode</strong> <span data-i18n="assessmentHelp">checks mastery more formally.</span></span>
+              <span><strong data-i18n="modeRemediation">Remediation Mode</strong> <span data-i18n="remediationHelp">slows down and simplifies the work.</span></span>
+              <span><strong data-i18n="modeFastReview">Fast Review Mode</strong> <span data-i18n="fastReviewHelp">favors short recall and mental fluency.</span></span>
+            </div>
+          </div>
+
+          <div class="advanced-settings-subsection">
+            <div class="teacher-form-section-header teacher-form-section-header-compact">
+              <div>
+                <h4 data-i18n="printInfoSection">Informations d'impression</h4>
+                <p data-i18n="printInfoIntro">Add only the printed classroom details you want to appear on the worksheet and PDF.</p>
+              </div>
+            </div>
+
+            <div class="teacher-form-grid teacher-form-grid-primary">
+              <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
+                <input id="schoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
+              </label>
+
+              <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
+                <input id="teacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
+              </label>
+
+              <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="scorePoints">Score / Points</span>
+                <input id="scorePoints" type="text" placeholder="e.g. /20" data-i18n-placeholder="scorePointsPlaceholder" />
+              </label>
+
+              <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="instructions">Instructions</span>
+                <textarea id="instructions" rows="3" placeholder="e.g. Solve each question carefully and show your work." data-i18n-placeholder="instructionsPlaceholder"></textarea>
+              </label>
+
+              <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="teacherNotes">Teacher Notes</span>
+                <textarea id="teacherNotes" rows="3" placeholder="Optional notes for teacher use or printing." data-i18n-placeholder="teacherNotesPlaceholder"></textarea>
+              </label>
+            </div>
+          </div>
+
+          <div class="advanced-settings-subsection global-school-settings-section">
+            <div class="teacher-form-section-header teacher-form-section-header-compact">
+              <div>
+                <h4 data-i18n="globalSchoolSettings">School Settings</h4>
+                <p data-i18n="globalSchoolSettingsIntro">Save your school details once and reuse them across new worksheets, previews, saved projects, and PDF exports.</p>
+              </div>
+            </div>
+
+            <div class="teacher-form-grid teacher-form-grid-primary">
+              <label class="teacher-form-field"><span data-i18n="schoolName">School Name</span>
+                <input id="globalSchoolName" type="text" placeholder="School name" data-i18n-placeholder="schoolNamePlaceholder" />
+              </label>
+
+              <label class="teacher-form-field"><span data-i18n="teacherName">Teacher Name</span>
+                <input id="globalTeacherName" type="text" placeholder="Teacher name" data-i18n-placeholder="teacherNamePlaceholder" />
+              </label>
+
+              <label class="teacher-form-field"><span data-i18n="defaultClassGrade">Default Class / Grade</span>
+                <select id="globalDefaultGrade">
+                  <option value="" data-i18n="noDefaultGrade">No default grade</option>
+                  <option value="Grade 1">Grade 1</option>
+                  <option value="Grade 2">Grade 2</option>
+                  <option value="Grade 3">Grade 3</option>
+                  <option value="Grade 4">Grade 4</option>
+                  <option value="Grade 5">Grade 5</option>
+                </select>
+              </label>
+
+              <label class="teacher-form-field"><span data-i18n="defaultSubject">Default Subject</span>
+                <select id="globalDefaultSubject">
+                  <option value="" data-i18n="noDefaultSubject">No default subject</option>
+                  <option value="math" data-i18n="subjectMath">Math</option>
+                  <option value="grammar" data-i18n="subjectGrammar">Grammar</option>
+                  <option value="reading" data-i18n="subjectReading">Reading</option>
+                  <option value="tracing" data-i18n="subjectTracing">Tracing</option>
+                  <option value="coloring" data-i18n="subjectColoring">Coloring</option>
+                </select>
+              </label>
+
+              <label class="teacher-form-field teacher-form-field-wide"><span data-i18n="schoolLogo">School Logo</span>
+                <input id="globalSchoolLogo" type="file" accept="image/png,image/jpeg,image/webp" />
+              </label>
+            </div>
+
+            <div class="global-school-settings-footer">
+              <div id="globalSchoolLogoCard" class="school-logo-card" hidden>
+                <div class="school-logo-card-preview">
+                  <img id="globalSchoolLogoPreview" alt="School logo preview" />
+                </div>
+                <div class="school-logo-card-copy">
+                  <strong data-i18n="schoolLogoReady">Logo ready for preview and PDF</strong>
+                  <span id="globalSchoolLogoName" data-i18n="schoolLogoStored">Saved in this browser for future worksheets.</span>
+                </div>
+                <button id="clearGlobalSchoolLogoButton" type="button" class="subtle-link-button school-logo-clear-button" data-i18n="removeLogo">Remove logo</button>
+              </div>
+
+              <div class="global-school-settings-actions">
+                <span id="globalSchoolSettingsStatus" class="global-school-settings-status" data-i18n="schoolSettingsSaved">School settings save automatically in this browser.</span>
+                <button id="resetGlobalSchoolSettingsButton" type="button" class="secondary-action-button school-settings-reset-button" data-i18n="resetSchoolSettings">Reset school settings</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="advanced-settings-subsection advanced-settings-subsection-utilities">
+            <div class="teacher-form-section-header teacher-form-section-header-compact">
+              <div>
+                <h4 data-i18n="secondaryToolsSection">Secondary Tools</h4>
+                <p data-i18n="secondaryToolsIntro">Keep duplicate or occasional actions here so the main workflow stays simple.</p>
+              </div>
+            </div>
+            <div class="advanced-utility-actions">
+              <button id="promptGenerateButton" type="button" class="secondary-action-button" data-i18n="generateFromPrompt">Generate From Prompt</button>
+              <button class="red advanced-clear-button" onclick="clearWorksheet()" data-i18n="clear">Clear</button>
+            </div>
+          </div>
+        </div>
+      </details>
       <div id="generationStatus" class="status-message" aria-live="polite"></div>
 
       <div class="saved-projects">
