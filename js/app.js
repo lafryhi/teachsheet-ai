@@ -164,118 +164,167 @@ const WORKFLOW_PRESETS = {
 
 const CLASSROOM_EXAMPLES = [
   {
-    id: "english-addition",
-    previewLanguage: "en",
+    id: "addition-template",
+    previewLanguage: "fr",
     prompts: {
       en: "grade 2 addition practice 20 questions",
       fr: "addition CE2"
     },
     templateId: "kids-colorful",
-    teacherMode: "practice"
+    teacherMode: "practice",
+    requestOverrides: {
+      type: "math",
+      grade: "Grade 2",
+      topic: "addition",
+      difficulty: "medium",
+      count: 20,
+      teacherMode: "practice"
+    }
   },
   {
-    id: "french-mental-math",
+    id: "subtraction-template",
     previewLanguage: "fr",
     prompts: {
-      en: "mental math fast review grade 2",
-      fr: "calcul mental CE1"
+      en: "grade 3 subtraction practice 15 questions",
+      fr: "soustraction CE1"
     },
-    templateId: "classic-math",
-    teacherMode: "fast-review"
+    templateId: "homework-sheet",
+    teacherMode: "practice",
+    requestOverrides: {
+      type: "math",
+      grade: "Grade 3",
+      topic: "subtraction",
+      difficulty: "medium",
+      count: 15,
+      teacherMode: "practice"
+    }
   },
   {
-    id: "french-multiplication",
+    id: "multiplication-template",
     previewLanguage: "fr",
     prompts: {
-      en: "grade 4 multiplication practice",
+      en: "grade 4 multiplication practice 18 questions",
       fr: "multiplication CM1"
     },
     templateId: "classic-math",
-    teacherMode: "practice"
+    teacherMode: "practice",
+    requestOverrides: {
+      type: "math",
+      grade: "Grade 4",
+      topic: "multiplication",
+      difficulty: "medium",
+      count: 18,
+      teacherMode: "practice"
+    }
   },
   {
-    id: "remediation-support",
+    id: "word-problems-template",
     previewLanguage: "en",
     prompts: {
-      en: "grade 3 remediation subtraction worksheet",
-      fr: "fiche de remediation soustraction CE2"
+      en: "grade 4 addition word problems 10 questions",
+      fr: "problemes d'addition CE2"
     },
     templateId: "homework-sheet",
-    teacherMode: "remediation"
+    teacherMode: "homework",
+    requestOverrides: {
+      type: "math",
+      grade: "Grade 4",
+      topic: "addition",
+      difficulty: "medium",
+      count: 10,
+      teacherMode: "homework",
+      focusPattern: "word-problem"
+    }
   },
   {
-    id: "french-assessment",
+    id: "french-grammar-template",
     previewLanguage: "fr",
     prompts: {
-      en: "grade 5 assessment division",
-      fr: "evaluation division CM2"
+      en: "grammar + verbs + 15 questions",
+      fr: "exercices de grammaire CE2"
     },
-    templateId: "exam-style",
-    teacherMode: "assessment"
+    templateId: "homework-sheet",
+    teacherMode: "practice",
+    requestOverrides: {
+      type: "grammar",
+      grade: "Grade 2",
+      topic: "verbs",
+      difficulty: "medium",
+      count: 15,
+      teacherMode: "practice"
+    }
   },
   {
-    id: "mixed-review",
+    id: "tracing-template",
     previewLanguage: "en",
     prompts: {
-      en: "grade 5 mixed review worksheet",
-      fr: "revision rapide CM1"
+      en: "tracing + letter A",
+      fr: "tracing lettre A"
     },
-    templateId: "classic-math",
-    teacherMode: "homework"
+    templateId: "kids-colorful",
+    teacherMode: "practice",
+    requestOverrides: {
+      type: "tracing",
+      grade: "Grade 1",
+      topic: "letter A",
+      difficulty: "easy",
+      count: 8,
+      teacherMode: "practice"
+    }
   }
 ];
 
 const CLASSROOM_EXAMPLE_COPY = {
   en: {
-    "english-addition": {
-      title: "English Addition Practice",
-      body: "A classroom-friendly addition worksheet with clear pacing, answer space, and printable structure."
+    "addition-template": {
+      title: "Addition Worksheet",
+      body: "A clear addition practice sheet for quick classwork, homework, or fluency routines."
     },
-    "french-mental-math": {
-      title: "French Mental Math",
-      body: "A quick oral and written fluency activity that works well for warm-up rounds and short revision."
+    "subtraction-template": {
+      title: "Subtraction Worksheet",
+      body: "A subtraction model with clean spacing and a familiar layout for everyday classroom use."
     },
-    "french-multiplication": {
-      title: "French Multiplication Practice",
-      body: "A structured multiplication page for primary classrooms, with clean line spacing and real A4 pacing."
+    "multiplication-template": {
+      title: "Multiplication Worksheet",
+      body: "A multiplication practice example designed for primary teachers who need a ready-to-print sheet."
     },
-    "remediation-support": {
-      title: "Remediation Support",
-      body: "A slower subtraction worksheet with clearer steps and gentler progression for targeted support."
+    "word-problems-template": {
+      title: "Word Problems Worksheet",
+      body: "A guided word-problem example that feels practical for class discussion and written solving."
     },
-    "french-assessment": {
-      title: "French Assessment Example",
-      body: "A sharper division assessment layout that looks ready for checking, printing, and classroom correction."
+    "french-grammar-template": {
+      title: "French Grammar Worksheet",
+      body: "A grammar example for primary French lessons with familiar classroom wording and simple reuse."
     },
-    "mixed-review": {
-      title: "Mixed Review Worksheet",
-      body: "A mixed operations worksheet that feels like real revision material instead of a generic generator output."
+    "tracing-template": {
+      title: "Tracing / Handwriting Worksheet",
+      body: "A handwriting starter with larger writing space and a child-friendly printable rhythm."
     }
   },
   fr: {
-    "english-addition": {
-      title: "Exemple d'addition",
-      body: "Une fiche d'addition claire, progressive et imprimable pour une utilisation immediate en classe."
+    "addition-template": {
+      title: "Fiche d'addition",
+      body: "Un modele d'addition clair et pret pour les routines de classe, le travail ecrit ou la revision."
     },
-    "french-mental-math": {
-      title: "Calcul mental",
-      body: "Une activite courte pour l'echauffement, la revision rapide et la fluidite mentale en primaire."
+    "subtraction-template": {
+      title: "Fiche de soustraction",
+      body: "Un modele de soustraction propre et lisible pour l'entrainement quotidien en classe."
     },
-    "french-multiplication": {
-      title: "Multiplication en classe",
-      body: "Une fiche de multiplication propre et lisible, avec une mise en page adaptee a l'impression A4."
+    "multiplication-template": {
+      title: "Fiche de multiplication",
+      body: "Une fiche de multiplication prete a imprimer pour le travail quotidien et les revisions ciblees."
     },
-    "remediation-support": {
-      title: "Exemple de remediation",
-      body: "Une fiche de soustraction plus douce, avec une progression plus simple pour l'accompagnement cible."
+    "word-problems-template": {
+      title: "Fiche de problemes",
+      body: "Un exemple de problemes ecrits qui reste lisible, guide et adapte a un usage reel en classe."
     },
-    "french-assessment": {
-      title: "Exemple d'evaluation",
-      body: "Une fiche d'evaluation en division qui semble deja prete pour la correction et l'impression."
+    "french-grammar-template": {
+      title: "Fiche de grammaire francaise",
+      body: "Une fiche de grammaire adaptee au primaire avec une formulation simple et une reutilisation rapide."
     },
-    "mixed-review": {
-      title: "Revision des operations",
-      body: "Une fiche melangee qui ressemble a un vrai support de revision pour la classe."
+    "tracing-template": {
+      title: "Fiche de graphisme / ecriture",
+      body: "Une activite de graphisme avec plus d'espace d'ecriture et une mise en page confortable pour les eleves."
     }
   }
 };
@@ -698,14 +747,72 @@ function buildClassroomExampleRequest(example) {
 
   return {
     ...parsedPrompt,
+    ...(example.requestOverrides || {}),
     language: exampleLanguage,
-    difficulty: parsedPrompt.difficulty || smartProfile.difficulty,
-    count: parsedPrompt.count || smartProfile.questionCount,
-    teacherMode,
-    layoutMode: parsedPrompt.layoutMode || smartProfile.layoutMode,
-    template: example.templateId || parsedPrompt.template || smartProfile.templateId,
-    templateId: example.templateId || parsedPrompt.template || smartProfile.templateId
+    difficulty: example.requestOverrides?.difficulty || parsedPrompt.difficulty || smartProfile.difficulty,
+    count: example.requestOverrides?.count || parsedPrompt.count || smartProfile.questionCount,
+    teacherMode: example.requestOverrides?.teacherMode || teacherMode,
+    layoutMode: example.requestOverrides?.layoutMode || parsedPrompt.layoutMode || smartProfile.layoutMode,
+    template: example.templateId || example.requestOverrides?.templateId || parsedPrompt.template || smartProfile.templateId,
+    templateId: example.templateId || example.requestOverrides?.templateId || parsedPrompt.template || smartProfile.templateId
   };
+}
+
+function getClassroomExampleById(exampleId = "") {
+  return CLASSROOM_EXAMPLES.find((example) => example.id === exampleId) || null;
+}
+
+function getLocalizedClassroomExamplePrompt(example) {
+  if (!example) {
+    return "";
+  }
+
+  return example.prompts?.[state.language] || example.prompts?.en || example.prompts?.fr || "";
+}
+
+function applyClassroomExampleToInterface(example) {
+  if (!example) {
+    return;
+  }
+
+  const worksheetRequest = buildClassroomExampleRequest(example);
+  const localizedPrompt = getLocalizedClassroomExamplePrompt(example);
+  const localizedCopy = getClassroomExampleText(example.id);
+
+  withWorkflowUpdate(() => {
+    state.activePresetId = null;
+    resetManualOverrides();
+    getElement("worksheetTitle").value = localizedCopy.title || getLocalizedWorksheetTitle(state.language, worksheetRequest);
+    getElement("subject").value = worksheetRequest.type || "math";
+    getElement("grade").value = worksheetRequest.grade || "Grade 2";
+    getElement("promptInput").value = localizedPrompt;
+    getElement("difficulty").value = worksheetRequest.difficulty || "medium";
+    ensureSelectOption(
+      getElement("questionCount"),
+      worksheetRequest.count || 15,
+      localizeQuestionCountLabel(state.language, worksheetRequest.count || 15)
+    );
+    getElement("questionCount").value = String(worksheetRequest.count || 15);
+    getElement("teacherMode").value = worksheetRequest.teacherMode || "practice";
+
+    if ((worksheetRequest.type || "math") === "math" && worksheetRequest.topic) {
+      getElement("operation").value = worksheetRequest.topic;
+    }
+  });
+
+  updateSubjectWorkflowUI();
+  state.manualOverrides.difficulty = true;
+  state.manualOverrides.questionCount = true;
+  state.manualOverrides.teacherMode = true;
+  applyTemplateSelection(worksheetRequest.templateId || getDefaultTemplate().id, {
+    manual: true,
+    refreshExisting: true,
+    persist: false
+  });
+  persistSettings();
+  getElement("app").scrollIntoView({ behavior: "smooth", block: "start" });
+  getElement("worksheetTitle").focus();
+  setStatusMessage(t(state.language, "exampleTemplateApplied"), "success");
 }
 
 function renderClassroomExamples() {
@@ -779,11 +886,8 @@ function renderClassroomExamples() {
       language: exampleLanguage
     });
 
-    const localizedPrompt = example.prompts?.[state.language] || example.prompts?.en || example.prompts?.fr || "";
     const localizedCopy = getClassroomExampleText(example.id);
-    const pageLabel = state.language === "fr"
-      ? `${layoutBreakdown.totalPages} pages`
-      : `${layoutBreakdown.totalPages} pages`;
+    const pageLabel = `${layoutBreakdown.totalPages} pages`;
     const questionLabel = localizeQuestionCountLabel(state.language, questions.length);
     const exampleLanguageLabel = getClassroomExampleLanguageLabel(exampleLanguage);
     const sampleQuestion = questions[0] ? getLocalizedQuestionDisplayText(questions[0], exampleLanguage).replace(/\s+/g, " ").trim() : "";
@@ -799,6 +903,8 @@ function renderClassroomExamples() {
           <h3>${localizedCopy.title}</h3>
           <p>${localizedCopy.body}</p>
           <div class="classroom-example-meta">
+            <span>${gradeLabel}</span>
+            <span>${subjectLabel}</span>
             <span>${worksheetModeLabel}</span>
             <span>${questionLabel}</span>
             <span>${pageLabel}</span>
@@ -808,17 +914,8 @@ function renderClassroomExamples() {
             <button
               type="button"
               class="demo-gallery-button classroom-example-button"
-              data-demo-prompt="${localizedPrompt}"
-              data-demo-template="${template.id}"
-              data-demo-mode="${example.teacherMode || worksheetRequest.teacherMode || "practice"}"
-            >${t(state.language, "classroomExampleGenerate")}</button>
-            <button
-              type="button"
-              class="classroom-example-link"
-              data-demo-prompt="${localizedPrompt}"
-              data-demo-template="${template.id}"
-              data-demo-mode="${example.teacherMode || worksheetRequest.teacherMode || "practice"}"
-            >${t(state.language, "classroomExamplePreview")}</button>
+              data-classroom-example="${example.id}"
+            >${t(state.language, "useThisTemplate")}</button>
           </div>
         </div>
       </article>
@@ -2662,14 +2759,15 @@ function bindFormPersistence() {
 
   const classroomExamplesGrid = getClassroomExamplesContainer();
   if (classroomExamplesGrid) {
-    classroomExamplesGrid.addEventListener("click", async (event) => {
-      const demoPreset = getDemoPresetFromTrigger(event.target);
+    classroomExamplesGrid.addEventListener("click", (event) => {
+      const exampleId = event.target.closest("[data-classroom-example]")?.dataset.classroomExample;
+      const example = getClassroomExampleById(exampleId);
 
-      if (!demoPreset) {
+      if (!example) {
         return;
       }
 
-      await runDemoPreset(demoPreset);
+      applyClassroomExampleToInterface(example);
     });
   }
 
