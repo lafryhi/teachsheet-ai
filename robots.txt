@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.lafryhi-elmostafa-school-primary.com/sitemap.xml
